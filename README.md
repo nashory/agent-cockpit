@@ -158,6 +158,12 @@ make run
 See [docs/development.md](docs/development.md) for native macOS, Linux, and
 Windows build/release details.
 
+Contribution guide:
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [SECURITY.md](SECURITY.md)
+- [docs/homebrew.md](docs/homebrew.md)
+
 Project layout:
 
 ```text
