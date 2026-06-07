@@ -110,6 +110,9 @@ func Parse(r io.Reader, path string) ([]usage.Event, error) {
 			if p.Info.Last.Input+p.Info.Last.Cached+p.Info.Last.Output+p.Info.Last.Reasoning == 0 {
 				continue
 			}
+			if model == "" {
+				model = "codex"
+			}
 			events = append(events, usage.Event{
 				Source:    "codex",
 				SessionID: sessionID,

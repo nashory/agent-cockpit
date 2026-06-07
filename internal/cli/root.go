@@ -301,6 +301,12 @@ output_per_million = 10
 cache_read_per_million = 0.125
 cache_write_per_million = 0
 
+[pricing."codex"]
+input_per_million = 1.25
+output_per_million = 10
+cache_read_per_million = 0.125
+cache_write_per_million = 0
+
 [pricing."gemini-2.5-pro"]
 input_per_million = 1.25
 output_per_million = 10

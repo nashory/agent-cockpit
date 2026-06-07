@@ -49,6 +49,10 @@ Codex sessions include metadata and token count events:
 
 `last_token_usage` is treated as turn-level usage.
 
+Some Codex logs do not include a model name. agent-cockpit normalizes those
+events to model `codex` so they can still be grouped and priced with a local
+estimate.
+
 ## Gemini
 
 Default path:
@@ -76,4 +80,3 @@ Gemini session files include a message array. Assistant messages can include:
 ```
 
 `tool` tokens are counted as output. `thoughts` tokens are counted as reasoning.
-
