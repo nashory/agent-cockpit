@@ -2,7 +2,7 @@
 dist/
 build/
 coverage.out
-agent-cockpit
-ac
-ac.exe
+/agent-cockpit
+/ac
+/ac.exe
 *.test
