@@ -164,7 +164,9 @@ Contribution guide:
 
 - [CONTRIBUTING.md](CONTRIBUTING.md)
 - [SECURITY.md](SECURITY.md)
+- [docs/architecture.md](docs/architecture.md)
 - [docs/homebrew.md](docs/homebrew.md)
+- [docs/sources.md](docs/sources.md)
 
 Project layout:
 
