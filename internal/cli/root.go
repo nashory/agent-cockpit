@@ -124,6 +124,10 @@ func Execute() error {
 			for _, p := range cfg.Paths.Codex {
 				printPath(p)
 			}
+			fmt.Println("Gemini paths:")
+			for _, p := range cfg.Paths.Gemini {
+				printPath(p)
+			}
 			return nil
 		},
 	})
@@ -136,7 +140,7 @@ func addFlags(cmd *cobra.Command, opts *options) {
 	cmd.PersistentFlags().IntVar(&opts.days, "days", opts.days, "number of days to include")
 	cmd.PersistentFlags().StringVar(&opts.since, "since", "", "start date, YYYY-MM-DD")
 	cmd.PersistentFlags().StringVar(&opts.until, "until", "", "end date, YYYY-MM-DD")
-	cmd.PersistentFlags().StringVar(&opts.sources, "source", "", "comma-separated source filter: claude,codex")
+	cmd.PersistentFlags().StringVar(&opts.sources, "source", "", "comma-separated source filter: claude,codex,gemini")
 	cmd.PersistentFlags().StringVar(&opts.project, "project", "", "project/cwd substring filter")
 	cmd.PersistentFlags().StringVar(&opts.model, "model", "", "model substring filter")
 	cmd.PersistentFlags().StringVar(&opts.configPath, "config", "", "config file path")
@@ -282,6 +286,7 @@ currency = "USD"
 [paths]
 claude = ["~/.claude/projects"]
 codex = ["~/.codex/sessions", "~/.codex/archived_sessions"]
+gemini = ["~/.gemini/tmp"]
 
 # Prices are USD per million tokens. Keys match model substrings.
 [pricing."claude-sonnet"]
@@ -294,6 +299,12 @@ cache_write_per_million = 3.75
 input_per_million = 1.25
 output_per_million = 10
 cache_read_per_million = 0.125
+cache_write_per_million = 0
+
+[pricing."gemini-2.5-pro"]
+input_per_million = 1.25
+output_per_million = 10
+cache_read_per_million = 0
 cache_write_per_million = 0
 `
 }

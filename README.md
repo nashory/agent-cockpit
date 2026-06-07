@@ -10,7 +10,7 @@ without uploading your logs.
 
 </div>
 
-> Early MVP: Claude Code and Codex local log parsing are implemented first.
+> Early MVP: Claude Code, Codex, and Gemini local log parsing are implemented first.
 > More agent adapters and live speed dashboards are planned.
 
 ## Install
@@ -90,6 +90,7 @@ agent-cockpit reads local logs only:
 | --- | --- |
 | Claude Code | `~/.claude/projects/**/*.jsonl` |
 | Codex | `~/.codex/sessions/**/*.jsonl`, `~/.codex/archived_sessions/**/*.jsonl` |
+| Gemini | `~/.gemini/tmp/**/chats/session-*.json` |
 
 No cloud upload, no background service, no API keys.
 
@@ -139,6 +140,7 @@ currency = "USD"
 [paths]
 claude = ["~/.claude/projects"]
 codex = ["~/.codex/sessions", "~/.codex/archived_sessions"]
+gemini = ["~/.gemini/tmp"]
 
 [pricing."claude-sonnet"]
 input_per_million = 3
@@ -170,6 +172,7 @@ Project layout:
 cmd/ac/                     main entry
 internal/source/claude/     Claude Code JSONL adapter
 internal/source/codex/      Codex JSONL adapter
+internal/source/gemini/     Gemini session adapter
 internal/usage/             normalized events and aggregation
 internal/report/            static terminal reports
 internal/tui/               Bubble Tea TUI
@@ -179,7 +182,7 @@ internal/tui/               Bubble Tea TUI
 
 - Live file watching and active session detection
 - Observed throughput dashboards
-- Gemini, OpenCode, and Copilot adapters
+- OpenCode and Copilot adapters
 - Configurable pricing
 - Homebrew distribution
 - Windows zip releases

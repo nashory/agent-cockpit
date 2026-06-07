@@ -22,6 +22,7 @@ type Config struct {
 type Paths struct {
 	Claude []string `toml:"claude"`
 	Codex  []string `toml:"codex"`
+	Gemini []string `toml:"gemini"`
 }
 
 func Default() Config {
@@ -36,6 +37,7 @@ func Default() Config {
 				filepath.Join(home, ".codex", "sessions"),
 				filepath.Join(home, ".codex", "archived_sessions"),
 			},
+			Gemini: []string{filepath.Join(home, ".gemini", "tmp")},
 		},
 		Pricing: map[string]usage.Pricing{},
 	}
@@ -54,6 +56,7 @@ func Load(path string) (Config, error) {
 	}
 	cfg.Paths.Claude = expandPaths(cfg.Paths.Claude)
 	cfg.Paths.Codex = expandPaths(cfg.Paths.Codex)
+	cfg.Paths.Gemini = expandPaths(cfg.Paths.Gemini)
 	if cfg.RefreshInterval == "" {
 		cfg.RefreshInterval = "3s"
 	}

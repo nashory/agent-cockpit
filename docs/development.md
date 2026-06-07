@@ -54,6 +54,9 @@ Claude Code:
 Codex:
   ~/.codex/sessions/**/*.jsonl
   ~/.codex/archived_sessions/**/*.jsonl
+
+Gemini:
+  ~/.gemini/tmp/**/chats/session-*.json
 ```
 
 Do not commit real agent logs, API keys, bot tokens, or local config files.

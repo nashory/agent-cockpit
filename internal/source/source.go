@@ -6,6 +6,7 @@ import (
 	"github.com/nashory/agent-cockpit/internal/config"
 	"github.com/nashory/agent-cockpit/internal/source/claude"
 	"github.com/nashory/agent-cockpit/internal/source/codex"
+	"github.com/nashory/agent-cockpit/internal/source/gemini"
 	"github.com/nashory/agent-cockpit/internal/usage"
 )
 
@@ -18,6 +19,7 @@ func All() []Source {
 	return []Source{
 		claude.Source{},
 		codex.Source{},
+		gemini.Source{},
 	}
 }
 

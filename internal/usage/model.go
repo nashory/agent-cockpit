@@ -46,6 +46,12 @@ func DefaultPricing(model string) Pricing {
 		return Pricing{InputPerMillion: 1.25, OutputPerMillion: 10, CacheReadPerMillion: 0.125}
 	case strings.Contains(m, "gpt-4.1"):
 		return Pricing{InputPerMillion: 2, OutputPerMillion: 8, CacheReadPerMillion: 0.50}
+	case strings.Contains(m, "gemini-3"):
+		return Pricing{InputPerMillion: 2, OutputPerMillion: 12}
+	case strings.Contains(m, "gemini-2.5-pro"):
+		return Pricing{InputPerMillion: 1.25, OutputPerMillion: 10}
+	case strings.Contains(m, "gemini-2.5-flash"):
+		return Pricing{InputPerMillion: 0.30, OutputPerMillion: 2.50}
 	default:
 		return Pricing{}
 	}
