@@ -1,0 +1,7 @@
+.DS_Store
+dist/
+build/
+coverage.out
+agent-cockpit
+ac
+*.test
