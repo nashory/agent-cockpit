@@ -8,6 +8,16 @@ be `ac`.
 
 ## User Install
 
+Before the first stable release:
+
+```bash
+brew tap nashory/tap
+brew install --HEAD agent-cockpit
+ac
+```
+
+After a stable release is added to the formula:
+
 ```bash
 brew tap nashory/tap
 brew install agent-cockpit
@@ -22,7 +32,8 @@ brew install nashory/tap/agent-cockpit
 
 ## Formula
 
-Use the macOS archive from a GitHub Release.
+The tap currently supports `--HEAD` source builds. After the first GitHub
+Release, add stable URLs for macOS and Linux archives.
 
 ```ruby
 class AgentCockpit < Formula
@@ -77,4 +88,3 @@ end
    brew install --build-from-source Formula/agent-cockpit.rb
    ac --version
    ```
-
