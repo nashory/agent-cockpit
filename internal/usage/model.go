@@ -25,11 +25,13 @@ func (e Event) TotalTokens() int64 {
 }
 
 type Pricing struct {
-	InputPerMillion      float64
-	OutputPerMillion     float64
-	CacheReadPerMillion  float64
-	CacheWritePerMillion float64
+	InputPerMillion      float64 `toml:"input_per_million" json:"input_per_million"`
+	OutputPerMillion     float64 `toml:"output_per_million" json:"output_per_million"`
+	CacheReadPerMillion  float64 `toml:"cache_read_per_million" json:"cache_read_per_million"`
+	CacheWritePerMillion float64 `toml:"cache_write_per_million" json:"cache_write_per_million"`
 }
+
+type PriceBook map[string]Pricing
 
 func DefaultPricing(model string) Pricing {
 	m := strings.ToLower(model)
@@ -50,11 +52,32 @@ func DefaultPricing(model string) Pricing {
 }
 
 func EstimateCost(e Event) float64 {
-	p := DefaultPricing(e.Model)
+	return EstimateCostWith(e, nil)
+}
+
+func EstimateCostWith(e Event, prices PriceBook) float64 {
+	p := lookupPricing(e.Model, prices)
 	return (float64(e.Input)*p.InputPerMillion +
 		float64(e.Output)*p.OutputPerMillion +
 		float64(e.CacheRead)*p.CacheReadPerMillion +
 		float64(e.CacheCreate)*p.CacheWritePerMillion) / 1_000_000
+}
+
+func lookupPricing(model string, prices PriceBook) Pricing {
+	model = strings.ToLower(model)
+	var bestKey string
+	var best Pricing
+	for key, price := range prices {
+		k := strings.ToLower(key)
+		if k != "" && strings.Contains(model, k) && len(k) > len(bestKey) {
+			bestKey = k
+			best = price
+		}
+	}
+	if bestKey != "" {
+		return best
+	}
+	return DefaultPricing(model)
 }
 
 type Totals struct {
@@ -69,6 +92,10 @@ type Totals struct {
 }
 
 func Summarize(events []Event) Totals {
+	return SummarizeWith(events, nil)
+}
+
+func SummarizeWith(events []Event, prices PriceBook) Totals {
 	var t Totals
 	for _, e := range events {
 		t.Events++
@@ -78,7 +105,7 @@ func Summarize(events []Event) Totals {
 		t.CacheCreate += e.CacheCreate
 		t.Reasoning += e.Reasoning
 		t.Total += e.TotalTokens()
-		t.CostUSD += EstimateCost(e)
+		t.CostUSD += EstimateCostWith(e, prices)
 	}
 	return t
 }
@@ -90,7 +117,11 @@ type Bucket struct {
 }
 
 func GroupBy(events []Event, key func(Event) string) []Bucket {
-	total := Summarize(events).Total
+	return GroupByWith(events, nil, key)
+}
+
+func GroupByWith(events []Event, prices PriceBook, key func(Event) string) []Bucket {
+	total := SummarizeWith(events, prices).Total
 	byKey := map[string][]Event{}
 	for _, e := range events {
 		k := key(e)
@@ -101,7 +132,7 @@ func GroupBy(events []Event, key func(Event) string) []Bucket {
 	}
 	buckets := make([]Bucket, 0, len(byKey))
 	for k, evs := range byKey {
-		t := Summarize(evs)
+		t := SummarizeWith(evs, prices)
 		share := 0.0
 		if total > 0 {
 			share = float64(t.Total) / float64(total)

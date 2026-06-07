@@ -19,13 +19,15 @@ import (
 )
 
 type options struct {
-	days    int
-	since   string
-	until   string
-	sources string
-	project string
-	model   string
-	json    bool
+	days       int
+	since      string
+	until      string
+	sources    string
+	project    string
+	model      string
+	configPath string
+	refresh    string
+	json       bool
 }
 
 var version = "dev"
@@ -37,59 +39,95 @@ func Execute() error {
 		Short: "Live usage, cost, and speed dashboards for coding agents",
 		Long:  "ac is the command-line cockpit for local coding-agent logs: token usage, estimated cost, and trends without uploading your data.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			events, err := load(cmd.Context(), opts)
+			events, cfg, err := load(cmd.Context(), opts)
 			if err != nil {
 				return err
 			}
 			if opts.json {
-				return writeJSON(events)
+				return writeJSON(events, cfg)
 			}
-			_, err = tea.NewProgram(tui.New(events), tea.WithAltScreen()).Run()
+			_, err = tea.NewProgram(tui.New(events, tuiOptions(cfg, nil, 0)), tea.WithAltScreen()).Run()
 			return err
 		},
 	}
 	addFlags(root, opts)
 	root.Version = version
 
-	root.AddCommand(reportCommand("today", "Show today's static report", opts, func(w *os.File, events []usage.Event) {
-		report.Overview(w, "Today", events)
+	root.AddCommand(reportCommand("today", "Show today's static report", opts, func(w *os.File, events []usage.Event, ro report.Options) {
+		report.Overview(w, "Today", events, ro)
 	}, func() { opts.days = 1 }))
-	root.AddCommand(reportCommand("weekly", "Show the last 7 days", opts, func(w *os.File, events []usage.Event) {
-		report.Overview(w, "Last 7 days", events)
+	root.AddCommand(reportCommand("weekly", "Show the last 7 days", opts, func(w *os.File, events []usage.Event, ro report.Options) {
+		report.Overview(w, "Last 7 days", events, ro)
 	}, func() { opts.days = 7 }))
-	root.AddCommand(reportCommand("monthly", "Show the last 30 days", opts, func(w *os.File, events []usage.Event) {
-		report.Overview(w, "Last 30 days", events)
+	root.AddCommand(reportCommand("monthly", "Show the last 30 days", opts, func(w *os.File, events []usage.Event, ro report.Options) {
+		report.Overview(w, "Last 30 days", events, ro)
 	}, func() { opts.days = 30 }))
-	root.AddCommand(reportCommand("agents", "Group usage by agent", opts, func(w *os.File, events []usage.Event) {
-		report.Buckets(w, "Agents", usage.GroupBy(events, func(e usage.Event) string { return e.Source }), 0)
+	root.AddCommand(reportCommand("agents", "Group usage by agent", opts, func(w *os.File, events []usage.Event, ro report.Options) {
+		report.Buckets(w, "Agents", usage.GroupByWith(events, ro.Pricing, func(e usage.Event) string { return e.Source }), 0, ro)
 	}, nil))
-	root.AddCommand(reportCommand("sessions", "Show highest-usage sessions", opts, func(w *os.File, events []usage.Event) {
-		report.Sessions(w, events, 20)
+	root.AddCommand(reportCommand("sessions", "Show highest-usage sessions", opts, func(w *os.File, events []usage.Event, ro report.Options) {
+		report.Sessions(w, events, 20, ro)
 	}, nil))
-	root.AddCommand(reportCommand("trends", "Show token and cost trends", opts, func(w *os.File, events []usage.Event) {
-		report.Trend(w, events, opts.days)
+	root.AddCommand(reportCommand("trends", "Show token and cost trends", opts, func(w *os.File, events []usage.Event, ro report.Options) {
+		report.Trend(w, events, opts.days, ro)
 	}, nil))
-	root.AddCommand(reportCommand("statusline", "Print one-line usage for tmux/statusline integrations", opts, func(w *os.File, events []usage.Event) {
-		t := usage.Summarize(events)
-		fmt.Fprintf(w, "tokens %d | cost $%.2f | events %d\n", t.Total, t.CostUSD, t.Events)
+	root.AddCommand(reportCommand("speed", "Show observed output token speed by agent/model", opts, func(w *os.File, events []usage.Event, ro report.Options) {
+		report.Speed(w, events, 20)
+	}, nil))
+	root.AddCommand(&cobra.Command{
+		Use:   "live",
+		Short: "Open the TUI and refresh local logs on an interval",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			events, cfg, err := load(cmd.Context(), opts)
+			if err != nil {
+				return err
+			}
+			interval := cfg.RefreshDuration()
+			if opts.refresh != "" {
+				parsed, err := time.ParseDuration(opts.refresh)
+				if err != nil {
+					return fmt.Errorf("parse --refresh: %w", err)
+				}
+				interval = parsed
+			}
+			reload := func() ([]usage.Event, error) {
+				events, _, err := load(cmd.Context(), opts)
+				return events, err
+			}
+			_, err = tea.NewProgram(tui.New(events, tuiOptions(cfg, reload, interval)), tea.WithAltScreen()).Run()
+			return err
+		},
+	})
+	root.AddCommand(reportCommand("statusline", "Print one-line usage for tmux/statusline integrations", opts, func(w *os.File, events []usage.Event, ro report.Options) {
+		t := usage.SummarizeWith(events, ro.Pricing)
+		currency := ro.Currency
+		if currency == "" {
+			currency = "USD"
+		}
+		fmt.Fprintf(w, "tokens %d | cost %.2f %s | events %d\n", t.Total, t.CostUSD, currency, t.Events)
 	}, nil))
 	root.AddCommand(&cobra.Command{
 		Use:   "doctor",
 		Short: "Show detected log locations",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg := config.Default()
+			cfg, err := config.Load(opts.configPath)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Config: %s\n", configPath(opts))
+			fmt.Printf("Refresh: %s\n", cfg.RefreshDuration())
 			fmt.Println("Claude paths:")
-			for _, p := range cfg.ClaudePaths {
+			for _, p := range cfg.Paths.Claude {
 				printPath(p)
 			}
 			fmt.Println("Codex paths:")
-			for _, p := range cfg.CodexPaths {
+			for _, p := range cfg.Paths.Codex {
 				printPath(p)
 			}
 			return nil
 		},
 	})
-	root.AddCommand(configCommand())
+	root.AddCommand(configCommand(opts))
 
 	return root.Execute()
 }
@@ -101,10 +139,12 @@ func addFlags(cmd *cobra.Command, opts *options) {
 	cmd.PersistentFlags().StringVar(&opts.sources, "source", "", "comma-separated source filter: claude,codex")
 	cmd.PersistentFlags().StringVar(&opts.project, "project", "", "project/cwd substring filter")
 	cmd.PersistentFlags().StringVar(&opts.model, "model", "", "model substring filter")
+	cmd.PersistentFlags().StringVar(&opts.configPath, "config", "", "config file path")
+	cmd.PersistentFlags().StringVar(&opts.refresh, "refresh", "", "live refresh interval, for example 2s")
 	cmd.PersistentFlags().BoolVar(&opts.json, "json", false, "print JSON instead of a table")
 }
 
-func reportCommand(use, short string, opts *options, render func(*os.File, []usage.Event), before func()) *cobra.Command {
+func reportCommand(use, short string, opts *options, render func(*os.File, []usage.Event, report.Options), before func()) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   use,
 		Short: short,
@@ -112,34 +152,38 @@ func reportCommand(use, short string, opts *options, render func(*os.File, []usa
 			if before != nil {
 				before()
 			}
-			events, err := load(cmd.Context(), opts)
+			events, cfg, err := load(cmd.Context(), opts)
 			if err != nil {
 				return err
 			}
 			if opts.json {
-				return writeJSON(events)
+				return writeJSON(events, cfg)
 			}
-			render(os.Stdout, events)
+			render(os.Stdout, events, reportOptions(cfg))
 			return nil
 		},
 	}
 	return cmd
 }
 
-func load(ctx context.Context, opts *options) ([]usage.Event, error) {
-	events, err := source.Collect(ctx, config.Default())
+func load(ctx context.Context, opts *options) ([]usage.Event, config.Config, error) {
+	cfg, err := config.Load(opts.configPath)
 	if err != nil {
-		return nil, err
+		return nil, config.Config{}, err
+	}
+	events, err := source.Collect(ctx, cfg)
+	if err != nil {
+		return nil, config.Config{}, err
 	}
 	since, until, err := window(opts)
 	if err != nil {
-		return nil, err
+		return nil, config.Config{}, err
 	}
 	var sources []string
 	if opts.sources != "" {
 		sources = strings.Split(opts.sources, ",")
 	}
-	return usage.Filter(events, since, until, sources, opts.project, opts.model), nil
+	return usage.Filter(events, since, until, sources, opts.project, opts.model), cfg, nil
 }
 
 func window(opts *options) (time.Time, time.Time, error) {
@@ -164,13 +208,13 @@ func window(opts *options) (time.Time, time.Time, error) {
 	return since, until, nil
 }
 
-func writeJSON(events []usage.Event) error {
+func writeJSON(events []usage.Event, cfg config.Config) error {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	return enc.Encode(struct {
 		Totals usage.Totals  `json:"totals"`
 		Events []usage.Event `json:"events"`
-	}{Totals: usage.Summarize(events), Events: events})
+	}{Totals: usage.SummarizeWith(events, cfg.Pricing), Events: events})
 }
 
 func printPath(path string) {
@@ -181,13 +225,13 @@ func printPath(path string) {
 	}
 }
 
-func configCommand() *cobra.Command {
+func configCommand(opts *options) *cobra.Command {
 	cmd := &cobra.Command{Use: "config", Short: "Configuration helpers"}
 	cmd.AddCommand(&cobra.Command{
 		Use:   "path",
 		Short: "Print config path",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println(config.ConfigPath())
+			fmt.Println(configPath(opts))
 		},
 	})
 	cmd.AddCommand(&cobra.Command{
@@ -195,13 +239,16 @@ func configCommand() *cobra.Command {
 		Short: "Create a starter config file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := config.ConfigPath()
+			if opts.configPath != "" {
+				path = opts.configPath
+			}
 			if err := os.MkdirAll(filepathDir(path), 0o755); err != nil {
 				return err
 			}
 			if _, err := os.Stat(path); err == nil {
 				return fmt.Errorf("config already exists: %s", path)
 			}
-			body := []byte("timezone = \"local\"\nrefresh_interval = \"3s\"\ncurrency = \"USD\"\n")
+			body := []byte(configTemplate())
 			return os.WriteFile(path, body, 0o644)
 		},
 	})
@@ -210,4 +257,43 @@ func configCommand() *cobra.Command {
 
 func filepathDir(path string) string {
 	return filepath.Dir(path)
+}
+
+func configPath(opts *options) string {
+	if opts.configPath != "" {
+		return opts.configPath
+	}
+	return config.ConfigPath()
+}
+
+func reportOptions(cfg config.Config) report.Options {
+	return report.Options{Pricing: cfg.Pricing, Currency: cfg.Currency}
+}
+
+func tuiOptions(cfg config.Config, reload func() ([]usage.Event, error), interval time.Duration) tui.Options {
+	return tui.Options{Report: reportOptions(cfg), RefreshInterval: interval, Reload: reload}
+}
+
+func configTemplate() string {
+	return `timezone = "local"
+refresh_interval = "3s"
+currency = "USD"
+
+[paths]
+claude = ["~/.claude/projects"]
+codex = ["~/.codex/sessions", "~/.codex/archived_sessions"]
+
+# Prices are USD per million tokens. Keys match model substrings.
+[pricing."claude-sonnet"]
+input_per_million = 3
+output_per_million = 15
+cache_read_per_million = 0.30
+cache_write_per_million = 3.75
+
+[pricing."gpt-5"]
+input_per_million = 1.25
+output_per_million = 10
+cache_read_per_million = 0.125
+cache_write_per_million = 0
+`
 }

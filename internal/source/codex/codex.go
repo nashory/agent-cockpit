@@ -21,7 +21,7 @@ func (Source) Name() string { return "codex" }
 
 func (Source) Collect(ctx context.Context, cfg config.Config) ([]usage.Event, error) {
 	var events []usage.Event
-	for _, root := range cfg.CodexPaths {
+	for _, root := range cfg.Paths.Codex {
 		if _, err := os.Stat(root); errors.Is(err, os.ErrNotExist) {
 			continue
 		}

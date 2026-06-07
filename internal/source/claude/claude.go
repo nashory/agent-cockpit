@@ -21,7 +21,7 @@ func (Source) Name() string { return "claude" }
 
 func (Source) Collect(ctx context.Context, cfg config.Config) ([]usage.Event, error) {
 	var events []usage.Event
-	for _, root := range cfg.ClaudePaths {
+	for _, root := range cfg.Paths.Claude {
 		if _, err := os.Stat(root); errors.Is(err, os.ErrNotExist) {
 			continue
 		}

@@ -4,4 +4,5 @@ build/
 coverage.out
 agent-cockpit
 ac
+ac.exe
 *.test

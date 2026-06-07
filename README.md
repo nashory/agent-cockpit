@@ -45,6 +45,12 @@ Open the TUI:
 ac
 ```
 
+Open the live TUI with periodic refresh:
+
+```bash
+ac live --refresh 2s
+```
+
 Print a static report:
 
 ```bash
@@ -52,6 +58,7 @@ ac today
 ac trends --days 30
 ac agents
 ac sessions
+ac speed
 ```
 
 Filter by source, project, or model:
@@ -66,6 +73,13 @@ Use it in tmux or a statusline:
 
 ```bash
 ac statusline
+```
+
+Create a local config file:
+
+```bash
+ac config init
+ac config path
 ```
 
 ## What It Reads
@@ -87,6 +101,51 @@ No cloud upload, no background service, no API keys.
 | Agents | cross-agent usage share |
 | Models | model-level usage and cost |
 | Trends | 30-day token and cost trend |
+| Speed | observed output tokens/sec by agent and model |
+
+## Native Platforms
+
+agent-cockpit ships as a CGO-free native binary for:
+
+| OS | Architectures |
+| --- | --- |
+| macOS | Apple Silicon, Intel |
+| Linux | amd64, arm64 |
+| Windows | amd64, arm64 |
+
+The command name is intentionally short:
+
+```text
+repo:    agent-cockpit
+binary:  ac
+```
+
+## Configuration
+
+Default config paths:
+
+| OS | Path |
+| --- | --- |
+| macOS/Linux | `~/.config/agent-cockpit/config.toml` |
+| Windows | `%APPDATA%\agent-cockpit\config.toml` |
+
+Example:
+
+```toml
+timezone = "local"
+refresh_interval = "3s"
+currency = "USD"
+
+[paths]
+claude = ["~/.claude/projects"]
+codex = ["~/.codex/sessions", "~/.codex/archived_sessions"]
+
+[pricing."claude-sonnet"]
+input_per_million = 3
+output_per_million = 15
+cache_read_per_million = 0.30
+cache_write_per_million = 3.75
+```
 
 ## Development
 

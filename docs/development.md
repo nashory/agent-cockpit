@@ -17,6 +17,15 @@ make build
 make run
 ```
 
+During local development on machines with binary allow-listing, it can be
+useful to run compile-only checks first:
+
+```bash
+go build ./cmd/ac
+GOOS=linux GOARCH=amd64 go build ./cmd/ac
+GOOS=windows GOARCH=amd64 go build ./cmd/ac
+```
+
 Build the distributable archives for all native targets:
 
 ```bash
@@ -62,3 +71,19 @@ Do not commit real agent logs, API keys, bot tokens, or local config files.
 3. The release workflow uploads native archives and `checksums.txt`.
 4. The Homebrew tap should point its formula at the release tarball.
 
+## Homebrew Formula Shape
+
+The tap formula should install the shipped binary as `ac`:
+
+```ruby
+class AgentCockpit < Formula
+  desc "Terminal cockpit for usage, cost, and speed across coding agents"
+  homepage "https://github.com/nashory/agent-cockpit"
+  url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.0/ac-v0.1.0-darwin-arm64.tar.gz"
+  sha256 "..."
+
+  def install
+    bin.install "ac"
+  end
+end
+```
