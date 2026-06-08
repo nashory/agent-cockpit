@@ -205,28 +205,36 @@ func (m Model) trendsView(width int) string {
 
 	gap := 1
 	velPts := dailyVelocity(m.events, days)
-	cw, stack := gridWidths(width, gap, 3, 30)
-	colW := cw
+
+	// Three-column grid: charts fill the left two columns (stacked vertically),
+	// the insight panels fill the right column (stacked vertically). On narrow
+	// terminals everything collapses to a single full-width column.
+	colW, stack := gridWidths(width, gap, 3, 26)
 	if stack {
-		colW = width
+		tok := panel("◈ TOKENS · 30d", colCyan, width, seriesChart(tokPts, width, 8, colGreen))
+		cost := panel("◈ COST · 30d", colAmber, width, seriesChart(costPts, width, 8, colAmber))
+		vel := panel("◈ VELOCITY · out t/s", colCyan, width, seriesChart(velPts, width, 8, colCyan))
+		eff := panel("◈ EFFICIENCY", colGreen, width, m.efficiencyBody(width-6))
+		econ := panel("◈ ECONOMICS", colAmber, width, m.economicsBody(width-6))
+		cad := panel("◈ CADENCE", colCyan, width, m.cadenceBody())
+		return vstack(hero, tok, cost, vel, eff, econ, cad)
 	}
-	tok := panel("◈ TOKENS · 30d", colCyan, colW, seriesChart(tokPts, colW, 8, colGreen))
-	cost := panel("◈ COST · 30d", colAmber, colW, seriesChart(costPts, colW, 8, colAmber))
-	vel := panel("◈ VELOCITY · out t/s", colCyan, colW, seriesChart(velPts, colW, 8, colCyan))
-	charts := arrangePanels(stack, gap, tok, cost, vel)
 
-	cw3, stack3 := gridWidths(width, gap, 3, 28)
-	colW = cw3
-	if stack3 {
-		colW = width
-	}
-	iw := colW - 6
-	eff := panel("◈ EFFICIENCY", colGreen, colW, m.efficiencyBody(iw))
-	econ := panel("◈ ECONOMICS", colAmber, colW, m.economicsBody(iw))
-	cad := panel("◈ CADENCE", colCyan, colW, m.cadenceBody())
-	insights := arrangePanels(stack3, gap, eff, econ, cad)
+	leftW := 2*colW + gap
+	rightW := colW
+	tok := panel("◈ TOKENS · 30d", colCyan, leftW, seriesChart(tokPts, leftW, 8, colGreen))
+	cost := panel("◈ COST · 30d", colAmber, leftW, seriesChart(costPts, leftW, 8, colAmber))
+	vel := panel("◈ VELOCITY · out t/s", colCyan, leftW, seriesChart(velPts, leftW, 8, colCyan))
+	left := lipgloss.JoinVertical(lipgloss.Left, tok, cost, vel)
 
-	return vstack(hero, charts, insights)
+	iw := rightW - 6
+	eff := panel("◈ EFFICIENCY", colGreen, rightW, m.efficiencyBody(iw))
+	econ := panel("◈ ECONOMICS", colAmber, rightW, m.economicsBody(iw))
+	cad := panel("◈ CADENCE", colCyan, rightW, m.cadenceBody())
+	right := lipgloss.JoinVertical(lipgloss.Left, eff, econ, cad)
+
+	body := lipgloss.JoinHorizontal(lipgloss.Top, left, strings.Repeat(" ", gap), right)
+	return vstack(hero, body)
 }
 
 // trendsHero shows the 30-day window summary readouts.
