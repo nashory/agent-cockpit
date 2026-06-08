@@ -2,6 +2,7 @@ package tui
 
 import (
 	"github.com/charmbracelet/lipgloss"
+	"github.com/nashory/agent-cockpit/internal/usage"
 )
 
 // zoomTarget is one focusable widget on a tab: navigate with arrows/hjkl, press
@@ -110,6 +111,16 @@ func (m Model) zoomTargets() []zoomTarget {
 					limit = 6
 				}
 				return m.ledgerTable(w, limit)
+			}},
+		}
+	case blocks:
+		return []zoomTarget{
+			{"BLOCKS", colCyan, func(w, h int) string {
+				limit := h - 4
+				if limit < 6 {
+					limit = 6
+				}
+				return m.blocksTable(usage.SessionBlocks(ev, prices, usage.DefaultBlockWindow), w, limit)
 			}},
 		}
 	}

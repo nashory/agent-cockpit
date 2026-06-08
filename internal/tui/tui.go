@@ -19,6 +19,7 @@ const (
 	trends
 	activity
 	daily
+	blocks
 	numViews
 )
 
@@ -144,7 +145,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "e":
 			m.compact = !m.compact
 			m.focus, m.zoomed = 0, false // target list changes with the layout
-		case "1", "2", "3", "4", "5":
+		case "1", "2", "3", "4", "5", "6":
 			m.view = view(int(s[0] - '1'))
 			m.focus, m.zoomed = 0, false
 		case "tab":
@@ -197,7 +198,7 @@ func (m Model) View() string {
 }
 
 func (m Model) sidebar() string {
-	items := []string{"1 Overview", "2 Breakdown", "3 Trends", "4 Activity", "5 Daily"}
+	items := []string{"1 Overview", "2 Breakdown", "3 Trends", "4 Activity", "5 Daily", "6 Blocks"}
 	for i := range items {
 		if view(i) == m.view {
 			items[i] = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39")).Render("> " + items[i])
@@ -287,6 +288,8 @@ func (m Model) content() string {
 		fmt.Fprint(&b, m.activityView(w))
 	case daily:
 		fmt.Fprint(&b, m.dailyView(w))
+	case blocks:
+		fmt.Fprint(&b, m.blocksView(w))
 	default:
 		fmt.Fprintln(&b, "Unknown view")
 	}

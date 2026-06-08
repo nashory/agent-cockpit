@@ -156,6 +156,34 @@ func TestComputeInsights(t *testing.T) {
 	}
 }
 
+func TestSessionBlocks(t *testing.T) {
+	at := func(d, h, m int) time.Time { return time.Date(2026, 1, d, h, m, 0, 0, time.UTC) }
+	win := 5 * time.Hour
+	events := []Event{
+		{Model: "claude-opus-4-8", Output: 10, Timestamp: at(1, 9, 30)}, // block A: floor 09:00, end 14:00
+		{Model: "claude-opus-4-8", Output: 10, Timestamp: at(1, 13, 0)}, // still A
+		{Model: "gpt-5-codex", Output: 10, Timestamp: at(1, 15, 0)},     // >= 14:00 -> block B: 15:00-20:00
+		{Model: "gpt-5-codex", Output: 10, Timestamp: at(2, 2, 0)},      // next day -> block C: 02:00-07:00
+	}
+	// "now" sits inside block C's window.
+	blocks := sessionBlocksAt(events, nil, win, at(2, 4, 0))
+	if len(blocks) != 3 {
+		t.Fatalf("expected 3 blocks, got %d", len(blocks))
+	}
+	if !blocks[0].Start.Equal(at(1, 9, 0)) || !blocks[0].End.Equal(at(1, 14, 0)) {
+		t.Fatalf("block A window = %v..%v", blocks[0].Start, blocks[0].End)
+	}
+	if blocks[0].Totals.Events != 2 || blocks[0].Totals.Total != 20 {
+		t.Fatalf("block A totals = %+v", blocks[0].Totals)
+	}
+	if blocks[0].Active || blocks[1].Active {
+		t.Fatalf("only the last block should be active")
+	}
+	if !blocks[2].Active {
+		t.Fatalf("block C should be active (now is inside its window)")
+	}
+}
+
 func TestEngagedHours(t *testing.T) {
 	at := func(d, h, m int) time.Time { return time.Date(2026, 1, d, h, m, 0, 0, time.UTC) }
 	events := []Event{

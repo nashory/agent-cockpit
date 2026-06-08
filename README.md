@@ -40,9 +40,9 @@ No cloud upload. No API keys. No background daemon.
 
 ## 🎛️ Features
 
-- **5 instrument tabs:** Overview, Breakdown, Trends, Activity (including a
-  GitHub-style year **contribution calendar**), and a ccusage-style **Daily**
-  ledger table.
+- **6 instrument tabs:** Overview, Breakdown, Trends, Activity (including a
+  GitHub-style year **contribution calendar**), a ccusage-style **Daily** ledger,
+  and **Blocks** (5-hour billing windows with a live burn-rate projection).
 - **Derived insights:** cache hit rate, cache savings, input:output ratio,
   reasoning share, effective rate, output throughput (tokens/sec), usage
   velocity (day-over-day change), engaged hours, spending cadence, and streaks.
@@ -124,7 +124,7 @@ cockpit doctor                # show detected log locations
 
 ## 🧭 Dashboards
 
-Five tabs, each packed with instruments. Press `enter` to zoom any widget
+Six tabs, each packed with instruments. Press `enter` to zoom any widget
 fullscreen:
 
 | Tab | Shows |
@@ -134,6 +134,7 @@ fullscreen:
 | **Trends** | token / cost / throughput / velocity time-series plus efficiency, economics, and cadence (with engaged hours) |
 | **Activity** | year contribution calendar, hour-of-day, day-of-week, projects |
 | **Daily** | a ccusage-style per-day table: input / output / cache / total tokens, cost, and models, newest first with a grand total |
+| **Blocks** | 5-hour activity/billing windows: a live ACTIVE WINDOW with elapsed/remaining, burn rate, and a cost projection, over a table of recent windows |
 
 <table>
   <tr>
@@ -147,7 +148,7 @@ fullscreen:
 
 | Key | Action |
 | --- | --- |
-| `1`-`5` | jump to a tab |
+| `1`-`6` | jump to a tab |
 | `tab` / `shift+tab` | next / previous tab |
 | arrows / `hjkl` | move widget focus |
 | `enter` / `esc` | zoom the focused widget / exit zoom |

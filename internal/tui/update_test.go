@@ -72,8 +72,8 @@ func TestUpdateKeyHandling(t *testing.T) {
 	// shift+tab wraps backwards from overview to the last tab.
 	m = upd(m, runes("1"))
 	m = upd(m, tea.KeyMsg{Type: tea.KeyShiftTab})
-	if m.view != daily {
-		t.Fatalf("shift+tab from overview should wrap to daily, got %d", m.view)
+	if m.view != blocks {
+		t.Fatalf("shift+tab from overview should wrap to blocks, got %d", m.view)
 	}
 }
 
