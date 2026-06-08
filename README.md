@@ -59,11 +59,14 @@ No cloud upload. No API keys. No background daemon.
 
 ## 🚀 Install
 
-> **Homebrew** is the planned default once the first release is tagged:
->
-> ```bash
-> brew install nashory/tap/agent-cockpit
-> ```
+**Homebrew** (macOS & Linux):
+
+```bash
+brew install nashory/tap/agent-cockpit
+ac
+```
+
+Or track `main` with `brew install --HEAD nashory/tap/agent-cockpit`.
 
 **With Go:**
 
