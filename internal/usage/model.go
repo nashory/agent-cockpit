@@ -36,7 +36,17 @@ type Pricing struct {
 
 type PriceBook map[string]Pricing
 
+// DefaultPricing resolves a model's rates from the vendored LiteLLM table, then
+// falls back to a small built-in tier table for anything not found (e.g. a model
+// newer than the vendored snapshot). User config in lookupPricing overrides both.
 func DefaultPricing(model string) Pricing {
+	if p, ok := litellmPricing(model); ok {
+		return p
+	}
+	return fallbackPricing(model)
+}
+
+func fallbackPricing(model string) Pricing {
 	m := strings.ToLower(model)
 	switch {
 	case strings.Contains(m, "opus"):

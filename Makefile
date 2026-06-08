@@ -30,3 +30,7 @@ run:
 
 snapshot:
 	go run ./cmd/cockpit today
+
+# Refresh the vendored LiteLLM pricing table (run before a release).
+pricing:
+	python3 scripts/gen-pricing.py

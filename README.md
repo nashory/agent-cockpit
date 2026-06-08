@@ -29,8 +29,10 @@ No cloud upload. No API keys. No background daemon.
   is uploaded, no service runs in the background, no keys are required.
 - **🛩️ One cockpit for every agent.** Claude Code, Codex, and Gemini in a single
   normalized view, so you can compare engines, models, and projects side by side.
-- **💸 Know the cost.** Per-model pricing turns raw tokens into USD estimates,
-  cache savings, effective `$/1M output`, and a daily burn rate.
+- **💸 Know the cost.** Per-model pricing (derived from the
+  [LiteLLM](https://github.com/BerriAI/litellm) dataset and vendored into the
+  binary, so it stays accurate with zero network calls) turns raw tokens into USD
+  estimates, cache savings, effective `$/1M output`, and a daily burn rate.
 - **⚡ Live.** `cockpit live` refreshes the instant an agent writes a log, via fsnotify
   (with a polling backstop).
 - **🧰 Zero setup.** Sensible defaults discover your logs automatically; a config
@@ -183,7 +185,8 @@ claude = ["~/.claude/projects"]
 codex  = ["~/.codex/sessions", "~/.codex/archived_sessions"]
 gemini = ["~/.gemini/tmp"]
 
-# Prices are USD per million tokens; keys match a model-name substring.
+# Defaults come from the vendored LiteLLM table; override here only if you want
+# to. Prices are USD per million tokens; keys match a model-name substring.
 [pricing."claude-sonnet"]
 input_per_million       = 3
 output_per_million      = 15

@@ -67,9 +67,30 @@ func TestLookupPricingLongestMatch(t *testing.T) {
 	if p := lookupPricing("claude-opus-4-8", prices); p.InputPerMillion != 99 {
 		t.Fatalf("expected longest match (claude-opus), got %v", p.InputPerMillion)
 	}
-	// Unknown model falls back to built-in defaults (opus tier here).
-	if p := lookupPricing("claude-opus-4-8", nil); p.InputPerMillion != 15 {
-		t.Fatalf("default opus input rate = %v, want 15", p.InputPerMillion)
+	// With no config, rates come from the vendored LiteLLM table. Opus 4.8 is the
+	// newer, cheaper Opus tier ($5/M in), not the legacy $15/M.
+	if p := lookupPricing("claude-opus-4-8", nil); p.InputPerMillion != 5 {
+		t.Fatalf("litellm opus-4-8 input rate = %v, want 5", p.InputPerMillion)
+	}
+}
+
+func TestDefaultPricingFromLiteLLM(t *testing.T) {
+	cases := map[string]Pricing{
+		"claude-opus-4-8":            {InputPerMillion: 5, OutputPerMillion: 25},
+		"gpt-5-codex":                {InputPerMillion: 1.25, OutputPerMillion: 10},
+		"gemini-2.5-flash":           {InputPerMillion: 0.30, OutputPerMillion: 2.5},
+		"claude-sonnet-4-5-20250930": {InputPerMillion: 3, OutputPerMillion: 15}, // substring match
+	}
+	for model, want := range cases {
+		got := DefaultPricing(model)
+		if got.InputPerMillion != want.InputPerMillion || got.OutputPerMillion != want.OutputPerMillion {
+			t.Errorf("DefaultPricing(%q) = in %v/out %v, want in %v/out %v",
+				model, got.InputPerMillion, got.OutputPerMillion, want.InputPerMillion, want.OutputPerMillion)
+		}
+	}
+	// A model absent from the table resolves to zero rates (no crash, no bogus cost).
+	if p := DefaultPricing("nonexistent-model-zzz"); p.InputPerMillion != 0 || p.OutputPerMillion != 0 {
+		t.Errorf("unknown model should be zero, got %+v", p)
 	}
 }
 
