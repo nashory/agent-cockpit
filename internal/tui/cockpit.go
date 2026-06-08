@@ -37,21 +37,19 @@ func (m Model) overview(width int) string {
 		lw, rw = width, width
 	}
 
-	engines := panel("◈ ENGINES", colCyan, lw, m.enginesBar(events, prices, lw))
-	trend := panel("◈ TREND · 30d tokens", colCyan, rw, m.trendChart(events, rw))
-	models := panel("◈ MODELS", colCyan, lw, m.modelsBar(events, prices, lw))
-	spark := panel("◈ ACTIVITY", colCyan, rw, m.agentSparks(events, rw))
 	annun := m.annunciator(events, totals, width)
 
-	var mid string
-	if stack {
-		mid = lipgloss.JoinVertical(lipgloss.Left, engines, trend, models, spark)
-	} else {
-		mid = lipgloss.JoinVertical(lipgloss.Left,
-			arrangePanels(false, gap, engines, trend),
-			arrangePanels(false, gap, models, spark),
-		)
-	}
+	// Two rows of paired instruments; panels in a row share a box height so the
+	// grid stays even. Narrow terminals stack everything vertically.
+	row1 := panelsRow(stack, gap,
+		panelSpec{"◈ ENGINES", colCyan, lw, m.enginesBar(events, prices, lw)},
+		panelSpec{"◈ TREND · 30d tokens", colCyan, rw, m.trendChart(events, rw)},
+	)
+	row2 := panelsRow(stack, gap,
+		panelSpec{"◈ MODELS", colCyan, lw, m.modelsBar(events, prices, lw)},
+		panelSpec{"◈ ACTIVITY", colCyan, rw, m.agentSparks(events, rw)},
+	)
+	mid := lipgloss.JoinVertical(lipgloss.Left, row1, row2)
 	return lipgloss.JoinVertical(lipgloss.Left, primary, mid, annun)
 }
 

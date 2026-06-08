@@ -67,9 +67,10 @@ func (m Model) activityView(width int) string {
 	if stack {
 		lw, rw = width, width
 	}
-	weekPanel := panel("◈ DAY OF WEEK", colCyan, lw, m.weekdayBars(m.ins, lw))
-	projPanel := panel("◈ TOP PROJECTS", colCyan, rw, m.projectBars(rw, cur))
-	row := arrangePanels(stack, gap, weekPanel, projPanel)
+	row := panelsRow(stack, gap,
+		panelSpec{"◈ DAY OF WEEK", colCyan, lw, m.weekdayBars(m.ins, lw)},
+		panelSpec{"◈ TOP PROJECTS", colCyan, rw, m.projectBars(rw, cur)},
+	)
 
 	return vstack(hero, cal, hourPanel, row)
 }

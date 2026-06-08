@@ -19,8 +19,6 @@ func (m Model) breakdownView(width int) string {
 	if stack {
 		lw, rw = width, width
 	}
-	models := panel("◈ MODELS · load", colCyan, lw, m.modelsBody(lw, 8))
-
 	rows := speedRows(m.events)
 	if len(rows) > 8 {
 		rows = rows[:8]
@@ -29,7 +27,11 @@ func (m Model) breakdownView(width int) string {
 	if len(rows) > 0 && rows[0].tps > 0 {
 		maxTPS = rows[0].tps
 	}
-	speed := panel("◈ OUTPUT SPEED", colCyan, rw, speedLanes(rows, maxTPS, rw))
 
-	return vstack(engines, arrangePanels(stack, gap, models, speed), mix)
+	row := panelsRow(stack, gap,
+		panelSpec{"◈ MODELS · load", colCyan, lw, m.modelsBody(lw, 8)},
+		panelSpec{"◈ OUTPUT SPEED", colCyan, rw, speedLanes(rows, maxTPS, rw)},
+	)
+
+	return vstack(engines, row, mix)
 }

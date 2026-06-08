@@ -83,6 +83,14 @@ func heroPanel(title string, accent lipgloss.Color, width int, body string) stri
 }
 
 func boxed(title string, accent lipgloss.Color, width int, body string, border lipgloss.Border, padV int) string {
+	return boxedH(title, accent, width, body, border, padV, 0)
+}
+
+// boxedH is boxed with an optional fixed body height (in lines). When bodyLines
+// > 0 the content area is padded to that height so sibling panels line up to the
+// same box height instead of ending raggedly. bodyLines counts the body only;
+// the header line is added on top.
+func boxedH(title string, accent lipgloss.Color, width int, body string, border lipgloss.Border, padV, bodyLines int) string {
 	inner := width - 4 // 2 border + 2 horizontal padding
 	if inner < 1 {
 		inner = 1
@@ -92,12 +100,81 @@ func boxed(title string, accent lipgloss.Color, width int, body string, border l
 	// Hard-clip every line to the text area so block-glyph content (gauges,
 	// charts, heat cells) that cannot word-wrap never spills past the border.
 	content = clipLines(content, inner-2)
-	return lipgloss.NewStyle().
+	st := lipgloss.NewStyle().
 		Border(border).
 		BorderForeground(accent).
 		Padding(padV, 1).
-		Width(inner).
-		Render(content)
+		Width(inner)
+	if bodyLines > 0 {
+		st = st.Height(bodyLines + 1) // +1 for the header line
+	}
+	return st.Render(content)
+}
+
+// panelH is panel with a fixed body height, so panels that share a row (or a
+// column) line up to the same box height.
+func panelH(title string, accent lipgloss.Color, width, bodyLines int, body string) string {
+	padV := 0
+	if renderCompact {
+		padV = 1
+	}
+	return boxedH(title, accent, width, body, lipgloss.RoundedBorder(), padV, bodyLines)
+}
+
+// panelSpec describes one panel for the row/column equalizers.
+type panelSpec struct {
+	title  string
+	accent lipgloss.Color
+	width  int
+	body   string
+}
+
+// lineCount returns the number of display lines in s ("" is zero lines).
+func lineCount(s string) int {
+	if s == "" {
+		return 0
+	}
+	return strings.Count(s, "\n") + 1
+}
+
+func maxBodyLines(specs []panelSpec) int {
+	h := 0
+	for _, s := range specs {
+		if n := lineCount(s.body); n > h {
+			h = n
+		}
+	}
+	return h
+}
+
+// panelsRow lays out panels side by side at a uniform box height (the tallest
+// body sets the height). When stack is true it falls back to a natural-height
+// vertical stack for narrow terminals.
+func panelsRow(stack bool, gap int, specs ...panelSpec) string {
+	if stack {
+		out := make([]string, len(specs))
+		for i, s := range specs {
+			out[i] = panel(s.title, s.accent, s.width, s.body)
+		}
+		return arrangePanels(true, gap, out...)
+	}
+	h := maxBodyLines(specs)
+	out := make([]string, len(specs))
+	for i, s := range specs {
+		out[i] = panelH(s.title, s.accent, s.width, h, s.body)
+	}
+	return arrangePanels(false, gap, out...)
+}
+
+// panelsCol stacks panels vertically at a uniform box height, so a column of
+// instrument cards reads as an even grid rather than ragged blocks.
+func panelsCol(specs ...panelSpec) string {
+	h := maxBodyLines(specs)
+	out := make([]string, len(specs))
+	for i, s := range specs {
+		out[i] = panelH(s.title, s.accent, s.width, h, s.body)
+	}
+	return lipgloss.JoinVertical(lipgloss.Left, out...)
 }
 
 // vstack joins panels vertically, inserting blank spacer rows in compact mode

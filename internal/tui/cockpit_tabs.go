@@ -222,16 +222,18 @@ func (m Model) trendsView(width int) string {
 
 	leftW := 2*colW + gap
 	rightW := colW
-	tok := panel("◈ TOKENS · 30d", colCyan, leftW, seriesChart(tokPts, leftW, 8, colGreen))
-	cost := panel("◈ COST · 30d", colAmber, leftW, seriesChart(costPts, leftW, 8, colAmber))
-	vel := panel("◈ VELOCITY · out t/s", colCyan, leftW, seriesChart(velPts, leftW, 8, colCyan))
-	left := lipgloss.JoinVertical(lipgloss.Left, tok, cost, vel)
+	left := panelsCol(
+		panelSpec{"◈ TOKENS · 30d", colCyan, leftW, seriesChart(tokPts, leftW, 8, colGreen)},
+		panelSpec{"◈ COST · 30d", colAmber, leftW, seriesChart(costPts, leftW, 8, colAmber)},
+		panelSpec{"◈ VELOCITY · out t/s", colCyan, leftW, seriesChart(velPts, leftW, 8, colCyan)},
+	)
 
 	iw := rightW - 6
-	eff := panel("◈ EFFICIENCY", colGreen, rightW, m.efficiencyBody(iw))
-	econ := panel("◈ ECONOMICS", colAmber, rightW, m.economicsBody(iw))
-	cad := panel("◈ CADENCE", colCyan, rightW, m.cadenceBody())
-	right := lipgloss.JoinVertical(lipgloss.Left, eff, econ, cad)
+	right := panelsCol(
+		panelSpec{"◈ EFFICIENCY", colGreen, rightW, m.efficiencyBody(iw)},
+		panelSpec{"◈ ECONOMICS", colAmber, rightW, m.economicsBody(iw)},
+		panelSpec{"◈ CADENCE", colCyan, rightW, m.cadenceBody()},
+	)
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, left, strings.Repeat(" ", gap), right)
 	return vstack(hero, body)
