@@ -7,6 +7,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/nashory/agent-cockpit/internal/report"
 	"github.com/nashory/agent-cockpit/internal/usage"
@@ -89,6 +90,38 @@ func TestCockpitRender(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestCalendarCursor(t *testing.T) {
+	m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
+	m.view = calendar
+
+	step := func(k tea.KeyType) {
+		nm, _ := m.Update(tea.KeyMsg{Type: k})
+		m = nm.(Model)
+	}
+
+	step(tea.KeyLeft) // older by a week
+	if m.calCursor != 7 {
+		t.Fatalf("left should move +7, got %d", m.calCursor)
+	}
+	step(tea.KeyRight)
+	step(tea.KeyRight) // back to 0, then clamp
+	if m.calCursor != 0 {
+		t.Fatalf("cursor should clamp at 0, got %d", m.calCursor)
+	}
+	step(tea.KeyUp) // older by a day
+	if m.calCursor != 1 {
+		t.Fatalf("up should move +1, got %d", m.calCursor)
+	}
+
+	// Off the calendar tab, arrows switch tabs and must not move the cursor.
+	m.view = overview
+	prev := m.calCursor
+	step(tea.KeyLeft)
+	if m.calCursor != prev {
+		t.Fatalf("cursor moved off the calendar tab")
 	}
 }
 

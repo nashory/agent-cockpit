@@ -36,8 +36,21 @@ type Model struct {
 	width           int
 	height          int
 	compact         bool           // compact (light) vs expert (dense) layout
+	calCursor       int            // calendar: selected day, days before today
 	ins             usage.Insights // derived once per data load, not per render
 	err             error
+}
+
+const calMaxCursor = 53*7 - 1
+
+func clampCursor(c int) int {
+	if c < 0 {
+		return 0
+	}
+	if c > calMaxCursor {
+		return calMaxCursor
+	}
+	return c
 }
 
 type Options struct {
@@ -88,6 +101,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		return m, nil
 	case tea.KeyMsg:
+		// On the calendar, arrow/hjkl drive the day cursor instead of tabs.
+		if m.view == calendar {
+			switch msg.String() {
+			case "left", "h":
+				m.calCursor = clampCursor(m.calCursor + 7)
+				return m, nil
+			case "right", "l":
+				m.calCursor = clampCursor(m.calCursor - 7)
+				return m, nil
+			case "up", "k":
+				m.calCursor = clampCursor(m.calCursor + 1)
+				return m, nil
+			case "down", "j":
+				m.calCursor = clampCursor(m.calCursor - 1)
+				return m, nil
+			}
+		}
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit

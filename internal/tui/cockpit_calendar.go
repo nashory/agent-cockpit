@@ -19,9 +19,23 @@ var contribRamp = []lipgloss.Color{
 	lipgloss.Color("46"),
 }
 
-// colWeekendIdle tints empty Saturday/Sunday cells slightly darker than empty
-// weekdays, so the weekend bands read at a glance.
-var colWeekendIdle = lipgloss.Color("234")
+// Idle-cell tints: weekends read darker, and weekdays alternate by month parity
+// so month bands are visible without breaking the contiguous grid.
+var (
+	colWeekendIdle   = lipgloss.Color("234")
+	colMonthEvenIdle = lipgloss.Color("236")
+	colMonthOddIdle  = lipgloss.Color("233")
+)
+
+func idleColor(d time.Time, row int) lipgloss.Color {
+	if row == 0 || row == 6 {
+		return colWeekendIdle
+	}
+	if int(d.Month())%2 == 1 {
+		return colMonthOddIdle
+	}
+	return colMonthEvenIdle
+}
 
 func contribStyle(level int) lipgloss.Style {
 	if level < 0 {
@@ -95,6 +109,10 @@ func (m Model) calendarView(width int) string {
 	start := end.AddDate(0, 0, -(weeks-1)*7)
 	start = start.AddDate(0, 0, -int(start.Weekday()))
 
+	// Selected day (cursor), navigable with arrows/hjkl.
+	selDate := end.AddDate(0, 0, -m.calCursor)
+	selKey := dayKey(selDate)
+
 	// Busiest day in view sets the color scale.
 	var max int64
 	for c := 0; c < weeks; c++ {
@@ -138,10 +156,14 @@ func (m Model) calendarView(width int) string {
 				sb.WriteString(strings.Repeat(" ", cellW))
 				continue
 			}
-			lvl := contribLevel(tokMap[dayKey(d)], max)
+			k := dayKey(d)
+			lvl := contribLevel(tokMap[k], max)
 			style := contribStyle(lvl)
-			if lvl == 0 && (r == 0 || r == 6) {
-				style = lipgloss.NewStyle().Foreground(colWeekendIdle) // shade idle weekends
+			if lvl == 0 {
+				style = lipgloss.NewStyle().Foreground(idleColor(d, r))
+			}
+			if k == selKey {
+				style = style.Reverse(true) // cursor
 			}
 			sb.WriteString(style.Render(strings.Repeat("█", cellW)))
 		}
@@ -149,11 +171,16 @@ func (m Model) calendarView(width int) string {
 	}
 
 	legend := contribLegend(cellW)
+	tip := lipgloss.NewStyle().Foreground(colCyan).Render("◂ ") +
+		valueStyle.Render(selDate.Format("Mon Jan 02 2006")) +
+		labelStyle.Render(" · ") +
+		lipgloss.NewStyle().Foreground(colGreen).Render(compact(tokMap[selKey])+" tokens") +
+		lipgloss.NewStyle().Foreground(colCyan).Render(" ▸")
 	grid := lipgloss.JoinVertical(lipgloss.Left,
-		append([]string{monthLine}, append(rows, "", legend)...)...)
+		append([]string{monthLine}, append(rows, "", legend, tip)...)...)
 
 	hero := heroPanel("✈ YEAR", colCyan, width, m.calendarHero(tokMap, start, end))
-	gridPanel := panel(fmt.Sprintf("◈ CONTRIBUTIONS · %d weeks · tokens/day", weeks), colGreen, width, grid)
+	gridPanel := panel(fmt.Sprintf("◈ CONTRIBUTIONS · %d weeks · ←→ weeks ↑↓ days", weeks), colGreen, width, grid)
 	return lipgloss.JoinVertical(lipgloss.Left, hero, gridPanel)
 }
 
