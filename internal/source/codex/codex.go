@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/nashory/agent-cockpit/internal/config"
+	"github.com/nashory/agent-cockpit/internal/scan"
 	"github.com/nashory/agent-cockpit/internal/usage"
 )
 
@@ -20,35 +20,9 @@ type Source struct{}
 func (Source) Name() string { return "codex" }
 
 func (Source) Collect(ctx context.Context, cfg config.Config) ([]usage.Event, error) {
-	var events []usage.Event
-	for _, root := range cfg.Paths.Codex {
-		if _, err := os.Stat(root); errors.Is(err, os.ErrNotExist) {
-			continue
-		}
-		err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-			if err != nil {
-				return nil
-			}
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			default:
-			}
-			if d.IsDir() || !strings.HasSuffix(path, ".jsonl") {
-				return nil
-			}
-			parsed, err := ParseFile(path)
-			if err != nil {
-				return nil
-			}
-			events = append(events, parsed...)
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-	return events, nil
+	return scan.Parallel(ctx, cfg.Paths.Codex,
+		func(path string) bool { return strings.HasSuffix(path, ".jsonl") },
+		ParseFile)
 }
 
 type envelope struct {

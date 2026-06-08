@@ -2,6 +2,7 @@ package source
 
 import (
 	"context"
+	"sync"
 
 	"github.com/nashory/agent-cockpit/internal/config"
 	"github.com/nashory/agent-cockpit/internal/source/claude"
@@ -24,13 +25,26 @@ func All() []Source {
 }
 
 func Collect(ctx context.Context, cfg config.Config) ([]usage.Event, error) {
+	srcs := All()
+	results := make([][]usage.Event, len(srcs))
+	errs := make([]error, len(srcs))
+
+	var wg sync.WaitGroup
+	for i, src := range srcs {
+		wg.Add(1)
+		go func(i int, src Source) {
+			defer wg.Done()
+			results[i], errs[i] = src.Collect(ctx, cfg)
+		}(i, src)
+	}
+	wg.Wait()
+
 	var all []usage.Event
-	for _, src := range All() {
-		events, err := src.Collect(ctx, cfg)
-		if err != nil {
-			return nil, err
+	for i := range srcs {
+		if errs[i] != nil {
+			return nil, errs[i]
 		}
-		all = append(all, events...)
+		all = append(all, results[i]...)
 	}
 	return all, nil
 }

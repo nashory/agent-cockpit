@@ -3,13 +3,13 @@ package gemini
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/nashory/agent-cockpit/internal/config"
+	"github.com/nashory/agent-cockpit/internal/scan"
 	"github.com/nashory/agent-cockpit/internal/usage"
 )
 
@@ -18,35 +18,11 @@ type Source struct{}
 func (Source) Name() string { return "gemini" }
 
 func (Source) Collect(ctx context.Context, cfg config.Config) ([]usage.Event, error) {
-	var events []usage.Event
-	for _, root := range cfg.Paths.Gemini {
-		if _, err := os.Stat(root); errors.Is(err, os.ErrNotExist) {
-			continue
-		}
-		err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-			if err != nil {
-				return nil
-			}
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			default:
-			}
-			if d.IsDir() || !strings.HasSuffix(path, ".json") || !strings.Contains(filepath.Base(path), "session-") {
-				return nil
-			}
-			parsed, err := ParseFile(path)
-			if err != nil {
-				return nil
-			}
-			events = append(events, parsed...)
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-	return events, nil
+	return scan.Parallel(ctx, cfg.Paths.Gemini,
+		func(path string) bool {
+			return strings.HasSuffix(path, ".json") && strings.Contains(filepath.Base(path), "session-")
+		},
+		ParseFile)
 }
 
 type sessionFile struct {
