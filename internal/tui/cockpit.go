@@ -41,19 +41,32 @@ func (m Model) overview(width int) string {
 
 	// Two rows of paired instruments; panels in a row share a box height so the
 	// grid stays even. Narrow terminals stack everything vertically.
+	span := m.dataSpanLabel()
 	row1 := panelsRow(stack, gap,
-		panelSpec{"◈ ENGINES", colCyan, lw, m.enginesBar(events, prices, lw)},
+		panelSpec{"◈ ENGINES · " + span, colCyan, lw, m.enginesBar(events, prices, lw)},
 		panelSpec{"◈ TREND · 30d tokens", colCyan, rw, m.trendChart(events, rw)},
 	)
 	row2 := panelsRow(stack, gap,
-		panelSpec{"◈ MODELS", colCyan, lw, m.modelsBar(events, prices, lw)},
-		panelSpec{"◈ ACTIVITY", colCyan, rw, m.agentSparks(events, rw)},
+		panelSpec{"◈ MODELS · " + span, colCyan, lw, m.modelsBar(events, prices, lw)},
+		panelSpec{"◈ ACTIVITY · 14d", colCyan, rw, m.agentSparks(events, rw)},
 	)
 	mid := lipgloss.JoinVertical(lipgloss.Left, row1, row2)
 	return lipgloss.JoinVertical(lipgloss.Left, primary, mid, annun)
 }
 
 // primaryStrip is the PFD-style top row: the headline readouts.
+// dataSpanLabel describes the calendar window the loaded events actually cover
+// (e.g. "30d"), so all-time aggregates like ENGINES share and MODELS load state
+// their period instead of leaving the reader guessing. It reflects any active
+// --since/--days filter since those shrink the loaded set.
+func (m Model) dataSpanLabel() string {
+	d := m.ins.SpanDays
+	if d < 1 {
+		d = 1
+	}
+	return fmt.Sprintf("%dd", d)
+}
+
 func (m Model) primaryStrip(t usage.Totals, width int) string {
 	cur := m.reportOptions.Currency
 	if cur == "" {

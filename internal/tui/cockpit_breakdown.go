@@ -6,11 +6,12 @@ package tui
 // of them for full detail.
 func (m Model) breakdownView(width int) string {
 	prices := m.reportOptions.Pricing
-	engines := panel("◈ ENGINES · share", colCyan, width, m.enginesBar(m.events, prices, width))
+	span := m.dataSpanLabel()
+	engines := panel("◈ ENGINES · share · "+span, colCyan, width, m.enginesBar(m.events, prices, width))
 	mix := panel("◈ MODEL MIX · 30d share", colCyan, width, m.modelStack(width, 8))
 
 	if m.compact {
-		return vstack(engines, panel("◈ MODELS · load", colCyan, width, m.modelsBody(width, 5)), mix)
+		return vstack(engines, panel("◈ MODELS · load · "+span, colCyan, width, m.modelsBody(width, 5)), mix)
 	}
 
 	gap := 1
@@ -29,7 +30,7 @@ func (m Model) breakdownView(width int) string {
 	}
 
 	row := panelsRow(stack, gap,
-		panelSpec{"◈ MODELS · load", colCyan, lw, m.modelsBody(lw, 8)},
+		panelSpec{"◈ MODELS · load · " + span, colCyan, lw, m.modelsBody(lw, 8)},
 		panelSpec{"◈ OUTPUT SPEED", colCyan, rw, speedLanes(rows, maxTPS, rw)},
 	)
 
