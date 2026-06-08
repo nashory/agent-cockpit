@@ -3,7 +3,7 @@
 # 🛩️ agent-cockpit
 
 [![CI](https://github.com/nashory/agent-cockpit/actions/workflows/ci.yml/badge.svg)](https://github.com/nashory/agent-cockpit/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/nashory/agent-cockpit)](https://goreportcard.com/report/github.com/nashory/agent-cockpit)
+[![Go Report Card](https://goreportcard.com/badge/github.com/nashory/agent-cockpit?refresh=1)](https://goreportcard.com/report/github.com/nashory/agent-cockpit)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/nashory/agent-cockpit)](go.mod)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-555)
