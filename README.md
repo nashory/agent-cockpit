@@ -6,7 +6,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/nashory/agent-cockpit)](https://goreportcard.com/report/github.com/nashory/agent-cockpit)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/nashory/agent-cockpit)](go.mod)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-555)](#-platforms)
+![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-555)
 
 **A live terminal cockpit for token usage, cost, and speed across your coding agents.**
 
@@ -23,13 +23,6 @@ No cloud upload. No API keys. No background daemon.
 
 ---
 
-## Contents
-
-[Why](#-why-agent-cockpit) · [Features](#-features) · [Install](#-install) ·
-[Quick start](#-quick-start) · [Dashboards](#-dashboards) · [Privacy](#-what-it-reads) ·
-[Configuration](#-configuration) · [How it works](#-how-it-works) ·
-[Platforms](#-platforms) · [Development](#-development) · [License](#-license)
-
 ## ✨ Why agent-cockpit?
 
 - **🔒 Private by design.** It only reads log files already on your disk. Nothing
@@ -45,8 +38,8 @@ No cloud upload. No API keys. No background daemon.
 
 ## 🎛️ Features
 
-- **8 instrument tabs** — Overview, Agents, Models, Trends, Speed, Insights,
-  Activity, and a GitHub-style year **Calendar**.
+- **4 instrument tabs** — Overview, Breakdown, Trends, and Activity (including a
+  GitHub-style year **contribution calendar**).
 - **Derived insights** — cache hit rate, cache savings, input:output ratio,
   reasoning share, effective rate, spending cadence, and activity streaks.
 - **Focus & zoom** — arrow-key focus across widgets, `enter` to blow one up
