@@ -212,30 +212,41 @@ func (m Model) trendsView(width int) string {
 	colW, stack := gridWidths(width, gap, 3, 26)
 	if stack {
 		tok := panel("◈ TOKENS · 30d", colCyan, width, seriesChart(tokPts, width, 8, colGreen))
-		cost := panel("◈ COST · 30d", colAmber, width, seriesChart(costPts, width, 8, colAmber))
+		cost := panel("◈ COST · 30d", colCyan, width, seriesChart(costPts, width, 8, colAmber))
 		vel := panel("◈ VELOCITY · out t/s", colCyan, width, seriesChart(velPts, width, 8, colCyan))
-		eff := panel("◈ EFFICIENCY", colGreen, width, m.efficiencyBody(width-6))
-		econ := panel("◈ ECONOMICS", colAmber, width, m.economicsBody(width-6))
+		eff := panel("◈ EFFICIENCY", colCyan, width, m.efficiencyBody(width-6))
+		econ := panel("◈ ECONOMICS", colCyan, width, m.economicsBody(width-6))
 		cad := panel("◈ CADENCE", colCyan, width, m.cadenceBody())
 		return vstack(hero, tok, cost, vel, eff, econ, cad)
 	}
 
 	leftW := 2*colW + gap
 	rightW := colW
-	left := panelsCol(
-		panelSpec{"◈ TOKENS · 30d", colCyan, leftW, seriesChart(tokPts, leftW, 8, colGreen)},
-		panelSpec{"◈ COST · 30d", colAmber, leftW, seriesChart(costPts, leftW, 8, colAmber)},
-		panelSpec{"◈ VELOCITY · out t/s", colCyan, leftW, seriesChart(velPts, leftW, 8, colCyan)},
-	)
-
 	iw := rightW - 6
-	right := panelsCol(
-		panelSpec{"◈ EFFICIENCY", colGreen, rightW, m.efficiencyBody(iw)},
-		panelSpec{"◈ ECONOMICS", colAmber, rightW, m.economicsBody(iw)},
-		panelSpec{"◈ CADENCE", colCyan, rightW, m.cadenceBody()},
-	)
 
-	body := lipgloss.JoinHorizontal(lipgloss.Top, left, strings.Repeat(" ", gap), right)
+	// Borders are uniform cyan like the other tabs; chart line colors stay
+	// distinct since they carry meaning. Every box uses one shared body height so
+	// the two columns form an even grid that ends at the same row.
+	charts := []panelSpec{
+		{"◈ TOKENS · 30d", colCyan, leftW, seriesChart(tokPts, leftW, 8, colGreen)},
+		{"◈ COST · 30d", colCyan, leftW, seriesChart(costPts, leftW, 8, colAmber)},
+		{"◈ VELOCITY · out t/s", colCyan, leftW, seriesChart(velPts, leftW, 8, colCyan)},
+	}
+	insights := []panelSpec{
+		{"◈ EFFICIENCY", colCyan, rightW, m.efficiencyBody(iw)},
+		{"◈ ECONOMICS", colCyan, rightW, m.economicsBody(iw)},
+		{"◈ CADENCE", colCyan, rightW, m.cadenceBody()},
+	}
+	h := maxBodyLines(append(append([]panelSpec{}, charts...), insights...))
+	render := func(specs []panelSpec) string {
+		out := make([]string, len(specs))
+		for i, s := range specs {
+			out[i] = panelH(s.title, s.accent, s.width, h, s.body)
+		}
+		return lipgloss.JoinVertical(lipgloss.Left, out...)
+	}
+
+	body := lipgloss.JoinHorizontal(lipgloss.Top, render(charts), strings.Repeat(" ", gap), render(insights))
 	return vstack(hero, body)
 }
 
