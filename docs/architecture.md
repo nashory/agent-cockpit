@@ -20,9 +20,10 @@ internal/source/            adapter registry
 internal/source/claude/     Claude Code JSONL parser
 internal/source/codex/      Codex JSONL parser
 internal/source/gemini/     Gemini session parser
-internal/usage/             normalized event model, pricing, grouping
+internal/scan/              parallel directory walk + file parsing
+internal/usage/             normalized event model, pricing, grouping, insights
 internal/report/            text reports and charts
-internal/tui/               sidebar TUI and live refresh loop
+internal/tui/               glass-cockpit TUI (tabs, theme, async load)
 ```
 
 ## Normalized Event
@@ -59,11 +60,25 @@ Cost is estimated locally from model-name substring matching:
 The UI should always say estimated cost unless an adapter gains authoritative
 billing data.
 
+## Loading Pipeline
+
+`source.Collect` runs the three adapters concurrently. Each adapter delegates to
+`scan.Parallel`, which first walks its roots to gather matching file paths, then
+parses them across a worker pool sized to the CPU count. Per-file parse errors
+are skipped so one corrupt log cannot abort a scan. Event order is therefore
+non-deterministic; all downstream consumers aggregate into maps and sort their
+own output, so they do not depend on order.
+
+The TUI launches immediately and performs the first load in a background
+`tea.Cmd`, showing a loading state and then the dashboard. Derived insights are
+computed once per load and cached on the model, not recomputed per frame.
+
 ## Live Mode
 
-`ac live` uses a polling refresh loop in the TUI. This is deliberately portable
-across macOS, Linux, and Windows. A future fsnotify watcher can be layered in
-without changing adapters or report aggregation.
+`ac live` uses a non-blocking polling refresh loop in the TUI: each tick kicks
+off a background reload rather than blocking the render. This is deliberately
+portable across macOS, Linux, and Windows. A future fsnotify watcher can be
+layered in without changing adapters or report aggregation.
 
 ## Native Distribution
 

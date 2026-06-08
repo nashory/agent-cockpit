@@ -11,7 +11,7 @@ without uploading your logs.
 </div>
 
 > Early MVP: Claude Code, Codex, and Gemini local log parsing are implemented first.
-> More agent adapters and live speed dashboards are planned.
+> More agent adapters (OpenCode, Copilot) are planned.
 
 ## Install
 
@@ -96,13 +96,29 @@ No cloud upload, no background service, no API keys.
 
 ## Dashboards
 
+The TUI is a glass-cockpit dashboard with eight instrument tabs:
+
 | View | Shows |
 | --- | --- |
-| Overview | token totals, estimated cost, top agents, top models |
-| Agents | cross-agent usage share |
-| Models | model-level usage and cost |
-| Trends | 30-day token and cost trend |
-| Speed | observed output tokens/sec by agent and model |
+| Overview | headline token/cost readouts, per-agent bars, 30-day trend |
+| Agents | per-engine clusters: tokens, cost, share, speed, activity |
+| Models | model-level load, cost, and share |
+| Trends | 30-day token and cost time-series |
+| Speed | airspeed tape and observed output tokens/sec per lane |
+| Insights | cache efficiency, economics, and spending cadence |
+| Activity | hour-of-day heatmap, day-of-week, and top projects |
+| Calendar | GitHub-style year contribution graph of tokens/day |
+
+### Keys
+
+| Key | Action |
+| --- | --- |
+| `1`–`8` | jump to a tab |
+| `tab` / `shift+tab` | next / previous tab |
+| `e` | toggle expert (dense) / compact (light) mode |
+| `r` | refresh now |
+| `q` | quit |
+| arrows / `hjkl` | on Calendar: move the day cursor; elsewhere: switch tabs |
 
 ## Native Platforms
 
@@ -175,16 +191,15 @@ cmd/ac/                     main entry
 internal/source/claude/     Claude Code JSONL adapter
 internal/source/codex/      Codex JSONL adapter
 internal/source/gemini/     Gemini session adapter
-internal/usage/             normalized events and aggregation
+internal/scan/              parallel directory walk + file parsing
+internal/usage/             normalized events, aggregation, derived insights
 internal/report/            static terminal reports
-internal/tui/               Bubble Tea TUI
+internal/tui/               Bubble Tea glass-cockpit TUI
 ```
 
 ## Roadmap
 
 - Live file watching and active session detection
-- Observed throughput dashboards
 - OpenCode and Copilot adapters
-- Configurable pricing
 - Homebrew distribution
 - Windows zip releases
