@@ -142,6 +142,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.startRefresh()
 		case "e":
 			m.compact = !m.compact
+			m.focus, m.zoomed = 0, false // target list changes with the layout
 		case "1", "2", "3", "4":
 			m.view = view(int(s[0] - '1'))
 			m.focus, m.zoomed = 0, false

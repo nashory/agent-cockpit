@@ -89,6 +89,50 @@ func TestCockpitRender(t *testing.T) {
 	}
 }
 
+// TestFocusTargetsMatchBody guards against the FOCUS bar drifting out of sync
+// with the panels a tab actually draws: every focus chip must correspond to a
+// "◈ <title>" instrument header in the rendered body, in both expert and
+// compact layouts. (Compact renders fewer panels, so the target list must
+// shrink to match.)
+func TestFocusTargetsMatchBody(t *testing.T) {
+	for _, compactMode := range []bool{false, true} {
+		for _, v := range []view{overview, breakdown, trends, activity} {
+			m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
+			m.width = 140
+			m.height = 44
+			m.view = v
+			m.compact = compactMode
+			body := stripANSI(m.View())
+			for _, tgt := range m.zoomTargets() {
+				header := "◈ " + tgt.title
+				if !strings.Contains(body, header) {
+					t.Errorf("view=%d compact=%v: FOCUS chip %q has no matching %q panel in the body",
+						v, compactMode, tgt.title, header)
+				}
+			}
+		}
+	}
+}
+
+// stripANSI removes SGR escape sequences so rendered text can be matched.
+func stripANSI(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		if s[i] == 0x1b {
+			for i < len(s) && s[i] != 'm' {
+				i++
+			}
+			if i < len(s) {
+				i++ // skip the trailing 'm'
+			}
+			continue
+		}
+		b.WriteByte(s[i])
+		i++
+	}
+	return b.String()
+}
+
 func TestZoomRender(t *testing.T) {
 	views := []view{overview, breakdown, trends, activity}
 	for _, v := range views {

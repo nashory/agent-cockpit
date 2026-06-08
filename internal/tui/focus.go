@@ -25,56 +25,77 @@ func chartH(h int) int {
 }
 
 // zoomTargets lists the focusable widgets for the current tab, each able to
-// render itself fullscreen. The renderers reuse the same body helpers as the
-// dashboard, with charts honoring the available height.
+// render itself fullscreen. The list is kept in lockstep with what the tab body
+// actually draws: the order follows the on-screen reading order, and compact
+// mode returns only the subset of panels the compact layout renders, so the
+// FOCUS bar never advertises a widget that isn't on screen.
 func (m Model) zoomTargets() []zoomTarget {
 	ev := m.events
 	prices := m.reportOptions.Pricing
 	cur := m.currency()
 	tokChart := func(w, h int) string { return seriesChart(dailySeries(ev, 30), w, chartH(h), colGreen) }
 	costChart := func(w, h int) string { return seriesChart(dailyCostSeries(ev, 30, prices), w, chartH(h), colAmber) }
-	enginesZoom := func(w, h int) string { return m.enginesBar(ev, prices, w) }
+	enginesBar := func(w, h int) string { return m.enginesBar(ev, prices, w) }
+	enginesClusters := func(w, h int) string { return m.agentClusters(w) }
 	modelsZoom := func(w, h int) string { return m.modelsBody(w, 0) }
+	trend := zoomTarget{"TREND", colCyan, tokChart}
+	engines := zoomTarget{"ENGINES", colCyan, enginesBar}
+	models := zoomTarget{"MODELS", colCyan, modelsZoom}
+	activitySpark := zoomTarget{"ACTIVITY", colCyan, func(w, h int) string { return m.agentSparks(ev, w) }}
+	mix := zoomTarget{"MODEL MIX", colCyan, func(w, h int) string { return m.modelStack(w, h) }}
+	speed := zoomTarget{"OUTPUT SPEED", colCyan, func(w, h int) string {
+		rows := speedRows(ev)
+		maxTPS := 1.0
+		if len(rows) > 0 && rows[0].tps > 0 {
+			maxTPS = rows[0].tps
+		}
+		return lipgloss.JoinVertical(lipgloss.Left, m.airspeedHero(w), "", speedLanes(rows, maxTPS, w))
+	}}
+	tokens := zoomTarget{"TOKENS", colCyan, tokChart}
+	cal := zoomTarget{"CALENDAR", colGreen, func(w, h int) string {
+		g, _ := m.contributionGrid(w)
+		return g
+	}}
 
 	switch m.view {
 	case overview:
-		return []zoomTarget{
-			{"TREND", colCyan, tokChart},
-			{"ENGINES", colCyan, enginesZoom},
-			{"MODELS", colCyan, modelsZoom},
-			{"ACTIVITY", colCyan, func(w, h int) string { return m.agentSparks(ev, w) }},
+		// Body: ENGINES | TREND, then MODELS | ACTIVITY. Compact: ENGINES, TREND.
+		if m.compact {
+			return []zoomTarget{engines, trend}
 		}
+		return []zoomTarget{engines, trend, models, activitySpark}
 	case breakdown:
-		return []zoomTarget{
-			{"ENGINES", colCyan, func(w, h int) string { return m.agentClusters(w) }},
-			{"MODELS", colCyan, modelsZoom},
-			{"SPEED", colCyan, func(w, h int) string {
-				rows := speedRows(ev)
-				maxTPS := 1.0
-				if len(rows) > 0 && rows[0].tps > 0 {
-					maxTPS = rows[0].tps
-				}
-				return lipgloss.JoinVertical(lipgloss.Left, m.airspeedHero(w), "", speedLanes(rows, maxTPS, w))
-			}},
-			{"MODEL MIX", colCyan, func(w, h int) string { return m.modelStack(w, h) }},
+		// Body: ENGINES, then MODELS | SPEED, then MODEL MIX.
+		// Compact: ENGINES, MODELS, MODEL MIX (no SPEED lane).
+		engines.render = enginesClusters // zoom shows the per-agent clusters
+		if m.compact {
+			return []zoomTarget{engines, models, mix}
 		}
+		return []zoomTarget{engines, models, speed, mix}
 	case trends:
+		// Body: TOKENS | COST, then EFFICIENCY | ECONOMICS | CADENCE.
+		// Compact: TOKENS only.
+		if m.compact {
+			return []zoomTarget{tokens}
+		}
 		return []zoomTarget{
-			{"TOKENS", colCyan, tokChart},
+			tokens,
 			{"COST", colAmber, costChart},
 			{"EFFICIENCY", colGreen, func(w, h int) string { return m.efficiencyBody(w - 6) }},
 			{"ECONOMICS", colAmber, func(w, h int) string { return m.economicsBody(w - 6) }},
 			{"CADENCE", colCyan, func(w, h int) string { return m.cadenceBody() }},
 		}
 	case activity:
+		// Body: CALENDAR, then HOUR OF DAY, then DAY OF WEEK | TOP PROJECTS.
+		// Compact: CALENDAR only.
+		if m.compact {
+			return []zoomTarget{cal}
+		}
 		return []zoomTarget{
-			{"CALENDAR", colGreen, func(w, h int) string {
-				g, _ := m.contributionGrid(w)
-				return g
-			}},
+			cal,
 			{"HOUR OF DAY", colCyan, func(w, h int) string { return m.hourStrip(w) }},
 			{"DAY OF WEEK", colCyan, func(w, h int) string { return m.weekdayBars(m.ins, w) }},
-			{"PROJECTS", colCyan, func(w, h int) string { return m.projectBars(w, cur) }},
+			{"TOP PROJECTS", colCyan, func(w, h int) string { return m.projectBars(w, cur) }},
 		}
 	}
 	return nil
