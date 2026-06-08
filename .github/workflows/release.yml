@@ -23,6 +23,8 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - name: Test before release
+        run: go test ./...
       - name: Resolve version
         id: version
         shell: bash

@@ -2,6 +2,8 @@
 
 # agent-cockpit
 
+[![CI](https://github.com/nashory/agent-cockpit/actions/workflows/ci.yml/badge.svg)](https://github.com/nashory/agent-cockpit/actions/workflows/ci.yml)
+
 **A live terminal cockpit for usage, cost, and speed across your coding agents.**
 
 Track Claude Code, Codex, Gemini, OpenCode, Copilot, and more from one local
