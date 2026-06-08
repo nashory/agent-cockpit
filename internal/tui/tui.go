@@ -31,6 +31,7 @@ type Model struct {
 	reportOptions   report.Options
 	refreshInterval time.Duration
 	reload          func() ([]usage.Event, error)
+	fsEvents        <-chan struct{}
 	lastRefresh     time.Time
 	loading         bool
 	width           int
@@ -59,9 +60,12 @@ type Options struct {
 	Report          report.Options
 	RefreshInterval time.Duration
 	Reload          func() ([]usage.Event, error)
+	FSEvents        <-chan struct{} // optional fsnotify-driven refresh signal
 }
 
 type tickMsg time.Time
+
+type fsEventMsg struct{}
 
 type loadedMsg struct {
 	events []usage.Event
@@ -74,6 +78,7 @@ func New(events []usage.Event, opts Options) Model {
 		reportOptions:   opts.Report,
 		refreshInterval: opts.RefreshInterval,
 		reload:          opts.Reload,
+		fsEvents:        opts.FSEvents,
 	}
 	if len(events) > 0 {
 		m.lastRefresh = time.Now()
@@ -92,6 +97,9 @@ func (m Model) Init() tea.Cmd {
 	}
 	if m.refreshInterval > 0 && m.reload != nil {
 		cmds = append(cmds, tick(m.refreshInterval))
+	}
+	if m.fsEvents != nil {
+		cmds = append(cmds, waitForFS(m.fsEvents))
 	}
 	return tea.Batch(cmds...)
 }
@@ -167,6 +175,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMsg:
 		refreshed, cmd := m.startRefresh()
 		next := tick(m.refreshInterval)
+		if cmd != nil {
+			return refreshed, tea.Batch(cmd, next)
+		}
+		return refreshed, next
+	case fsEventMsg:
+		refreshed, cmd := m.startRefresh()
+		next := waitForFS(m.fsEvents)
 		if cmd != nil {
 			return refreshed, tea.Batch(cmd, next)
 		}
@@ -307,4 +322,15 @@ func tick(interval time.Duration) tea.Cmd {
 	return tea.Tick(interval, func(t time.Time) tea.Msg {
 		return tickMsg(t)
 	})
+}
+
+// waitForFS blocks on the fsnotify signal channel and yields one fsEventMsg,
+// re-armed by Update after each event.
+func waitForFS(ch <-chan struct{}) tea.Cmd {
+	return func() tea.Msg {
+		if _, ok := <-ch; !ok {
+			return nil
+		}
+		return fsEventMsg{}
+	}
 }

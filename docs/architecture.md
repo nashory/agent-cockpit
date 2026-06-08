@@ -21,6 +21,7 @@ internal/source/claude/     Claude Code JSONL parser
 internal/source/codex/      Codex JSONL parser
 internal/source/gemini/     Gemini session parser
 internal/scan/              parallel directory walk + file parsing
+internal/watch/             fsnotify log-dir watcher with debounced refresh
 internal/usage/             normalized event model, pricing, grouping, insights
 internal/report/            text reports and charts
 internal/tui/               glass-cockpit TUI (tabs, theme, async load)
@@ -75,10 +76,13 @@ computed once per load and cached on the model, not recomputed per frame.
 
 ## Live Mode
 
-`ac live` uses a non-blocking polling refresh loop in the TUI: each tick kicks
-off a background reload rather than blocking the render. This is deliberately
-portable across macOS, Linux, and Windows. A future fsnotify watcher can be
-layered in without changing adapters or report aggregation.
+`ac live` refreshes on file-system events. `internal/watch` recursively watches
+the configured log roots with fsnotify, auto-watches new subdirectories as they
+appear, and debounces bursts of writes into a single refresh signal that the TUI
+consumes via a Bubble Tea command. A non-blocking interval tick remains as a
+backstop, and if the OS watcher cannot start (e.g. inotify limits) the TUI falls
+back to polling alone. Watching is layered on top of the adapters and report
+aggregation without changing them.
 
 ## Native Distribution
 

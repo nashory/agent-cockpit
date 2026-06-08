@@ -45,7 +45,8 @@ Open the TUI:
 ac
 ```
 
-Open the live TUI with periodic refresh:
+Open the live TUI, which refreshes on file changes (via fsnotify, with an
+interval backstop):
 
 ```bash
 ac live --refresh 2s
@@ -197,6 +198,7 @@ internal/source/claude/     Claude Code JSONL adapter
 internal/source/codex/      Codex JSONL adapter
 internal/source/gemini/     Gemini session adapter
 internal/scan/              parallel directory walk + file parsing
+internal/watch/             fsnotify watcher for live refresh
 internal/usage/             normalized events, aggregation, derived insights
 internal/report/            static terminal reports
 internal/tui/               Bubble Tea glass-cockpit TUI

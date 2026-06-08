@@ -15,6 +15,7 @@ import (
 	"github.com/nashory/agent-cockpit/internal/source"
 	"github.com/nashory/agent-cockpit/internal/tui"
 	"github.com/nashory/agent-cockpit/internal/usage"
+	"github.com/nashory/agent-cockpit/internal/watch"
 	"github.com/spf13/cobra"
 )
 
@@ -102,7 +103,15 @@ func Execute() error {
 				events, _, err := load(cmd.Context(), opts)
 				return events, err
 			}
-			_, err = tea.NewProgram(tui.New(nil, tuiOptions(cfg, reload, interval)), tea.WithAltScreen()).Run()
+			tuiOpts := tuiOptions(cfg, reload, interval)
+			// Refresh on file-system events when possible; the interval tick
+			// above stays as a backstop if the watcher can't start.
+			roots := append(append(append([]string{}, cfg.Paths.Claude...), cfg.Paths.Codex...), cfg.Paths.Gemini...)
+			if w, werr := watch.New(roots, watch.IsLogFile, watch.DefaultDebounce); werr == nil {
+				defer w.Close()
+				tuiOpts.FSEvents = w.Events()
+			}
+			_, err = tea.NewProgram(tui.New(nil, tuiOpts), tea.WithAltScreen()).Run()
 			return err
 		},
 	})
