@@ -16,12 +16,12 @@ import (
 var acBin string
 
 func TestMain(m *testing.M) {
-	dir, err := os.MkdirTemp("", "ac-smoke")
+	dir, err := os.MkdirTemp("", "cockpit-smoke")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "mktemp:", err)
 		os.Exit(1)
 	}
-	acBin = filepath.Join(dir, "ac")
+	acBin = filepath.Join(dir, "cockpit")
 	if runtime.GOOS == "windows" {
 		acBin += ".exe"
 	}

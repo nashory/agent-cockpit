@@ -56,13 +56,13 @@ jobs:
         include:
           - os: ubuntu-latest
             asset: linux-amd64.tar.gz
-            bin: ac
+            bin: cockpit
           - os: macos-latest
             asset: darwin-arm64.tar.gz
-            bin: ac
+            bin: cockpit
           - os: windows-latest
             asset: windows-amd64.zip
-            bin: ac.exe
+            bin: cockpit.exe
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/download-artifact@v4
@@ -74,7 +74,7 @@ jobs:
         run: |
           set -euo pipefail
           tag="${{ needs.build.outputs.version }}"
-          asset="ac-${tag}-${{ matrix.asset }}"
+          asset="cockpit-${tag}-${{ matrix.asset }}"
           dir="${asset%.tar.gz}"
           dir="${dir%.zip}"
           cd dist
@@ -86,7 +86,7 @@ jobs:
           echo "running $bin on ${{ matrix.os }}"
           out="$("$bin" --version)"
           echo "$out"
-          echo "$out" | grep -q "ac version ${tag}"
+          echo "$out" | grep -q "cockpit version ${tag}"
           # Exercise a non-TUI code path end to end.
           "$bin" today --json > /dev/null
           "$bin" doctor > /dev/null

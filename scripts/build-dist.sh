@@ -5,7 +5,7 @@ version="${1:-dev}"
 out_dir="${OUT_DIR:-dist}"
 
 mkdir -p "$out_dir"
-rm -f "$out_dir"/ac-* "$out_dir"/checksums.txt
+rm -f "$out_dir"/cockpit-* "$out_dir"/checksums.txt
 
 build() {
   local goos="$1"
@@ -15,8 +15,8 @@ build() {
     ext=".exe"
   fi
 
-  local bin="ac${ext}"
-  local dir="ac-${version}-${goos}-${goarch}"
+  local bin="cockpit${ext}"
+  local dir="cockpit-${version}-${goos}-${goarch}"
   local archive
 
   rm -rf "$out_dir/$dir"
@@ -26,7 +26,7 @@ build() {
     -trimpath \
     -ldflags "-s -w -X github.com/nashory/agent-cockpit/internal/cli.version=${version}" \
     -o "$out_dir/$dir/$bin" \
-    ./cmd/ac
+    ./cmd/cockpit
 
   cp README.md LICENSE "$out_dir/$dir/"
 
@@ -48,5 +48,5 @@ build linux arm64
 build windows amd64
 build windows arm64
 
-(cd "$out_dir" && shasum -a 256 ac-* > checksums.txt)
+(cd "$out_dir" && shasum -a 256 cockpit-* > checksums.txt)
 

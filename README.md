@@ -31,7 +31,7 @@ No cloud upload. No API keys. No background daemon.
   normalized view — compare engines, models, and projects side by side.
 - **💸 Know the cost.** Per-model pricing turns raw tokens into USD estimates,
   cache savings, effective `$/1M output`, and a daily burn rate.
-- **⚡ Live.** `ac live` refreshes the instant an agent writes a log, via fsnotify
+- **⚡ Live.** `cockpit live` refreshes the instant an agent writes a log, via fsnotify
   (with a polling backstop).
 - **🧰 Zero setup.** Sensible defaults discover your logs automatically; a config
   file is optional.
@@ -48,7 +48,7 @@ No cloud upload. No API keys. No background daemon.
 - **Caution annunciators** — `HIGH BURN`, `OPUS HEAVY`, `STALE`, `LIVE` lamps.
 - **Static reports & statusline** — pipeable output for scripts, tmux, and CI.
 - **Fast** — a cold scan of hundreds of logs parses in parallel across cores.
-- **Single binary** — CGO-free, cross-platform, ~6 MB. The command is just `ac`.
+- **Single binary** — CGO-free, cross-platform, ~6 MB. The command is just `cockpit`.
 
 ## 🚀 Install
 
@@ -56,7 +56,7 @@ No cloud upload. No API keys. No background daemon.
 
 ```bash
 brew install nashory/tap/agent-cockpit
-ac
+cockpit
 ```
 
 Or track `main` with `brew install --HEAD nashory/tap/agent-cockpit`.
@@ -64,7 +64,7 @@ Or track `main` with `brew install --HEAD nashory/tap/agent-cockpit`.
 **With Go:**
 
 ```bash
-go install github.com/nashory/agent-cockpit/cmd/ac@latest
+go install github.com/nashory/agent-cockpit/cmd/cockpit@latest
 ```
 
 **From source:**
@@ -72,33 +72,33 @@ go install github.com/nashory/agent-cockpit/cmd/ac@latest
 ```bash
 git clone https://github.com/nashory/agent-cockpit.git
 cd agent-cockpit
-make build && ./ac
+make build && ./cockpit
 ```
 
 ## ⚡ Quick Start
 
 ```bash
-ac                       # open the dashboard
-ac live --refresh 2s     # live mode (refreshes on file changes)
+cockpit                       # open the dashboard
+cockpit live --refresh 2s     # live mode (refreshes on file changes)
 
 # static, pipeable reports
-ac today
-ac trends --days 30
-ac agents
-ac speed
-ac statusline            # one line for tmux / your shell prompt
+cockpit today
+cockpit trends --days 30
+cockpit agents
+cockpit speed
+cockpit statusline            # one line for tmux / your shell prompt
 
 # filter by source, project, or model
-ac monthly --source claude
-ac trends  --source claude,codex --project myrepo --days 30
-ac agents  --model sonnet
+cockpit monthly --source claude
+cockpit trends  --source claude,codex --project myrepo --days 30
+cockpit agents  --model sonnet
 
 # JSON for scripts
-ac today --json
+cockpit today --json
 
 # config helpers
-ac config init
-ac doctor                # show detected log locations
+cockpit config init
+cockpit doctor                # show detected log locations
 ```
 
 ## 🧭 Dashboards
@@ -173,7 +173,7 @@ cache_read_per_million  = 0.30
 cache_write_per_million = 3.75
 ```
 
-Run `ac config init` to drop a starter file in place.
+Run `cockpit config init` to drop a starter file in place.
 
 ## 🏗️ How It Works
 
@@ -183,7 +183,7 @@ mode is driven by an fsnotify watcher, and the TUI is built with
 [Bubble Tea](https://github.com/charmbracelet/bubbletea).
 
 ```text
-cmd/ac/                 entry point (the `ac` binary)
+cmd/cockpit/                 entry point (the `cockpit` binary)
 internal/source/        Claude / Codex / Gemini log adapters
 internal/scan/          parallel directory walk + file parsing
 internal/watch/         fsnotify watcher for live refresh
@@ -210,8 +210,8 @@ Ships as a CGO-free native binary:
 make ci        # gofmt + go vet + full test suite (mirrors GitHub CI)
 make test      # go test ./...
 make race      # go test -race ./...
-make build     # build ./ac
-make run       # go run ./cmd/ac
+make build     # build ./cockpit
+make run       # go run ./cmd/cockpit
 ```
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md),

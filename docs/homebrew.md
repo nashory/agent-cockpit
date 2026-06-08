@@ -4,7 +4,7 @@ The public repo is `nashory/agent-cockpit`. The Homebrew tap should live at
 `nashory/homebrew-tap`.
 
 The formula name should be `agent-cockpit`, but the installed executable should
-be `ac`.
+be `cockpit`.
 
 ## User Install
 
@@ -13,7 +13,7 @@ Before the first stable release:
 ```bash
 brew tap nashory/tap
 brew install --HEAD agent-cockpit
-ac
+cockpit
 ```
 
 After a stable release is added to the formula:
@@ -21,7 +21,7 @@ After a stable release is added to the formula:
 ```bash
 brew tap nashory/tap
 brew install agent-cockpit
-ac
+cockpit
 ```
 
 Or:
@@ -42,30 +42,30 @@ class AgentCockpit < Formula
 
   on_macos do
     if Hardware::CPU.arm?
-      url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.0/ac-v0.1.0-darwin-arm64.tar.gz"
+      url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.0/cockpit-v0.1.0-darwin-arm64.tar.gz"
       sha256 "..."
     else
-      url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.0/ac-v0.1.0-darwin-amd64.tar.gz"
+      url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.0/cockpit-v0.1.0-darwin-amd64.tar.gz"
       sha256 "..."
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
-      url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.0/ac-v0.1.0-linux-arm64.tar.gz"
+      url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.0/cockpit-v0.1.0-linux-arm64.tar.gz"
       sha256 "..."
     else
-      url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.0/ac-v0.1.0-linux-amd64.tar.gz"
+      url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.0/cockpit-v0.1.0-linux-amd64.tar.gz"
       sha256 "..."
     end
   end
 
   def install
-    bin.install "ac"
+    bin.install "cockpit"
   end
 
   test do
-    system "#{bin}/ac", "--version"
+    system "#{bin}/cockpit", "--version"
   end
 end
 ```
@@ -86,5 +86,5 @@ end
 
    ```bash
    brew install --build-from-source Formula/agent-cockpit.rb
-   ac --version
+   cockpit --version
    ```

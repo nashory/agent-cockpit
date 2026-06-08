@@ -36,9 +36,9 @@ var version = "dev"
 func Execute() error {
 	opts := &options{days: 30}
 	root := &cobra.Command{
-		Use:   "ac",
+		Use:   "cockpit",
 		Short: "Live usage, cost, and speed dashboards for coding agents",
-		Long:  "ac is the command-line cockpit for local coding-agent logs: token usage, estimated cost, and trends without uploading your data.",
+		Long:  "cockpit is the command-line dashboard for local coding-agent logs: token usage, estimated cost, and trends without uploading your data.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.json {
 				events, cfg, err := load(cmd.Context(), opts)

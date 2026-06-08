@@ -9,23 +9,23 @@ are new agent adapters, parser fixtures, terminal UX, and native packaging.
 git clone https://github.com/nashory/agent-cockpit.git
 cd agent-cockpit
 go mod download
-go build ./cmd/ac
+go build ./cmd/cockpit
 ```
 
 Run the TUI locally:
 
 ```bash
-go run ./cmd/ac
+go run ./cmd/cockpit
 ```
 
 On machines with binary allow-listing, `go run` and `go test` may require local
 approval. Compile-only checks are still useful:
 
 ```bash
-go build ./cmd/ac
-GOOS=darwin GOARCH=arm64 go build ./cmd/ac
-GOOS=linux GOARCH=amd64 go build ./cmd/ac
-GOOS=windows GOARCH=amd64 go build ./cmd/ac
+go build ./cmd/cockpit
+GOOS=darwin GOARCH=arm64 go build ./cmd/cockpit
+GOOS=linux GOARCH=amd64 go build ./cmd/cockpit
+GOOS=windows GOARCH=amd64 go build ./cmd/cockpit
 ```
 
 ## Before Opening a PR

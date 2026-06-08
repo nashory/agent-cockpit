@@ -13,7 +13,7 @@ local agent logs
 ## Packages
 
 ```text
-cmd/ac/                     binary entrypoint
+cmd/cockpit/                     binary entrypoint
 internal/cli/               Cobra commands and flags
 internal/config/            config path, TOML loading, defaults
 internal/source/            adapter registry
@@ -76,7 +76,7 @@ computed once per load and cached on the model, not recomputed per frame.
 
 ## Live Mode
 
-`ac live` refreshes on file-system events. `internal/watch` recursively watches
+`cockpit live` refreshes on file-system events. `internal/watch` recursively watches
 the configured log roots with fsnotify, auto-watches new subdirectories as they
 appear, and debounces bursts of writes into a single refresh signal that the TUI
 consumes via a Bubble Tea command. A non-blocking interval tick remains as a
@@ -89,11 +89,11 @@ aggregation without changing them.
 Release artifacts are CGO-free binaries:
 
 ```text
-ac-vX.Y.Z-darwin-arm64.tar.gz
-ac-vX.Y.Z-darwin-amd64.tar.gz
-ac-vX.Y.Z-linux-amd64.tar.gz
-ac-vX.Y.Z-linux-arm64.tar.gz
-ac-vX.Y.Z-windows-amd64.zip
-ac-vX.Y.Z-windows-arm64.zip
+cockpit-vX.Y.Z-darwin-arm64.tar.gz
+cockpit-vX.Y.Z-darwin-amd64.tar.gz
+cockpit-vX.Y.Z-linux-amd64.tar.gz
+cockpit-vX.Y.Z-linux-arm64.tar.gz
+cockpit-vX.Y.Z-windows-amd64.zip
+cockpit-vX.Y.Z-windows-arm64.zip
 ```
 

@@ -1,6 +1,6 @@
 # Development
 
-agent-cockpit is a native Go CLI/TUI. The shipped command is `ac`; the repo and
+agent-cockpit is a native Go CLI/TUI. The shipped command is `cockpit`; the repo and
 project name stay `agent-cockpit`.
 
 ## Requirements
@@ -21,9 +21,9 @@ During local development on machines with binary allow-listing, it can be
 useful to run compile-only checks first:
 
 ```bash
-go build ./cmd/ac
-GOOS=linux GOARCH=amd64 go build ./cmd/ac
-GOOS=windows GOARCH=amd64 go build ./cmd/ac
+go build ./cmd/cockpit
+GOOS=linux GOARCH=amd64 go build ./cmd/cockpit
+GOOS=windows GOARCH=amd64 go build ./cmd/cockpit
 ```
 
 Build the distributable archives for all native targets:
@@ -76,17 +76,17 @@ Do not commit real agent logs, API keys, bot tokens, or local config files.
 
 ## Homebrew Formula Shape
 
-The tap formula should install the shipped binary as `ac`:
+The tap formula should install the shipped binary as `cockpit`:
 
 ```ruby
 class AgentCockpit < Formula
   desc "Terminal cockpit for usage, cost, and speed across coding agents"
   homepage "https://github.com/nashory/agent-cockpit"
-  url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.0/ac-v0.1.0-darwin-arm64.tar.gz"
+  url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.0/cockpit-v0.1.0-darwin-arm64.tar.gz"
   sha256 "..."
 
   def install
-    bin.install "ac"
+    bin.install "cockpit"
   end
 end
 ```

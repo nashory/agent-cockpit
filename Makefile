@@ -1,7 +1,7 @@
 .PHONY: build test race lint fmt vet ci run snapshot
 
 build:
-	go build -o ac ./cmd/ac
+	go build -o cockpit ./cmd/cockpit
 
 test:
 	go test ./...
@@ -26,7 +26,7 @@ lint:
 ci: lint test
 
 run:
-	go run ./cmd/ac
+	go run ./cmd/cockpit
 
 snapshot:
-	go run ./cmd/ac today
+	go run ./cmd/cockpit today

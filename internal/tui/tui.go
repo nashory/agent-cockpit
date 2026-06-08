@@ -214,7 +214,7 @@ func (m Model) sidebar() string {
 	if m.compact {
 		mode = "compact"
 	}
-	return "agent-cockpit\nac\n" + status + "\nmode " + mode + "\n\n" + lipgloss.JoinVertical(lipgloss.Left, items...) + "\n\n↑↓ focus\nenter zoom\ne mode\nr refresh\nq quit"
+	return "agent-cockpit\ncockpit\n" + status + "\nmode " + mode + "\n\n" + lipgloss.JoinVertical(lipgloss.Left, items...) + "\n\n↑↓ focus\nenter zoom\ne mode\nr refresh\nq quit"
 }
 
 // contentWidth is the drawable width to the right of the sidebar, accounting

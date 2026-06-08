@@ -40,7 +40,7 @@ jobs:
           go-version-file: go.mod
           cache: true
       - run: go test ./...
-      - run: go build ./cmd/ac
+      - run: go build ./cmd/cockpit
 
   race:
     name: Race + Coverage
