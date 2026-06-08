@@ -39,14 +39,22 @@ func Execute() error {
 		Short: "Live usage, cost, and speed dashboards for coding agents",
 		Long:  "ac is the command-line cockpit for local coding-agent logs: token usage, estimated cost, and trends without uploading your data.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			events, cfg, err := load(cmd.Context(), opts)
+			if opts.json {
+				events, cfg, err := load(cmd.Context(), opts)
+				if err != nil {
+					return err
+				}
+				return writeJSON(events, cfg)
+			}
+			cfg, err := config.Load(opts.configPath)
 			if err != nil {
 				return err
 			}
-			if opts.json {
-				return writeJSON(events, cfg)
+			reload := func() ([]usage.Event, error) {
+				events, _, err := load(cmd.Context(), opts)
+				return events, err
 			}
-			_, err = tea.NewProgram(tui.New(events, tuiOptions(cfg, nil, 0)), tea.WithAltScreen()).Run()
+			_, err = tea.NewProgram(tui.New(nil, tuiOptions(cfg, reload, 0)), tea.WithAltScreen()).Run()
 			return err
 		},
 	}
@@ -78,7 +86,7 @@ func Execute() error {
 		Use:   "live",
 		Short: "Open the TUI and refresh local logs on an interval",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			events, cfg, err := load(cmd.Context(), opts)
+			cfg, err := config.Load(opts.configPath)
 			if err != nil {
 				return err
 			}
@@ -94,7 +102,7 @@ func Execute() error {
 				events, _, err := load(cmd.Context(), opts)
 				return events, err
 			}
-			_, err = tea.NewProgram(tui.New(events, tuiOptions(cfg, reload, interval)), tea.WithAltScreen()).Run()
+			_, err = tea.NewProgram(tui.New(nil, tuiOptions(cfg, reload, interval)), tea.WithAltScreen()).Run()
 			return err
 		},
 	})
