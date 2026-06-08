@@ -22,9 +22,10 @@ var modelPalette = []lipgloss.Color{
 
 var colOther = lipgloss.Color("240")
 
-// colIdle marks days with no activity at all; rendered as a solid white band
-// (same block as the model bands, just white) so an empty day reads cleanly.
-var colIdle = lipgloss.Color("231")
+// colIdle marks days with no activity at all; rendered as a solid black band
+// (same block as the model bands, just black) so an empty day recedes into the
+// background instead of reading as a model.
+var colIdle = lipgloss.Color("0")
 
 const stackTopModels = 5
 
