@@ -54,6 +54,7 @@ func TestCockpitRender(t *testing.T) {
 		{"BREAKDOWN", breakdown},
 		{"TRENDS", trends},
 		{"ACTIVITY", activity},
+		{"DAILY", daily},
 	}
 	for _, compactMode := range []bool{false, true} {
 		for _, termW := range []int{140, 80} {
@@ -96,7 +97,7 @@ func TestCockpitRender(t *testing.T) {
 // shrink to match.)
 func TestFocusTargetsMatchBody(t *testing.T) {
 	for _, compactMode := range []bool{false, true} {
-		for _, v := range []view{overview, breakdown, trends, activity} {
+		for _, v := range []view{overview, breakdown, trends, activity, daily} {
 			m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
 			m.width = 140
 			m.height = 44
@@ -134,7 +135,7 @@ func stripANSI(s string) string {
 }
 
 func TestZoomRender(t *testing.T) {
-	views := []view{overview, breakdown, trends, activity}
+	views := []view{overview, breakdown, trends, activity, daily}
 	for _, v := range views {
 		for _, w := range []int{140, 80} {
 			m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})

@@ -101,6 +101,17 @@ func (m Model) zoomTargets() []zoomTarget {
 			{"DAY OF WEEK", colCyan, func(w, h int) string { return m.weekdayBars(m.ins, w) }},
 			{"TOP PROJECTS", colCyan, func(w, h int) string { return m.projectBars(w, cur) }},
 		}
+	case daily:
+		// One table; zoom shows as many day rows as the height allows.
+		return []zoomTarget{
+			{"DAILY", colCyan, func(w, h int) string {
+				limit := h - 4
+				if limit < 6 {
+					limit = 6
+				}
+				return m.ledgerTable(w, limit)
+			}},
+		}
 	}
 	return nil
 }

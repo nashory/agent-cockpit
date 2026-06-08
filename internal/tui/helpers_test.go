@@ -149,6 +149,32 @@ func TestDailyThroughput(t *testing.T) {
 	}
 }
 
+func TestDailyLedger(t *testing.T) {
+	at := func(d int) time.Time { return time.Date(2026, 1, d, 12, 0, 0, 0, time.UTC) }
+	events := []usage.Event{
+		{Model: "claude-opus-4-8", Input: 100, Output: 50, CacheRead: 10, Timestamp: at(2)},
+		{Model: "gpt-5-codex", Input: 200, Output: 20, Timestamp: at(2)},
+		{Model: "claude-opus-4-8", Input: 5, Output: 5, Timestamp: at(1)},
+		{Model: "x", Timestamp: time.Time{}}, // zero ts ignored
+	}
+	rows := dailyLedger(events, nil)
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 day rows, got %d", len(rows))
+	}
+	// Newest first.
+	if rows[0].date != "2026-01-02" || rows[1].date != "2026-01-01" {
+		t.Fatalf("rows not newest-first: %q, %q", rows[0].date, rows[1].date)
+	}
+	// Day 2 aggregates both events: input 300, output 70, total 380, 2 models.
+	d2 := rows[0].totals
+	if d2.Input != 300 || d2.Output != 70 || d2.Total != 380 {
+		t.Fatalf("day2 totals = %+v", d2)
+	}
+	if len(rows[0].models) != 2 {
+		t.Fatalf("day2 models = %d, want 2", len(rows[0].models))
+	}
+}
+
 func TestDailyVelocity(t *testing.T) {
 	// Day-over-day change in total tokens (Output only, so Total == Output):
 	// day-2 = 1000, day-1 = 3000, day0 = 2000.
