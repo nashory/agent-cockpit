@@ -213,7 +213,7 @@ func (m Model) calendarHero(tokMap map[string]int64) string {
 	}
 	current := cur // run ending at today (0 if today idle)
 
-	peak := "—"
+	peak := "n/a"
 	if !busiestDay.IsZero() {
 		peak = busiestDay.Format("Jan 02")
 	}

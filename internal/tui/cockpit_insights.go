@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// meter renders "LABEL  ███░░ 78%" — a labeled ratio gauge for a panel of the
+// meter renders a labeled ratio gauge ("LABEL  ███░░ 78%") for a panel of the
 // given inner text width.
 func meter(label string, ratio float64, innerW int) string {
 	g := innerW - 10 - 7 // label(10) + " 000%"(6) + 1 safety

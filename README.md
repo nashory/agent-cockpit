@@ -10,7 +10,7 @@
 
 **A live terminal cockpit for token usage, cost, and speed across your coding agents.**
 
-Claude Code, Codex, and Gemini burn tokens all day — `agent-cockpit` reads their
+Claude Code, Codex, and Gemini burn tokens all day. `agent-cockpit` reads their
 **local** logs and turns them into a glass-cockpit dashboard: token burn, USD
 estimates, observed throughput, trends, and a GitHub-style year of activity.
 No cloud upload. No API keys. No background daemon.
@@ -28,7 +28,7 @@ No cloud upload. No API keys. No background daemon.
 - **🔒 Private by design.** It only reads log files already on your disk. Nothing
   is uploaded, no service runs in the background, no keys are required.
 - **🛩️ One cockpit for every agent.** Claude Code, Codex, and Gemini in a single
-  normalized view — compare engines, models, and projects side by side.
+  normalized view, so you can compare engines, models, and projects side by side.
 - **💸 Know the cost.** Per-model pricing turns raw tokens into USD estimates,
   cache savings, effective `$/1M output`, and a daily burn rate.
 - **⚡ Live.** `cockpit live` refreshes the instant an agent writes a log, via fsnotify
@@ -38,17 +38,17 @@ No cloud upload. No API keys. No background daemon.
 
 ## 🎛️ Features
 
-- **4 instrument tabs** — Overview, Breakdown, Trends, and Activity (including a
+- **4 instrument tabs:** Overview, Breakdown, Trends, and Activity (including a
   GitHub-style year **contribution calendar**).
-- **Derived insights** — cache hit rate, cache savings, input:output ratio,
+- **Derived insights:** cache hit rate, cache savings, input:output ratio,
   reasoning share, effective rate, spending cadence, and activity streaks.
-- **Focus & zoom** — arrow-key focus across widgets, `enter` to blow one up
-  fullscreen for detail.
-- **Expert / compact modes** — pack every instrument in, or a clean, light view.
-- **Caution annunciators** — `HIGH BURN`, `OPUS HEAVY`, `STALE`, `LIVE` lamps.
-- **Static reports & statusline** — pipeable output for scripts, tmux, and CI.
-- **Fast** — a cold scan of hundreds of logs parses in parallel across cores.
-- **Single binary** — CGO-free, cross-platform, ~6 MB. The command is just `cockpit`.
+- **Focus and zoom:** move focus across widgets with the arrows, hit `enter` to
+  blow one up fullscreen.
+- **Expert and compact modes:** pack every instrument in, or keep it light.
+- **Caution annunciators:** `HIGH BURN`, `OPUS HEAVY`, `STALE`, `LIVE` lamps.
+- **Static reports and statusline:** pipeable output for scripts, tmux, and CI.
+- **Fast:** a cold scan of hundreds of logs parses in parallel across cores.
+- **Single binary:** CGO-free, cross-platform, ~6 MB. The command is just `cockpit`.
 
 ## 🚀 Install
 
@@ -61,12 +61,11 @@ cockpit
 
 Or track `main` with `brew install --HEAD nashory/tap/agent-cockpit`.
 
-**Windows** (Homebrew isn't available) — grab the prebuilt binary from the
-[latest release](https://github.com/nashory/agent-cockpit/releases/latest):
-download `cockpit-<version>-windows-amd64.zip` (or `-arm64`), unzip, and run
+**Windows** (no Homebrew): grab the prebuilt binary from the
+[latest release](https://github.com/nashory/agent-cockpit/releases/latest).
+Download `cockpit-<version>-windows-amd64.zip` (or `-arm64`), unzip, and run
 `cockpit.exe`. Drop its folder on your `PATH` to run `cockpit` from anywhere.
-macOS/Linux users who don't use Homebrew can grab the matching `.tar.gz` the
-same way.
+macOS/Linux users who skip Homebrew can grab the matching `.tar.gz` the same way.
 
 **With Go** (any platform, needs Go installed):
 
@@ -110,8 +109,8 @@ cockpit doctor                # show detected log locations
 
 ## 🧭 Dashboards
 
-Four tabs, each packed with instruments — press `enter` to zoom any widget
-fullscreen for detail:
+Four tabs, each packed with instruments. Press `enter` to zoom any widget
+fullscreen:
 
 | Tab | Shows |
 | --- | --- |
@@ -132,7 +131,7 @@ fullscreen for detail:
 
 | Key | Action |
 | --- | --- |
-| `1`–`4` | jump to a tab |
+| `1`-`4` | jump to a tab |
 | `tab` / `shift+tab` | next / previous tab |
 | arrows / `hjkl` | move widget focus |
 | `enter` / `esc` | zoom the focused widget / exit zoom |
@@ -145,7 +144,7 @@ On **Activity**, zoom the calendar (`enter`) and then arrows move the day cursor
 
 ## 🔒 What It Reads
 
-`agent-cockpit` reads **local log files only** — no network calls, ever.
+`agent-cockpit` reads **local log files only**. No network calls, ever.
 
 | Agent | Default path |
 | --- | --- |
@@ -221,7 +220,7 @@ make build     # build ./cockpit
 make run       # go run ./cmd/cockpit
 ```
 
-Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md),
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md),
 [SECURITY.md](SECURITY.md), and [docs/](docs/).
 
 ## 📄 License

@@ -135,7 +135,7 @@ func ComputeInsights(events []Event, prices PriceBook) Insights {
 		ins.PremiumCostShare = opusCost / totalCost
 	}
 
-	// -1 means "no timestamped activity"; callers render this as "—" instead of
+	// -1 means "no timestamped activity" so callers can show a blank instead of
 	// claiming midnight Sunday is the busiest slot.
 	ins.BusiestHour, ins.BusiestWeekday = -1, -1
 	var maxHour, maxWeekday int64
