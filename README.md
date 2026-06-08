@@ -138,22 +138,21 @@ ac doctor                # show detected log locations
 
 ## 🧭 Dashboards
 
+Four tabs, each packed with instruments — press `enter` to zoom any widget
+fullscreen for detail:
+
 | Tab | Shows |
 | --- | --- |
 | **Overview** | headline token/cost readouts, per-agent bars, 30-day trend |
-| **Agents** | per-engine clusters: tokens, cost, share, speed, activity |
-| **Models** | model-level load, cost, and share |
-| **Trends** | 30-day token and cost time-series |
-| **Speed** | airspeed tape and observed output tokens/sec per lane |
-| **Insights** | cache efficiency, economics, and spending cadence |
-| **Activity** | hour-of-day heatmap, day-of-week, and top projects |
-| **Calendar** | GitHub-style year contribution graph of tokens/day |
+| **Breakdown** | engine share, model load, and output speed per lane |
+| **Trends** | token/cost time-series plus efficiency, economics, and cadence |
+| **Activity** | year contribution calendar, hour-of-day, day-of-week, projects |
 
 ### Keys
 
 | Key | Action |
 | --- | --- |
-| `1`–`8` | jump to a tab |
+| `1`–`4` | jump to a tab |
 | `tab` / `shift+tab` | next / previous tab |
 | arrows / `hjkl` | move widget focus |
 | `enter` / `esc` | zoom the focused widget / exit zoom |
@@ -161,7 +160,7 @@ ac doctor                # show detected log locations
 | `r` | refresh now |
 | `q` | quit |
 
-On the **Calendar**, zoom in with `enter`, then arrows move the day cursor
+On **Activity**, zoom the calendar (`enter`) and then arrows move the day cursor
 (left/right by week, up/down by day) with a tooltip for the selected day.
 
 ## 🔒 What It Reads
