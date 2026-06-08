@@ -15,8 +15,11 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build:
+    name: Build artifacts
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -36,11 +39,71 @@ jobs:
           fi
       - name: Build artifacts
         run: bash scripts/build-dist.sh "${{ steps.version.outputs.value }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
+
+  # Run each platform's actual release artifact on its native runner, so a
+  # release can only publish if the binary really executes on macOS, Linux,
+  # and Windows.
+  verify:
+    name: Verify ${{ matrix.os }}
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset: linux-amd64.tar.gz
+            bin: ac
+          - os: macos-latest
+            asset: darwin-arm64.tar.gz
+            bin: ac
+          - os: windows-latest
+            asset: windows-amd64.zip
+            bin: ac.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Extract and run the artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ needs.build.outputs.version }}"
+          asset="ac-${tag}-${{ matrix.asset }}"
+          dir="${asset%.tar.gz}"
+          dir="${dir%.zip}"
+          cd dist
+          case "$asset" in
+            *.zip) tar -xf "$asset" ;;
+            *)     tar -xzf "$asset" ;;
+          esac
+          bin="$dir/${{ matrix.bin }}"
+          echo "running $bin on ${{ matrix.os }}"
+          out="$("$bin" --version)"
+          echo "$out"
+          echo "$out" | grep -q "ac version ${tag}"
+          # Exercise a non-TUI code path end to end.
+          "$bin" today --json > /dev/null
+          "$bin" doctor > /dev/null
+
+  publish:
+    name: Publish release
+    needs: [build, verify]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.value }}
-          name: agent-cockpit ${{ steps.version.outputs.value }}
+          tag_name: ${{ needs.build.outputs.version }}
+          name: agent-cockpit ${{ needs.build.outputs.version }}
           files: dist/*
           generate_release_notes: true
-
