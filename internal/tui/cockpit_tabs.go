@@ -204,49 +204,54 @@ func (m Model) trendsView(width int) string {
 	}
 
 	gap := 1
+	thrPts := dailyThroughput(m.events, days)
 	velPts := dailyVelocity(m.events, days)
 
-	// Three-column grid: charts fill the left two columns (stacked vertically),
-	// the insight panels fill the right column (stacked vertically). On narrow
-	// terminals everything collapses to a single full-width column.
+	// Four charts in a 2x2 grid fill the left two columns; the three insight
+	// panels stack in the right column. On narrow terminals everything collapses
+	// to a single full-width column.
 	colW, stack := gridWidths(width, gap, 3, 26)
 	if stack {
-		tok := panel("◈ TOKENS · 30d", colCyan, width, seriesChart(tokPts, width, 8, colGreen))
-		cost := panel("◈ COST · 30d", colCyan, width, seriesChart(costPts, width, 8, colAmber))
-		vel := panel("◈ VELOCITY · out t/s", colCyan, width, seriesChart(velPts, width, 8, colCyan))
-		eff := panel("◈ EFFICIENCY", colCyan, width, m.efficiencyBody(width-6))
-		econ := panel("◈ ECONOMICS", colCyan, width, m.economicsBody(width-6))
-		cad := panel("◈ CADENCE", colCyan, width, m.cadenceBody())
-		return vstack(hero, tok, cost, vel, eff, econ, cad)
+		return vstack(hero,
+			panel("◈ TOKENS · 30d", colCyan, width, seriesChart(tokPts, width, 8, colGreen)),
+			panel("◈ COST · 30d", colCyan, width, seriesChart(costPts, width, 8, colAmber)),
+			panel("◈ THROUGHPUT · out t/s", colCyan, width, seriesChart(thrPts, width, 8, colCyan)),
+			panel("◈ VELOCITY · Δ tok/day", colCyan, width, seriesChart(velPts, width, 8, colAmber)),
+			panel("◈ EFFICIENCY", colCyan, width, m.efficiencyBody(width-6)),
+			panel("◈ ECONOMICS", colCyan, width, m.economicsBody(width-6)),
+			panel("◈ CADENCE", colCyan, width, m.cadenceBody()),
+		)
 	}
 
-	leftW := 2*colW + gap
-	rightW := colW
-	iw := rightW - 6
-
-	// Borders are uniform cyan like the other tabs; chart line colors stay
-	// distinct since they carry meaning. Every box uses one shared body height so
-	// the two columns form an even grid that ends at the same row.
-	charts := []panelSpec{
-		{"◈ TOKENS · 30d", colCyan, leftW, seriesChart(tokPts, leftW, 8, colGreen)},
-		{"◈ COST · 30d", colCyan, leftW, seriesChart(costPts, leftW, 8, colAmber)},
-		{"◈ VELOCITY · out t/s", colCyan, leftW, seriesChart(velPts, leftW, 8, colCyan)},
-	}
+	iw := colW - 6
+	// Insight cards set the right column height; size the chart rows so the 2x2
+	// grid on the left ends on the same row as the three cards on the right.
 	insights := []panelSpec{
-		{"◈ EFFICIENCY", colCyan, rightW, m.efficiencyBody(iw)},
-		{"◈ ECONOMICS", colCyan, rightW, m.economicsBody(iw)},
-		{"◈ CADENCE", colCyan, rightW, m.cadenceBody()},
+		{"◈ EFFICIENCY", colCyan, colW, m.efficiencyBody(iw)},
+		{"◈ ECONOMICS", colCyan, colW, m.economicsBody(iw)},
+		{"◈ CADENCE", colCyan, colW, m.cadenceBody()},
 	}
-	h := maxBodyLines(append(append([]panelSpec{}, charts...), insights...))
-	render := func(specs []panelSpec) string {
-		out := make([]string, len(specs))
-		for i, s := range specs {
-			out[i] = panelH(s.title, s.accent, s.width, h, s.body)
-		}
-		return lipgloss.JoinVertical(lipgloss.Left, out...)
+	cardBody := maxBodyLines(insights)
+	rightTotal := 3 * (cardBody + 3) // each card box = body + header + 2 borders
+	chBody := rightTotal/2 - 3       // two chart rows fill the same height
+	if chBody < 6 {
+		chBody = 6
 	}
 
-	body := lipgloss.JoinHorizontal(lipgloss.Top, render(charts), strings.Repeat(" ", gap), render(insights))
+	// Borders/headers are uniform cyan like the other tabs; chart line colors
+	// stay distinct since they carry meaning.
+	gridTop := panelsRow(false, gap,
+		panelSpec{"◈ TOKENS · 30d", colCyan, colW, seriesChart(tokPts, colW, chBody, colGreen)},
+		panelSpec{"◈ COST · 30d", colCyan, colW, seriesChart(costPts, colW, chBody, colAmber)},
+	)
+	gridBot := panelsRow(false, gap,
+		panelSpec{"◈ THROUGHPUT · out t/s", colCyan, colW, seriesChart(thrPts, colW, chBody, colCyan)},
+		panelSpec{"◈ VELOCITY · Δ tok/day", colCyan, colW, seriesChart(velPts, colW, chBody, colAmber)},
+	)
+	left := lipgloss.JoinVertical(lipgloss.Left, gridTop, gridBot)
+	right := panelsCol(insights...)
+
+	body := lipgloss.JoinHorizontal(lipgloss.Top, left, strings.Repeat(" ", gap), right)
 	return vstack(hero, body)
 }
 
@@ -412,11 +417,12 @@ func subsetSpeed(events []usage.Event) float64 {
 	return float64(tokens) / secs
 }
 
-// dailyVelocity returns output tokens per second for each of the last `days`
+// dailyThroughput returns output tokens per second for each of the last `days`
 // days: that day's output divided by its active span (first to last event).
 // Days with fewer than two timestamped events have no measurable span and
-// report 0, since we cannot infer how long a single event took.
-func dailyVelocity(events []usage.Event, days int) []tslc.TimePoint {
+// report 0, since we cannot infer how long a single event took. This is a rate
+// (how fast tokens were produced), distinct from dailyVelocity below.
+func dailyThroughput(events []usage.Event, days int) []tslc.TimePoint {
 	start := time.Now().AddDate(0, 0, -days+1).Truncate(24 * time.Hour)
 	type acc struct {
 		out         int64
@@ -451,6 +457,33 @@ func dailyVelocity(events []usage.Event, days int) []tslc.TimePoint {
 	return pts
 }
 
+// dailyVelocity returns the day-over-day change in total token usage: today's
+// tokens minus yesterday's. It is signed (positive when usage is accelerating,
+// negative when it is winding down) and the first day in the window is 0 since
+// there is no prior day to compare against.
+func dailyVelocity(events []usage.Event, days int) []tslc.TimePoint {
+	start := time.Now().AddDate(0, 0, -days+1).Truncate(24 * time.Hour)
+	tot := make([]float64, days)
+	for _, e := range events {
+		if e.Timestamp.IsZero() {
+			continue
+		}
+		idx := int(e.Timestamp.Truncate(24*time.Hour).Sub(start) / (24 * time.Hour))
+		if idx >= 0 && idx < days {
+			tot[idx] += float64(e.TotalTokens())
+		}
+	}
+	pts := make([]tslc.TimePoint, days)
+	for i := range tot {
+		var d float64
+		if i > 0 {
+			d = tot[i] - tot[i-1]
+		}
+		pts[i] = tslc.TimePoint{Time: start.AddDate(0, 0, i), Value: d}
+	}
+	return pts
+}
+
 func dailyCostSeries(events []usage.Event, days int, prices usage.PriceBook) []tslc.TimePoint {
 	start := time.Now().AddDate(0, 0, -days+1).Truncate(24 * time.Hour)
 	buckets := make([]float64, days)
@@ -476,24 +509,27 @@ func seriesChart(pts []tslc.TimePoint, width, height int, color lipgloss.Color) 
 	if len(pts) == 0 {
 		return labelStyle.Render("no data")
 	}
-	var maxY float64
+	var maxY, minY float64
 	for _, p := range pts {
 		if p.Value > maxY {
 			maxY = p.Value
 		}
+		if p.Value < minY {
+			minY = p.Value // stays <= 0; keeps a zero baseline for signed series
+		}
 	}
-	if maxY <= 0 {
-		maxY = 1
+	if maxY <= minY {
+		maxY = minY + 1
 	}
 	start := pts[0].Time
 	end := pts[len(pts)-1].Time
 	tc := tslc.New(inner, height,
 		tslc.WithTimeRange(start, end),
-		tslc.WithYRange(0, maxY),
+		tslc.WithYRange(minY, maxY),
 		tslc.WithAxesStyles(labelStyle, labelStyle),
 		tslc.WithStyle(lipgloss.NewStyle().Foreground(color)),
 	)
-	tc.SetViewTimeAndYRange(start, end, 0, maxY)
+	tc.SetViewTimeAndYRange(start, end, minY, maxY)
 	for _, p := range pts {
 		tc.Push(p)
 	}

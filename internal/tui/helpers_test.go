@@ -129,7 +129,7 @@ func TestTruncateASCIIUnchanged(t *testing.T) {
 	}
 }
 
-func TestDailyVelocity(t *testing.T) {
+func TestDailyThroughput(t *testing.T) {
 	// Two events on the same UTC day, 2h apart, 3600 output each:
 	// 7200 output / 7200 seconds = 1.0 tokens/sec on that day.
 	base := time.Now().Truncate(24 * time.Hour).Add(9 * time.Hour)
@@ -137,14 +137,35 @@ func TestDailyVelocity(t *testing.T) {
 		{Output: 3600, Timestamp: base},
 		{Output: 3600, Timestamp: base.Add(2 * time.Hour)},
 	}
-	pts := dailyVelocity(events, 30)
+	pts := dailyThroughput(events, 30)
 	last := pts[len(pts)-1].Value
 	if last < 0.99 || last > 1.01 {
-		t.Fatalf("velocity = %v t/s, want ~1.0", last)
+		t.Fatalf("throughput = %v t/s, want ~1.0", last)
 	}
 	// A single-event day has no measurable span -> 0.
-	one := dailyVelocity([]usage.Event{{Output: 5000, Timestamp: base}}, 30)
+	one := dailyThroughput([]usage.Event{{Output: 5000, Timestamp: base}}, 30)
 	if v := one[len(one)-1].Value; v != 0 {
-		t.Fatalf("single-event velocity = %v, want 0", v)
+		t.Fatalf("single-event throughput = %v, want 0", v)
+	}
+}
+
+func TestDailyVelocity(t *testing.T) {
+	// Day-over-day change in total tokens (Output only, so Total == Output):
+	// day-2 = 1000, day-1 = 3000, day0 = 2000.
+	day := func(off int) time.Time {
+		return time.Now().Truncate(24*time.Hour).Add(12*time.Hour).AddDate(0, 0, -off)
+	}
+	events := []usage.Event{
+		{Output: 1000, Timestamp: day(2)},
+		{Output: 3000, Timestamp: day(1)},
+		{Output: 2000, Timestamp: day(0)},
+	}
+	pts := dailyVelocity(events, 30)
+	n := len(pts)
+	if got := pts[n-1].Value; got != -1000 { // 2000 - 3000
+		t.Fatalf("velocity today = %v, want -1000", got)
+	}
+	if got := pts[n-2].Value; got != 2000 { // 3000 - 1000
+		t.Fatalf("velocity yesterday = %v, want 2000", got)
 	}
 }
