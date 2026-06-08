@@ -12,7 +12,9 @@ func TestSummarizeAndGroupBy(t *testing.T) {
 	}
 
 	totals := Summarize(events)
-	if totals.Events != 2 || totals.Total != 47 || totals.Input != 13 || totals.Output != 27 {
+	// Total is the sum of disjoint components (Reasoning is a subset of Output,
+	// not added again): 10+20+5 + 3+7 = 45.
+	if totals.Events != 2 || totals.Total != 45 || totals.Input != 13 || totals.Output != 27 {
 		t.Fatalf("unexpected totals: %+v", totals)
 	}
 
@@ -76,6 +78,24 @@ func TestEstimateCostWith(t *testing.T) {
 	prices := PriceBook{"x": {InputPerMillion: 2, OutputPerMillion: 10}}
 	if c := EstimateCostWith(e, prices); c != 12 {
 		t.Fatalf("cost = %v, want 12", c)
+	}
+}
+
+// TestEstimateCostCachedNotDoubleCharged guards the codex/gemini accounting fix:
+// cached prompt tokens must be priced only at the cache-read rate, never also at
+// the full input rate. The adapter stores disjoint Input/CacheRead.
+func TestEstimateCostCachedNotDoubleCharged(t *testing.T) {
+	// codex-shaped event: input_tokens 67776 incl 65024 cached -> Input 2752.
+	e := Event{Model: "gpt-5-codex", Input: 2752, CacheRead: 65024, Output: 306}
+	want := (2752*1.25 + 65024*0.125 + 306*10) / 1_000_000 // default codex rates
+	got := EstimateCost(e)
+	if got < want-1e-9 || got > want+1e-9 {
+		t.Fatalf("cost = %v, want %v", got, want)
+	}
+	// Sanity: charging cached at the input rate (the old bug) would be ~9x more.
+	buggy := (67776*1.25 + 65024*0.125 + 306*10) / 1_000_000
+	if got >= buggy {
+		t.Fatalf("cached appears double-charged: got %v, buggy %v", got, buggy)
 	}
 }
 

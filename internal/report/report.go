@@ -84,7 +84,7 @@ func Speed(w io.Writer, events []usage.Event, limit int) {
 		if e.Timestamp.After(s.last) {
 			s.last = e.Timestamp
 		}
-		s.tokens += e.Output + e.Reasoning
+		s.tokens += e.Output
 		s.events++
 	}
 

@@ -89,8 +89,8 @@ func TestSpeedRowsSortedByThroughput(t *testing.T) {
 	events := []usage.Event{
 		{Source: "claude", Model: "opus", Output: 100, Timestamp: t0},
 		{Source: "claude", Model: "opus", Output: 100, Timestamp: t0.Add(10 * time.Second)}, // 200/10s = 20 t/s
-		{Source: "codex", Model: "gpt", Output: 50, Reasoning: 50, Timestamp: t0},
-		{Source: "codex", Model: "gpt", Timestamp: t0.Add(20 * time.Second)}, // 100/20s = 5 t/s
+		{Source: "codex", Model: "gpt", Output: 100, Reasoning: 40, Timestamp: t0},          // reasoning ⊆ output
+		{Source: "codex", Model: "gpt", Timestamp: t0.Add(20 * time.Second)},                // 100/20s = 5 t/s
 	}
 	rows := speedRows(events)
 	if len(rows) != 2 {

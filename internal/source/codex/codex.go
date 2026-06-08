@@ -87,13 +87,20 @@ func Parse(r io.Reader, path string) ([]usage.Event, error) {
 			if model == "" {
 				model = "codex"
 			}
+			// input_tokens includes cached_input_tokens; split them so the
+			// disjoint components price correctly (cached at the cache rate,
+			// not the full input rate). Output already includes reasoning.
+			input := p.Info.Last.Input - p.Info.Last.Cached
+			if input < 0 {
+				input = 0
+			}
 			events = append(events, usage.Event{
 				Source:    "codex",
 				SessionID: sessionID,
 				Project:   projectName(cwd, path),
 				CWD:       cwd,
 				Model:     model,
-				Input:     p.Info.Last.Input,
+				Input:     input,
 				Output:    p.Info.Last.Output,
 				CacheRead: p.Info.Last.Cached,
 				Reasoning: p.Info.Last.Reasoning,

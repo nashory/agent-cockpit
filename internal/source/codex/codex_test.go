@@ -24,7 +24,9 @@ func TestParse(t *testing.T) {
 	if e.Source != "codex" || e.SessionID != "sess-1" || e.Model != "gpt-5-codex" {
 		t.Fatalf("unexpected metadata from session_meta: %+v", e)
 	}
-	if e.Input != 300 || e.CacheRead != 40 || e.Output != 80 || e.Reasoning != 20 {
+	// input_tokens (300) includes cached_input_tokens (40); Input is the
+	// non-cached remainder so cached is not double-charged at the input rate.
+	if e.Input != 260 || e.CacheRead != 40 || e.Output != 80 || e.Reasoning != 20 {
 		t.Fatalf("unexpected token counts: %+v", e)
 	}
 	if e.Project != "proj" {

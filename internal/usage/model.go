@@ -20,8 +20,11 @@ type Event struct {
 	Timestamp   time.Time `json:"timestamp"`
 }
 
+// TotalTokens sums the disjoint billed components. Reasoning is a display-only
+// subset of Output (providers bill it at the output rate and include it in the
+// output count), so it is not added again here.
 func (e Event) TotalTokens() int64 {
-	return e.Input + e.Output + e.CacheRead + e.CacheCreate + e.Reasoning
+	return e.Input + e.Output + e.CacheRead + e.CacheCreate
 }
 
 type Pricing struct {

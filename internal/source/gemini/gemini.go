@@ -72,13 +72,20 @@ func ParseFile(path string) ([]usage.Event, error) {
 		if ts.IsZero() {
 			ts = session.StartTime
 		}
+		// Gemini's prompt count (input) includes cached tokens; split them so
+		// the disjoint components price correctly. Thoughts bill at the output
+		// rate, so fold them into Output (and surface as the Reasoning subset).
+		input := msg.Tokens.Input - msg.Tokens.Cached
+		if input < 0 {
+			input = 0
+		}
 		events = append(events, usage.Event{
 			Source:    "gemini",
 			SessionID: session.SessionID,
 			Project:   project,
 			Model:     msg.Model,
-			Input:     msg.Tokens.Input,
-			Output:    msg.Tokens.Output + msg.Tokens.Tool,
+			Input:     input,
+			Output:    msg.Tokens.Output + msg.Tokens.Thoughts + msg.Tokens.Tool,
 			CacheRead: msg.Tokens.Cached,
 			Reasoning: msg.Tokens.Thoughts,
 			Timestamp: ts,

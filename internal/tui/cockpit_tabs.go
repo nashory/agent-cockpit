@@ -352,7 +352,7 @@ func speedRows(events []usage.Event) []speedRow {
 		if e.Timestamp.After(a.last) {
 			a.last = e.Timestamp
 		}
-		a.tokens += e.Output + e.Reasoning
+		a.tokens += e.Output
 		a.events++
 	}
 	rows := make([]speedRow, 0, len(byKey))
@@ -380,7 +380,7 @@ func subsetSpeed(events []usage.Event) float64 {
 		if e.Timestamp.After(last) {
 			last = e.Timestamp
 		}
-		tokens += e.Output + e.Reasoning
+		tokens += e.Output
 	}
 	secs := last.Sub(first).Seconds()
 	if secs <= 0 {

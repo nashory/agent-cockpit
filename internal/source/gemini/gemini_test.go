@@ -36,8 +36,9 @@ func TestParseFile(t *testing.T) {
 	if e.Source != "gemini" || e.SessionID != "g1" || e.Model != "gemini-2.5-pro" {
 		t.Fatalf("unexpected metadata: %+v", e)
 	}
-	// Output folds in tool tokens; reasoning comes from thoughts.
-	if e.Input != 100 || e.Output != 42 || e.CacheRead != 10 || e.Reasoning != 5 {
+	// input (100) includes cached (10), so Input is the non-cached remainder (90).
+	// Output folds in thoughts (5) and tool (2); reasoning surfaces thoughts.
+	if e.Input != 90 || e.Output != 47 || e.CacheRead != 10 || e.Reasoning != 5 {
 		t.Fatalf("unexpected token counts: %+v", e)
 	}
 	if e.Project != "proj" {
