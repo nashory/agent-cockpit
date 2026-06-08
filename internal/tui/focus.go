@@ -36,11 +36,11 @@ func (m Model) zoomTargets() []zoomTarget {
 	tokChart := func(w, h int) string { return seriesChart(dailySeries(ev, 30), w, chartH(h), colGreen) }
 	costChart := func(w, h int) string { return seriesChart(dailyCostSeries(ev, 30, prices), w, chartH(h), colAmber) }
 	thrChart := func(w, h int) string { return seriesChart(dailyThroughput(ev, 30), w, chartH(h), colCyan) }
-	velChart := func(w, h int) string { return seriesChart(dailyVelocity(ev, 30), w, chartH(h), colAmber) }
+	velChart := func(w, h int) string { return seriesChart(dailyVelocity(ev, 30), w, chartH(h), colCyan) }
 	enginesBar := func(w, h int) string { return m.enginesBar(ev, prices, w) }
 	enginesClusters := func(w, h int) string { return m.agentClusters(w) }
 	modelsZoom := func(w, h int) string { return m.modelsBody(w, 0) }
-	trend := zoomTarget{"TREND", colCyan, tokChart}
+	trend := zoomTarget{"TREND", colGreen, tokChart}
 	engines := zoomTarget{"ENGINES", colCyan, enginesBar}
 	models := zoomTarget{"MODELS", colCyan, modelsZoom}
 	activitySpark := zoomTarget{"ACTIVITY", colCyan, func(w, h int) string { return m.agentSparks(ev, w) }}
@@ -53,7 +53,7 @@ func (m Model) zoomTargets() []zoomTarget {
 		}
 		return lipgloss.JoinVertical(lipgloss.Left, m.airspeedHero(w), "", speedLanes(rows, maxTPS, w))
 	}}
-	tokens := zoomTarget{"TOKENS", colCyan, tokChart}
+	tokens := zoomTarget{"TOKENS", colGreen, tokChart}
 	cal := zoomTarget{"CALENDAR", colGreen, func(w, h int) string {
 		g, _ := m.contributionGrid(w)
 		return g
@@ -83,11 +83,11 @@ func (m Model) zoomTargets() []zoomTarget {
 		return []zoomTarget{
 			tokens,
 			{"COST", colAmber, costChart},
-			{"VELOCITY", colAmber, velChart},
+			{"VELOCITY", colCyan, velChart},
 			{"THROUGHPUT", colCyan, thrChart},
 			{"EFFICIENCY", colGreen, func(w, h int) string { return m.efficiencyBody(w - 6) }},
 			{"ECONOMICS", colAmber, func(w, h int) string { return m.economicsBody(w - 6) }},
-			{"CADENCE", colCyan, func(w, h int) string { return m.cadenceBody() }},
+			{"CADENCE", colGreen, func(w, h int) string { return m.cadenceBody() }},
 		}
 	case activity:
 		// Body: CALENDAR, then HOUR OF DAY, then DAY OF WEEK | TOP PROJECTS.

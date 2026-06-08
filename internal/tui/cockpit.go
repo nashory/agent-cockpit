@@ -44,7 +44,7 @@ func (m Model) overview(width int) string {
 	span := m.dataSpanLabel()
 	row1 := panelsRow(stack, gap,
 		panelSpec{"◈ ENGINES · " + span, colCyan, lw, m.enginesBar(events, prices, lw)},
-		panelSpec{"◈ TREND · 30d tokens", colCyan, rw, m.trendChart(events, rw)},
+		panelSpec{"◈ TREND · 30d tokens", colGreen, rw, m.trendChart(events, rw)},
 	)
 	row2 := panelsRow(stack, gap,
 		panelSpec{"◈ MODELS · " + span, colCyan, lw, m.modelsBar(events, prices, lw)},

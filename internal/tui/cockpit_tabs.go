@@ -213,13 +213,13 @@ func (m Model) trendsView(width int) string {
 	half, stackHalf := gridWidths(width, gap, 2, 26)
 	if stackHalf {
 		return vstack(hero,
-			panel("◈ TOKENS · 30d", colCyan, width, seriesChart(tokPts, width, 8, colGreen)),
-			panel("◈ COST · 30d", colCyan, width, seriesChart(costPts, width, 8, colAmber)),
-			panel("◈ VELOCITY · Δ tok/day", colCyan, width, seriesChart(velPts, width, 8, colAmber)),
+			panel("◈ TOKENS · 30d", colGreen, width, seriesChart(tokPts, width, 8, colGreen)),
+			panel("◈ COST · 30d", colAmber, width, seriesChart(costPts, width, 8, colAmber)),
+			panel("◈ VELOCITY · Δ tok/day", colCyan, width, seriesChart(velPts, width, 8, colCyan)),
 			panel("◈ THROUGHPUT · out t/s", colCyan, width, seriesChart(thrPts, width, 8, colCyan)),
-			panel("◈ EFFICIENCY", colCyan, width, m.efficiencyBody(width-6)),
-			panel("◈ ECONOMICS", colCyan, width, m.economicsBody(width-6)),
-			panel("◈ CADENCE", colCyan, width, m.cadenceBody()),
+			panel("◈ EFFICIENCY", colGreen, width, m.efficiencyBody(width-6)),
+			panel("◈ ECONOMICS", colAmber, width, m.economicsBody(width-6)),
+			panel("◈ CADENCE", colGreen, width, m.cadenceBody()),
 		)
 	}
 
@@ -233,17 +233,17 @@ func (m Model) trendsView(width int) string {
 	// Borders/headers are uniform cyan like the other tabs; chart line colors
 	// stay distinct since they carry meaning.
 	row1 := panelsRow(false, gap,
-		panelSpec{"◈ TOKENS · 30d", colCyan, half, seriesChart(tokPts, half, 8, colGreen)},
-		panelSpec{"◈ COST · 30d", colCyan, half, seriesChart(costPts, half, 8, colAmber)},
+		panelSpec{"◈ TOKENS · 30d", colGreen, half, seriesChart(tokPts, half, 8, colGreen)},
+		panelSpec{"◈ COST · 30d", colAmber, half, seriesChart(costPts, half, 8, colAmber)},
 	)
 	row2 := panelsRow(false, gap,
-		panelSpec{"◈ VELOCITY · Δ tok/day", colCyan, half, seriesChart(velPts, half, 8, colAmber)},
+		panelSpec{"◈ VELOCITY · Δ tok/day", colCyan, half, seriesChart(velPts, half, 8, colCyan)},
 		panelSpec{"◈ THROUGHPUT · out t/s", colCyan, half, seriesChart(thrPts, half, 8, colCyan)},
 	)
 	row3 := panelsRow(stackThird, gap,
-		panelSpec{"◈ EFFICIENCY", colCyan, tw, m.efficiencyBody(iw)},
-		panelSpec{"◈ ECONOMICS", colCyan, tw, m.economicsBody(iw)},
-		panelSpec{"◈ CADENCE", colCyan, tw, m.cadenceBody()},
+		panelSpec{"◈ EFFICIENCY", colGreen, tw, m.efficiencyBody(iw)},
+		panelSpec{"◈ ECONOMICS", colAmber, tw, m.economicsBody(iw)},
+		panelSpec{"◈ CADENCE", colGreen, tw, m.cadenceBody()},
 	)
 	return vstack(hero, row1, row2, row3)
 }
