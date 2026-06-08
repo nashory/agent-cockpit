@@ -48,11 +48,9 @@ func Parallel(ctx context.Context, roots []string, match MatchFunc, parse ParseF
 				if ctx.Err() != nil {
 					return
 				}
-				parsed, perr := parse(paths[i])
-				if perr != nil {
-					continue
-				}
-				results[i] = parsed
+				// Keep whatever parsed even on error: a single corrupt or
+				// oversized line should not drop the rest of the file's events.
+				results[i], _ = parse(paths[i])
 			}
 		}()
 	}

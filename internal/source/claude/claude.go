@@ -52,7 +52,7 @@ func ParseFile(path string) ([]usage.Event, error) {
 
 func Parse(r io.Reader, path string) ([]usage.Event, error) {
 	scanner := bufio.NewScanner(r)
-	scanner.Buffer(make([]byte, 0, 64*1024), 8*1024*1024)
+	scanner.Buffer(make([]byte, 0, 64*1024), 64*1024*1024)
 	var events []usage.Event
 	for scanner.Scan() {
 		var l line

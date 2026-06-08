@@ -27,7 +27,7 @@ privately.
 Before a release:
 
 - Confirm no real logs or local config files are committed.
-- Confirm release archives contain only `ac`, `README.md`, and `LICENSE`.
+- Confirm release archives contain only `cockpit`, `README.md`, and `LICENSE`.
 - Confirm GitHub Actions artifacts are built from the tagged commit.
 - Confirm Homebrew checksums match the release artifacts.
 - Review new adapters for network calls or shell execution.

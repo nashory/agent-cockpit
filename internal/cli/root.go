@@ -39,6 +39,9 @@ func Execute() error {
 		Use:   "cockpit",
 		Short: "Live usage, cost, and speed dashboards for coding agents",
 		Long:  "cockpit is the command-line dashboard for local coding-agent logs: token usage, estimated cost, and trends without uploading your data.",
+		// Print runtime errors once (from main), without dumping usage.
+		SilenceErrors: true,
+		SilenceUsage:  true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if opts.json {
 				events, cfg, err := load(cmd.Context(), opts)

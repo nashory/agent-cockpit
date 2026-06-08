@@ -78,6 +78,34 @@ func TestParallelSkipsParseErrors(t *testing.T) {
 	}
 }
 
+func TestParallelKeepsPartialOnError(t *testing.T) {
+	root := t.TempDir()
+	write(t, filepath.Join(root, "f.jsonl"), "x\ny\nBOOM\nz")
+
+	// A parser that yields events until it hits a fatal line (mimics a scanner
+	// error mid-file): it returns what it gathered plus an error.
+	partial := func(path string) ([]usage.Event, error) {
+		b, _ := os.ReadFile(path)
+		var out []usage.Event
+		for _, line := range strings.Split(strings.TrimSpace(string(b)), "\n") {
+			if line == "BOOM" {
+				return out, errors.New("scanner error mid-file")
+			}
+			out = append(out, usage.Event{Model: line})
+		}
+		return out, nil
+	}
+
+	events, err := Parallel(context.Background(), []string{root}, match, partial)
+	if err != nil {
+		t.Fatalf("a mid-file error must not fail the scan: %v", err)
+	}
+	// The events parsed before the error (x, y) must survive.
+	if len(events) != 2 {
+		t.Fatalf("expected 2 partial events kept, got %d (%v)", len(events), events)
+	}
+}
+
 func TestParallelMissingRoot(t *testing.T) {
 	events, err := Parallel(context.Background(), []string{filepath.Join(t.TempDir(), "nope")}, match, parse)
 	if err != nil {
