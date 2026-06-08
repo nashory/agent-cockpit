@@ -46,7 +46,7 @@ func (m Model) zoomTargets() []zoomTarget {
 		}
 	case breakdown:
 		return []zoomTarget{
-			{"MODEL MIX", colCyan, func(w, h int) string { return m.modelStack(w, h) }},
+			{"ENGINES", colCyan, func(w, h int) string { return m.agentClusters(w) }},
 			{"MODELS", colCyan, modelsZoom},
 			{"SPEED", colCyan, func(w, h int) string {
 				rows := speedRows(ev)
@@ -56,7 +56,7 @@ func (m Model) zoomTargets() []zoomTarget {
 				}
 				return lipgloss.JoinVertical(lipgloss.Left, m.airspeedHero(w), "", speedLanes(rows, maxTPS, w))
 			}},
-			{"ENGINES", colCyan, func(w, h int) string { return m.agentClusters(w) }},
+			{"MODEL MIX", colCyan, func(w, h int) string { return m.modelStack(w, h) }},
 		}
 	case trends:
 		return []zoomTarget{
