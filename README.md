@@ -61,7 +61,14 @@ cockpit
 
 Or track `main` with `brew install --HEAD nashory/tap/agent-cockpit`.
 
-**With Go:**
+**Windows** (Homebrew isn't available) — grab the prebuilt binary from the
+[latest release](https://github.com/nashory/agent-cockpit/releases/latest):
+download `cockpit-<version>-windows-amd64.zip` (or `-arm64`), unzip, and run
+`cockpit.exe`. Drop its folder on your `PATH` to run `cockpit` from anywhere.
+macOS/Linux users who don't use Homebrew can grab the matching `.tar.gz` the
+same way.
+
+**With Go** (any platform, needs Go installed):
 
 ```bash
 go install github.com/nashory/agent-cockpit/cmd/cockpit@latest
