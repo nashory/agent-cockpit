@@ -31,7 +31,7 @@ func (m Model) breakdownView(width int) string {
 
 	row := panelsRow(stack, gap,
 		panelSpec{"◈ MODELS · load · " + span, colCyan, lw, m.modelsBody(lw, 8)},
-		panelSpec{"◈ OUTPUT SPEED", colCyan, rw, speedLanes(rows, maxTPS, rw)},
+		panelSpec{"◈ OUTPUT SPEED · " + span, colCyan, rw, speedLanes(rows, maxTPS, rw)},
 	)
 
 	return vstack(engines, row, mix)

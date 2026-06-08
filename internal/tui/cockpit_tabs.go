@@ -210,16 +210,17 @@ func (m Model) trendsView(width int) string {
 	// Three full-width rows: TOKENS|COST, then VELOCITY|THROUGHPUT (both 50/50),
 	// then EFFICIENCY|ECONOMICS|CADENCE (thirds). Each row equalizes its panels'
 	// box height. Narrow terminals collapse to a single full-width column.
+	span := m.dataSpanLabel() // insight panels are all-time, unlike the 30d charts
 	half, stackHalf := gridWidths(width, gap, 2, 26)
 	if stackHalf {
 		return vstack(hero,
 			panel("◈ TOKENS · 30d", colGreen, width, seriesChart(tokPts, width, 8, colGreen)),
 			panel("◈ COST · 30d", colAmber, width, seriesChart(costPts, width, 8, colAmber)),
-			panel("◈ VELOCITY · Δ tok/day", colCyan, width, seriesChart(velPts, width, 8, colCyan)),
-			panel("◈ THROUGHPUT · out t/s", colCyan, width, seriesChart(thrPts, width, 8, colCyan)),
-			panel("◈ EFFICIENCY", colGreen, width, m.efficiencyBody(width-6)),
-			panel("◈ ECONOMICS", colAmber, width, m.economicsBody(width-6)),
-			panel("◈ CADENCE", colGreen, width, m.cadenceBody()),
+			panel("◈ VELOCITY · Δ tok/day · 30d", colCyan, width, seriesChart(velPts, width, 8, colCyan)),
+			panel("◈ THROUGHPUT · out t/s · 30d", colCyan, width, seriesChart(thrPts, width, 8, colCyan)),
+			panel("◈ EFFICIENCY · "+span, colGreen, width, m.efficiencyBody(width-6)),
+			panel("◈ ECONOMICS · "+span, colAmber, width, m.economicsBody(width-6)),
+			panel("◈ CADENCE · "+span, colGreen, width, m.cadenceBody()),
 		)
 	}
 
@@ -237,13 +238,13 @@ func (m Model) trendsView(width int) string {
 		panelSpec{"◈ COST · 30d", colAmber, half, seriesChart(costPts, half, 8, colAmber)},
 	)
 	row2 := panelsRow(false, gap,
-		panelSpec{"◈ VELOCITY · Δ tok/day", colCyan, half, seriesChart(velPts, half, 8, colCyan)},
-		panelSpec{"◈ THROUGHPUT · out t/s", colCyan, half, seriesChart(thrPts, half, 8, colCyan)},
+		panelSpec{"◈ VELOCITY · Δ tok/day · 30d", colCyan, half, seriesChart(velPts, half, 8, colCyan)},
+		panelSpec{"◈ THROUGHPUT · out t/s · 30d", colCyan, half, seriesChart(thrPts, half, 8, colCyan)},
 	)
 	row3 := panelsRow(stackThird, gap,
-		panelSpec{"◈ EFFICIENCY", colGreen, tw, m.efficiencyBody(iw)},
-		panelSpec{"◈ ECONOMICS", colAmber, tw, m.economicsBody(iw)},
-		panelSpec{"◈ CADENCE", colGreen, tw, m.cadenceBody()},
+		panelSpec{"◈ EFFICIENCY · " + span, colGreen, tw, m.efficiencyBody(iw)},
+		panelSpec{"◈ ECONOMICS · " + span, colAmber, tw, m.economicsBody(iw)},
+		panelSpec{"◈ CADENCE · " + span, colGreen, tw, m.cadenceBody()},
 	)
 	return vstack(hero, row1, row2, row3)
 }

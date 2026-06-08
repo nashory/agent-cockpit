@@ -60,7 +60,8 @@ func (m Model) activityView(width int) string {
 		return vstack(hero, cal)
 	}
 
-	hourPanel := panel("◈ HOUR OF DAY · tokens", colCyan, width, m.hourStrip(width))
+	span := m.dataSpanLabel() // the hour/weekday/project aggregates are all-time
+	hourPanel := panel("◈ HOUR OF DAY · "+span, colCyan, width, m.hourStrip(width))
 	gap := 1
 	cw, stack := gridWidths(width, gap, 2, 40)
 	lw, rw := cw, cw
@@ -68,8 +69,8 @@ func (m Model) activityView(width int) string {
 		lw, rw = width, width
 	}
 	row := panelsRow(stack, gap,
-		panelSpec{"◈ DAY OF WEEK", colCyan, lw, m.weekdayBars(m.ins, lw)},
-		panelSpec{"◈ TOP PROJECTS · " + m.dataSpanLabel(), colCyan, rw, m.projectBars(rw, cur)},
+		panelSpec{"◈ DAY OF WEEK · " + span, colCyan, lw, m.weekdayBars(m.ins, lw)},
+		panelSpec{"◈ TOP PROJECTS · " + span, colCyan, rw, m.projectBars(rw, cur)},
 	)
 
 	return vstack(hero, cal, hourPanel, row)

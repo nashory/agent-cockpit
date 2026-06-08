@@ -25,7 +25,7 @@ func (m Model) overview(width int) string {
 
 	if m.compact {
 		// Light: headline readouts + the two instruments that matter most.
-		engines := panel("◈ ENGINES", colCyan, width, m.enginesBar(events, prices, width))
+		engines := panel("◈ ENGINES · "+m.dataSpanLabel(), colCyan, width, m.enginesBar(events, prices, width))
 		trend := panel("◈ TREND · 30d tokens", colCyan, width, m.trendChart(events, width))
 		return vstack(primary, engines, trend)
 	}
@@ -82,7 +82,8 @@ func (m Model) primaryStrip(t usage.Totals, width int) string {
 	cells = append(cells, readout("CLOCK", clock, colAmber))
 
 	joined := lipgloss.JoinHorizontal(lipgloss.Top, spread(cells, "   ")...)
-	return heroPanel("✈ AGENT COCKPIT", colCyan, width, joined)
+	// These are all-time totals; state the span so COST etc. are not ambiguous.
+	return heroPanel("✈ AGENT COCKPIT · "+m.dataSpanLabel(), colCyan, width, joined)
 }
 
 func readout(label, value string, accent lipgloss.Color) string {
