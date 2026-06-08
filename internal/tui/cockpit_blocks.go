@@ -29,11 +29,9 @@ func (m Model) blocksView(width int) string {
 	bl := usage.SessionBlocks(m.events, m.reportOptions.Pricing, usage.DefaultBlockWindow)
 	hero := heroPanel("✈ ACTIVE WINDOW · 5h", colCyan, width, m.activeBlockBody(bl))
 
-	limit := m.height - 16
-	if limit < 5 {
-		limit = 5
-	}
-	table := panel("◈ BLOCKS · 5h windows", colCyan, width, m.blocksTable(bl, width, limit))
+	vis := m.tableVisible()
+	title := "◈ BLOCKS · 5h windows" + scrollHint(m.scroll, vis, len(bl))
+	table := panel(title, colCyan, width, m.blocksTable(bl, width, m.scroll, vis))
 	return vstack(hero, table)
 }
 
@@ -76,7 +74,7 @@ func (m Model) activeBlockBody(bl []usage.Block) string {
 
 // blocksTable lists windows newest first: when it started, how long was active,
 // tokens, cost, and models, with a marker on the live window.
-func (m Model) blocksTable(bl []usage.Block, width, limit int) string {
+func (m Model) blocksTable(bl []usage.Block, width, offset, limit int) string {
 	if len(bl) == 0 {
 		return labelStyle.Render("no data")
 	}
@@ -104,6 +102,11 @@ func (m Model) blocksTable(bl []usage.Block, width, limit int) string {
 	rows := make([]usage.Block, len(bl))
 	for i, x := range bl {
 		rows[len(bl)-1-i] = x
+	}
+	if offset > 0 && offset < len(rows) {
+		rows = rows[offset:]
+	} else if offset >= len(rows) {
+		rows = nil
 	}
 	if limit > 0 && len(rows) > limit {
 		rows = rows[:limit]

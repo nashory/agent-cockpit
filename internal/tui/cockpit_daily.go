@@ -70,19 +70,27 @@ func dayModelList(set map[string]struct{}) string {
 // a TOTAL footer, the way ccusage prints its daily report.
 func (m Model) dailyView(width int) string {
 	span := m.dataSpanLabel()
-	// Cap rows to what fits under the header/footer/chrome; enter zooms to all.
-	limit := m.height - 14
-	if limit < 6 {
-		limit = 6
-	}
-	body := m.ledgerTable(width, limit)
-	return panel("◈ DAILY · last "+span, colCyan, width, body)
+	body := m.ledgerTable(width, m.scroll, m.tableVisible())
+	title := "◈ DAILY · last " + span + scrollHint(m.scroll, m.tableVisible(), m.tableTotal())
+	return panel(title, colCyan, width, body)
 }
 
-// ledgerTable formats the daily ledger to the given content width. limit caps
-// the number of day rows shown (<=0 uses a tab-friendly default); the TOTAL row
-// always reflects every day in range.
-func (m Model) ledgerTable(width, limit int) string {
+// scrollHint shows "· 31-60 / 190 ↑↓" when a table has more rows than fit.
+func scrollHint(offset, visible, total int) string {
+	if total <= visible {
+		return ""
+	}
+	from := offset + 1
+	to := offset + visible
+	if to > total {
+		to = total
+	}
+	return fmt.Sprintf(" · %d-%d / %d  ↑↓", from, to, total)
+}
+
+// ledgerTable formats the daily ledger to the given content width, showing
+// `limit` rows starting at `offset`. The TOTAL row always reflects every day.
+func (m Model) ledgerTable(width, offset, limit int) string {
 	rows := dailyLedger(m.events, m.reportOptions.Pricing)
 	if len(rows) == 0 {
 		return labelStyle.Render("no data")
@@ -112,6 +120,11 @@ func (m Model) ledgerTable(width, limit int) string {
 	b.WriteByte('\n')
 
 	shown := rows
+	if offset > 0 && offset < len(shown) {
+		shown = shown[offset:]
+	} else if offset >= len(shown) {
+		shown = nil
+	}
 	if limit > 0 && len(shown) > limit {
 		shown = shown[:limit]
 	}

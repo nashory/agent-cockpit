@@ -38,6 +38,7 @@ type Model struct {
 	focus           int            // focused widget within the current tab
 	zoomed          bool           // fullscreen the focused widget
 	calCursor       int            // calendar: selected day, days before today
+	scroll          int            // row offset for the table tabs (Daily, Blocks)
 	ins             usage.Insights // derived once per data load, not per render
 	err             error
 }
@@ -52,6 +53,58 @@ func clampCursor(c int) int {
 		return calMaxCursor
 	}
 	return c
+}
+
+func clampScroll(c, max int) int {
+	if c < 0 {
+		return 0
+	}
+	if c > max {
+		return max
+	}
+	return c
+}
+
+// tableTotal is the number of rows the current table tab can show.
+func (m Model) tableTotal() int {
+	switch m.view {
+	case daily:
+		return len(dailyLedger(m.events, m.reportOptions.Pricing))
+	case blocks:
+		return len(usage.SessionBlocks(m.events, m.reportOptions.Pricing, usage.DefaultBlockWindow))
+	}
+	return 0
+}
+
+// tableVisible is how many table rows fit in the current context (zoomed uses
+// the full content height; otherwise the tab leaves room for chrome).
+func (m Model) tableVisible() int {
+	if m.zoomed {
+		if v := m.contentHeight() - 4; v > 6 {
+			return v
+		}
+		return 6
+	}
+	switch m.view {
+	case daily:
+		if v := m.height - 14; v > 6 {
+			return v
+		}
+		return 6
+	case blocks:
+		if v := m.height - 16; v > 5 {
+			return v
+		}
+		return 5
+	}
+	return 0
+}
+
+func (m Model) maxScroll() int {
+	if mx := m.tableTotal() - m.tableVisible(); mx > 0 {
+		return mx
+	}
+	return 0
 }
 
 type Options struct {
@@ -131,6 +184,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// On the table tabs (Daily, Blocks) arrows scroll the rows.
+		if m.view == daily || m.view == blocks {
+			switch s {
+			case "up", "k":
+				m.scroll = clampScroll(m.scroll-1, m.maxScroll())
+				return m, nil
+			case "down", "j":
+				m.scroll = clampScroll(m.scroll+1, m.maxScroll())
+				return m, nil
+			case "pgup":
+				m.scroll = clampScroll(m.scroll-10, m.maxScroll())
+				return m, nil
+			case "pgdown":
+				m.scroll = clampScroll(m.scroll+10, m.maxScroll())
+				return m, nil
+			case "home", "g":
+				m.scroll = 0
+				return m, nil
+			case "end", "G":
+				m.scroll = m.maxScroll()
+				return m, nil
+			}
+		}
+
 		switch s {
 		case "ctrl+c", "q":
 			return m, tea.Quit
@@ -147,13 +224,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.focus, m.zoomed = 0, false // target list changes with the layout
 		case "1", "2", "3", "4", "5", "6":
 			m.view = view(int(s[0] - '1'))
-			m.focus, m.zoomed = 0, false
+			m.focus, m.zoomed, m.scroll = 0, false, 0
 		case "tab":
 			m.view = (m.view + 1) % numViews
-			m.focus, m.zoomed = 0, false
+			m.focus, m.zoomed, m.scroll = 0, false, 0
 		case "shift+tab":
 			m.view = (m.view + numViews - 1) % numViews
-			m.focus, m.zoomed = 0, false
+			m.focus, m.zoomed, m.scroll = 0, false, 0
 		case "left", "h", "up", "k":
 			if n > 0 {
 				m.focus = (m.focus - 1 + n) % n

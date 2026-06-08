@@ -110,7 +110,7 @@ func (m Model) zoomTargets() []zoomTarget {
 				if limit < 6 {
 					limit = 6
 				}
-				return m.ledgerTable(w, limit)
+				return m.ledgerTable(w, m.scroll, limit)
 			}},
 		}
 	case blocks:
@@ -120,7 +120,7 @@ func (m Model) zoomTargets() []zoomTarget {
 				if limit < 6 {
 					limit = 6
 				}
-				return m.blocksTable(usage.SessionBlocks(ev, prices, usage.DefaultBlockWindow), w, limit)
+				return m.blocksTable(usage.SessionBlocks(ev, prices, usage.DefaultBlockWindow), w, m.scroll, limit)
 			}},
 		}
 	}

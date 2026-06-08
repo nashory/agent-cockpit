@@ -83,3 +83,36 @@ func TestUpdateQuits(t *testing.T) {
 		t.Fatal("'q' should return a quit command")
 	}
 }
+
+func TestTableScroll(t *testing.T) {
+	m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
+	m.width, m.height = 140, 44
+
+	m = upd(m, runes("6")) // Blocks tab
+	if m.view != blocks || m.scroll != 0 {
+		t.Fatalf("expected blocks/scroll 0, got view=%d scroll=%d", m.view, m.scroll)
+	}
+	if m.maxScroll() <= 0 {
+		t.Fatalf("sample data should overflow the blocks table, maxScroll=%d", m.maxScroll())
+	}
+	// Down scrolls, up clamps at 0.
+	m = upd(m, tea.KeyMsg{Type: tea.KeyDown})
+	if m.scroll != 1 {
+		t.Fatalf("down should scroll to 1, got %d", m.scroll)
+	}
+	m = upd(m, tea.KeyMsg{Type: tea.KeyUp})
+	m = upd(m, tea.KeyMsg{Type: tea.KeyUp})
+	if m.scroll != 0 {
+		t.Fatalf("up past top should clamp to 0, got %d", m.scroll)
+	}
+	// end jumps to the bottom, capped at maxScroll.
+	m = upd(m, runes("G"))
+	if m.scroll != m.maxScroll() {
+		t.Fatalf("G should jump to maxScroll %d, got %d", m.maxScroll(), m.scroll)
+	}
+	// Switching tabs resets the scroll offset.
+	m = upd(m, runes("1"))
+	if m.scroll != 0 {
+		t.Fatalf("tab switch should reset scroll, got %d", m.scroll)
+	}
+}
