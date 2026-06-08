@@ -77,15 +77,6 @@ func dailyTokenMap(events []usage.Event) map[string]int64 {
 	return m
 }
 
-// calendarView is the GitHub-style contribution graph: weeks as columns, days
-// of the week as rows, each cell colored by that day's token usage.
-func (m Model) calendarView(width int) string {
-	grid, weeks := m.contributionGrid(width)
-	hero := heroPanel("✈ YEAR", colCyan, width, m.calendarHero(dailyTokenMap(m.events)))
-	gridPanel := panel(fmt.Sprintf("◈ CONTRIBUTIONS · %d weeks · ←→ weeks ↑↓ days", weeks), colGreen, width, grid)
-	return lipgloss.JoinVertical(lipgloss.Left, hero, gridPanel)
-}
-
 // contributionGrid renders the year heat-grid body (month labels, weekday rows,
 // legend, and the selected-day tooltip) and returns it with the week count.
 func (m Model) contributionGrid(width int) (string, int) {

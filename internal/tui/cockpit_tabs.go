@@ -111,29 +111,16 @@ func kv(label, value string, accent lipgloss.Color) string {
 		lipgloss.NewStyle().Foreground(accent).Bold(true).Render(value)
 }
 
-// agentsView is the per-engine instrument cluster: one panel per agent with
-// its headline readouts, a share gauge, observed speed, and an activity trace.
-func (m Model) agentsView(width int) string {
+// agentClusters renders one panel per agent: headline readouts, a share gauge,
+// observed speed, and a 14-day activity trace. Used on the Breakdown tab and as
+// the ENGINES zoom view.
+func (m Model) agentClusters(width int) string {
 	prices := m.reportOptions.Pricing
 	buckets := usage.GroupByWith(m.events, prices, func(e usage.Event) string { return e.Source })
 	if len(buckets) == 0 {
 		return labelStyle.Render("no data")
 	}
 	cur := m.currency()
-
-	if m.compact {
-		header := panel("◈ ENGINES · tokens", colCyan, width, m.enginesBar(m.events, prices, width))
-		var b strings.Builder
-		for _, bk := range buckets {
-			bullet := lipgloss.NewStyle().Foreground(agentColor(bk.Key)).Render("●")
-			fmt.Fprintf(&b, "%s %-8s %9s  %10s  %5.1f%%\n",
-				bullet, truncate(bk.Key, 8), compact(bk.Totals.Total),
-				fmt.Sprintf("%.2f %s", bk.Totals.CostUSD, cur), bk.Share*100)
-		}
-		list := panel("◈ AGENTS", colCyan, width, strings.TrimRight(b.String(), "\n"))
-		return vstack(header, list)
-	}
-
 	gap := 1
 	n := len(buckets)
 	pw, stack := gridWidths(width, gap, n, 30)
@@ -144,8 +131,7 @@ func (m Model) agentsView(width int) string {
 	panels := make([]string, 0, n)
 	for _, b := range buckets {
 		c := agentColor(b.Key)
-		sub := filterSource(m.events, b.Key)
-		tps := subsetSpeed(sub)
+		tps := subsetSpeed(filterSource(m.events, b.Key))
 		sparkW := pw - 13 // box(6) + label(7)
 		if sparkW < 6 {
 			sparkW = 6
@@ -167,19 +153,7 @@ func (m Model) agentsView(width int) string {
 		)
 		panels = append(panels, panel("◈ "+strings.ToUpper(b.Key), c, pw, body))
 	}
-
-	row := arrangePanels(stack, gap, panels...)
-	header := panel("◈ ENGINES · tokens", colCyan, width, m.enginesBar(m.events, prices, width))
-	return lipgloss.JoinVertical(lipgloss.Left, header, row)
-}
-
-// modelsView is the model instrument table: a gauge, cost, and share per model.
-func (m Model) modelsView(width int) string {
-	limit := 10
-	if m.compact {
-		limit = 5
-	}
-	return panel("◈ MODELS · load", colCyan, width, m.modelsBody(width, limit))
+	return arrangePanels(stack, gap, panels...)
 }
 
 // modelsBody renders the per-model load/cost/share table (limit<=0 = all).
@@ -215,16 +189,47 @@ func (m Model) modelsBody(width, limit int) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
-// trendsView is the navigation display: stacked token and cost time-series with
-// summary readouts (total, daily average, peak).
+// trendsView is the analysis tab: token/cost time-series plus derived insight
+// panels (efficiency, economics, cadence).
 func (m Model) trendsView(width int) string {
 	days := 30
 	prices := m.reportOptions.Pricing
-	cur := m.currency()
-
 	tokPts := dailySeries(m.events, days)
 	costPts := dailyCostSeries(m.events, days, prices)
 
+	hero := heroPanel("✈ TRENDS · 30d", colCyan, width, m.trendsHero(tokPts, costPts, days))
+	if m.compact {
+		tok := panel("◈ TOKENS · 30d", colCyan, width, seriesChart(tokPts, width, 8, colGreen))
+		return vstack(hero, tok)
+	}
+
+	gap := 1
+	cw, stack := gridWidths(width, gap, 2, 40)
+	lw, rw := cw, cw
+	if stack {
+		lw, rw = width, width
+	}
+	tok := panel("◈ TOKENS · 30d", colCyan, lw, seriesChart(tokPts, lw, 8, colGreen))
+	cost := panel("◈ COST · 30d", colAmber, rw, seriesChart(costPts, rw, 8, colAmber))
+	charts := arrangePanels(stack, gap, tok, cost)
+
+	cw3, stack3 := gridWidths(width, gap, 3, 28)
+	colW := cw3
+	if stack3 {
+		colW = width
+	}
+	iw := colW - 6
+	eff := panel("◈ EFFICIENCY", colGreen, colW, m.efficiencyBody(iw))
+	econ := panel("◈ ECONOMICS", colAmber, colW, m.economicsBody(iw))
+	cad := panel("◈ CADENCE", colCyan, colW, m.cadenceBody())
+	insights := arrangePanels(stack3, gap, eff, econ, cad)
+
+	return vstack(hero, charts, insights)
+}
+
+// trendsHero shows the 30-day window summary readouts.
+func (m Model) trendsHero(tokPts, costPts []tslc.TimePoint, days int) string {
+	cur := m.currency()
 	var totalTok, peakTok float64
 	for _, p := range tokPts {
 		totalTok += p.Value
@@ -239,8 +244,7 @@ func (m Model) trendsView(width int) string {
 			peakCost = p.Value
 		}
 	}
-
-	readouts := lipgloss.JoinHorizontal(lipgloss.Top, spread([]string{
+	return lipgloss.JoinHorizontal(lipgloss.Top, spread([]string{
 		readout("WINDOW", fmt.Sprintf("%dd", days), colDim),
 		readout("TOKENS", compact(int64(totalTok)), colCyan),
 		readout("TOK/DAY", compact(int64(totalTok/float64(days))), colText),
@@ -248,31 +252,14 @@ func (m Model) trendsView(width int) string {
 		readout("COST", fmt.Sprintf("%.2f %s", totalCost, cur), colGreen),
 		readout("PEAK COST", fmt.Sprintf("%.2f", peakCost), colAmber),
 	}, "   ")...)
-
-	nav := heroPanel("✈ NAV · trends", colCyan, width, readouts)
-	tokChart := panel("◈ TOKENS · "+fmt.Sprintf("%dd", days), colCyan, width,
-		seriesChart(tokPts, width, 9, colGreen))
-	if m.compact {
-		return vstack(nav, tokChart)
-	}
-	costChart := panel("◈ COST · "+fmt.Sprintf("%dd", days), colAmber, width,
-		seriesChart(costPts, width, 9, colAmber))
-	return vstack(nav, tokChart, costChart)
 }
 
-// speedView is the airspeed panel: observed output tokens/sec per agent/model,
-// rendered as gauges relative to the fastest lane.
-func (m Model) speedView(width int) string {
+// airspeedHero renders the glass-cockpit airspeed tape driven by the fastest
+// output lane. Used on the Breakdown SPEED zoom view.
+func (m Model) airspeedHero(width int) string {
 	rows := speedRows(m.events)
 	if len(rows) == 0 {
 		return labelStyle.Render("no data")
-	}
-	limit := 16
-	if m.compact {
-		limit = 5
-	}
-	if len(rows) > limit {
-		rows = rows[:limit]
 	}
 	top := rows[0]
 	maxTPS := top.tps
@@ -280,9 +267,6 @@ func (m Model) speedView(width int) string {
 		maxTPS = 1
 	}
 	inner := width - 6
-
-	// Hero: a glass-cockpit airspeed tape driven by the fastest lane, scaled
-	// with headroom so the needle reads in the normal band, not the redline.
 	scaleMax := maxTPS * 1.25
 	tape := airspeedTape(top.tps, scaleMax, inner)
 	rmax := fmtScale(scaleMax)
@@ -297,11 +281,7 @@ func (m Model) speedView(width int) string {
 		readout("OUT t/s", fmt.Sprintf("%.1f", top.tps), colCyan),
 		readout("LANES", compact(int64(len(rows))), colDim),
 	}, "   ")...)
-	hero := heroPanel("✈ AIRSPEED · output t/s", colCyan, width,
-		lipgloss.JoinVertical(lipgloss.Left, readouts, "", scale, tape))
-
-	return lipgloss.JoinVertical(lipgloss.Left, hero,
-		panel("◈ OUTPUT SPEED · all lanes", colCyan, width, speedLanes(rows, maxTPS, width)))
+	return lipgloss.JoinVertical(lipgloss.Left, readouts, "", scale, tape)
 }
 
 // speedLanes renders the per-lane relative-speed table.

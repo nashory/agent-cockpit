@@ -20,8 +20,8 @@ func TestUpdateKeyHandling(t *testing.T) {
 
 	// Number keys jump tabs.
 	m = upd(m, runes("3"))
-	if m.view != models {
-		t.Fatalf("'3' should select models, got %d", m.view)
+	if m.view != trends {
+		t.Fatalf("'3' should select trends, got %d", m.view)
 	}
 
 	// Overview has several focusable widgets; arrows move focus and wrap.
@@ -65,15 +65,15 @@ func TestUpdateKeyHandling(t *testing.T) {
 	// Tab advances the view and resets focus/zoom.
 	m.focus, m.zoomed = 2, true
 	m = upd(m, tea.KeyMsg{Type: tea.KeyTab})
-	if m.view != agents || m.focus != 0 || m.zoomed {
+	if m.view != breakdown || m.focus != 0 || m.zoomed {
 		t.Fatalf("tab should advance view and reset focus/zoom, got view=%d focus=%d zoomed=%v", m.view, m.focus, m.zoomed)
 	}
 
-	// shift+tab wraps backwards from overview to calendar.
+	// shift+tab wraps backwards from overview to the last tab.
 	m = upd(m, runes("1"))
 	m = upd(m, tea.KeyMsg{Type: tea.KeyShiftTab})
-	if m.view != calendar {
-		t.Fatalf("shift+tab from overview should wrap to calendar, got %d", m.view)
+	if m.view != activity {
+		t.Fatalf("shift+tab from overview should wrap to activity, got %d", m.view)
 	}
 }
 

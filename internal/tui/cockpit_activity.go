@@ -10,20 +10,6 @@ import (
 
 var weekdayNames = [7]string{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}
 
-func hourLabel(h int) string {
-	if h < 0 || h > 23 {
-		return "—"
-	}
-	return fmt.Sprintf("%02d:00", h)
-}
-
-func weekdayLabel(d int) string {
-	if d < 0 || d > 6 {
-		return "—"
-	}
-	return weekdayNames[d]
-}
-
 // heatRamp goes cold (idle) to hot (busy), glass-cockpit style.
 var heatRamp = []lipgloss.Color{
 	lipgloss.Color("236"), lipgloss.Color("238"), lipgloss.Color("24"),
@@ -62,38 +48,30 @@ func heatCells(values []int64, cellW int) string {
 	return b.String()
 }
 
-// activityView is the temporal-rhythm display: when work happens (hour of day,
-// day of week) and where it lands (top projects).
+// activityView is the temporal tab: the year contribution calendar plus when
+// work happens (hour of day, day of week) and where it lands (top projects).
 func (m Model) activityView(width int) string {
-	ins := m.ins
 	cur := m.currency()
-
-	hero := heroPanel("✈ ACTIVITY", colCyan, width,
-		lipgloss.JoinHorizontal(lipgloss.Top, spread([]string{
-			readout("PEAK HOUR", hourLabel(ins.BusiestHour), colCyan),
-			readout("BUSIEST DAY", weekdayLabel(ins.BusiestWeekday), colGreen),
-			readout("ACTIVE DAYS", fmt.Sprintf("%d / %d", ins.ActiveDays, ins.SpanDays), colText),
-			readout("PROJECTS", compact(int64(ins.Projects)), colAmber),
-		}, "   ")...))
-
-	hourPanel := panel("◈ HOUR OF DAY · tokens", colCyan, width, m.hourStrip(width))
+	hero := heroPanel("✈ ACTIVITY · year", colCyan, width, m.calendarHero(dailyTokenMap(m.events)))
+	grid, weeks := m.contributionGrid(width)
+	cal := panel(fmt.Sprintf("◈ CALENDAR · %dw · ←→ weeks ↑↓ days", weeks), colGreen, width, grid)
 
 	if m.compact {
-		return vstack(hero, hourPanel)
+		return vstack(hero, cal)
 	}
 
-	// DAY OF WEEK bars + TOP PROJECTS, side by side (stacked when narrow).
+	hourPanel := panel("◈ HOUR OF DAY · tokens", colCyan, width, m.hourStrip(width))
 	gap := 1
 	cw, stack := gridWidths(width, gap, 2, 40)
 	lw, rw := cw, cw
 	if stack {
 		lw, rw = width, width
 	}
-	weekPanel := panel("◈ DAY OF WEEK", colCyan, lw, m.weekdayBars(ins, lw))
+	weekPanel := panel("◈ DAY OF WEEK", colCyan, lw, m.weekdayBars(m.ins, lw))
 	projPanel := panel("◈ TOP PROJECTS", colCyan, rw, m.projectBars(rw, cur))
 	row := arrangePanels(stack, gap, weekPanel, projPanel)
 
-	return lipgloss.JoinVertical(lipgloss.Left, hero, hourPanel, row)
+	return vstack(hero, cal, hourPanel, row)
 }
 
 // hourStrip renders the 24-hour heat strip with axis labels and a legend.

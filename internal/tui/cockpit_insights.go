@@ -16,42 +16,6 @@ func meter(label string, ratio float64, innerW int) string {
 	return labelStyle.Render(fmt.Sprintf("%-10s", label)) + gauge(ratio, g) + fmt.Sprintf(" %4.0f%%", ratio*100)
 }
 
-// insightsView is the flight-data recorder: derived efficiency, economics, and
-// cadence metrics distilled from the raw token stream.
-func (m Model) insightsView(width int) string {
-	ins := m.ins
-	cur := m.currency()
-
-	// Headline summary strip.
-	hero := heroPanel("✈ FLIGHT DATA", colCyan, width,
-		lipgloss.JoinHorizontal(lipgloss.Top, spread([]string{
-			readout("CACHE HIT", fmt.Sprintf("%.0f%%", ins.CacheHitRate*100), colGreen),
-			readout("CACHE SAVED", fmt.Sprintf("%.0f %s", ins.CacheSavingsUSD, cur), colGreen),
-			readout("BURN/DAY", fmt.Sprintf("%.2f %s", ins.CostPerActiveDay, cur), colAmber),
-			readout("PROJ 30d", fmt.Sprintf("%.0f %s", ins.ProjectedMonthlyUSD, cur), colAmber),
-			readout("PEAK HOUR", hourLabel(ins.BusiestHour), colCyan),
-			readout("SESSIONS", compact(int64(ins.Sessions)), colText),
-		}, "   ")...))
-
-	if m.compact {
-		return hero
-	}
-
-	gap := 1
-	colW, stack := gridWidths(width, gap, 3, 28)
-	if stack {
-		colW = width
-	}
-	innerW := colW - 6
-
-	eff := panel("◈ EFFICIENCY", colGreen, colW, m.efficiencyBody(innerW))
-	econ := panel("◈ ECONOMICS", colAmber, colW, m.economicsBody(innerW))
-	cad := panel("◈ CADENCE", colCyan, colW, m.cadenceBody())
-
-	row := arrangePanels(stack, gap, eff, econ, cad)
-	return lipgloss.JoinVertical(lipgloss.Left, hero, row)
-}
-
 func (m Model) efficiencyBody(innerW int) string {
 	ins, cur := m.ins, m.currency()
 	return lipgloss.JoinVertical(lipgloss.Left,

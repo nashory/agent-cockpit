@@ -44,44 +44,37 @@ func (m Model) zoomTargets() []zoomTarget {
 			{"MODELS", colCyan, modelsZoom},
 			{"ACTIVITY", colCyan, func(w, h int) string { return m.agentSparks(ev, w) }},
 		}
-	case agents:
+	case breakdown:
 		return []zoomTarget{
-			{"ENGINES", colCyan, enginesZoom},
+			{"ENGINES", colCyan, func(w, h int) string { return m.agentClusters(w) }},
 			{"MODELS", colCyan, modelsZoom},
+			{"SPEED", colCyan, func(w, h int) string {
+				rows := speedRows(ev)
+				maxTPS := 1.0
+				if len(rows) > 0 && rows[0].tps > 0 {
+					maxTPS = rows[0].tps
+				}
+				return lipgloss.JoinVertical(lipgloss.Left, m.airspeedHero(w), "", speedLanes(rows, maxTPS, w))
+			}},
 		}
-	case models:
-		return []zoomTarget{{"MODELS", colCyan, modelsZoom}}
 	case trends:
 		return []zoomTarget{
 			{"TOKENS", colCyan, tokChart},
 			{"COST", colAmber, costChart},
-		}
-	case speed:
-		return []zoomTarget{{"OUTPUT SPEED", colCyan, func(w, h int) string {
-			rows := speedRows(ev)
-			maxTPS := 1.0
-			if len(rows) > 0 {
-				maxTPS = rows[0].tps
-			}
-			return speedLanes(rows, maxTPS, w)
-		}}}
-	case insights:
-		return []zoomTarget{
 			{"EFFICIENCY", colGreen, func(w, h int) string { return m.efficiencyBody(w - 6) }},
 			{"ECONOMICS", colAmber, func(w, h int) string { return m.economicsBody(w - 6) }},
 			{"CADENCE", colCyan, func(w, h int) string { return m.cadenceBody() }},
 		}
 	case activity:
 		return []zoomTarget{
+			{"CALENDAR", colGreen, func(w, h int) string {
+				g, _ := m.contributionGrid(w)
+				return g
+			}},
 			{"HOUR OF DAY", colCyan, func(w, h int) string { return m.hourStrip(w) }},
 			{"DAY OF WEEK", colCyan, func(w, h int) string { return m.weekdayBars(m.ins, w) }},
 			{"PROJECTS", colCyan, func(w, h int) string { return m.projectBars(w, cur) }},
 		}
-	case calendar:
-		return []zoomTarget{{"CALENDAR", colGreen, func(w, h int) string {
-			g, _ := m.contributionGrid(w)
-			return g
-		}}}
 	}
 	return nil
 }

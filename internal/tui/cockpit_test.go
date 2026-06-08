@@ -51,13 +51,9 @@ func TestCockpitRender(t *testing.T) {
 		v    view
 	}{
 		{"OVERVIEW", overview},
-		{"AGENTS", agents},
-		{"MODELS", models},
+		{"BREAKDOWN", breakdown},
 		{"TRENDS", trends},
-		{"SPEED", speed},
-		{"INSIGHTS", insights},
 		{"ACTIVITY", activity},
-		{"CALENDAR", calendar},
 	}
 	for _, compactMode := range []bool{false, true} {
 		for _, termW := range []int{140, 80} {
@@ -94,7 +90,7 @@ func TestCockpitRender(t *testing.T) {
 }
 
 func TestZoomRender(t *testing.T) {
-	views := []view{overview, agents, models, trends, speed, insights, activity, calendar}
+	views := []view{overview, breakdown, trends, activity}
 	for _, v := range views {
 		for _, w := range []int{140, 80} {
 			m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
@@ -121,8 +117,9 @@ func TestZoomRender(t *testing.T) {
 
 func TestCalendarCursor(t *testing.T) {
 	m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
-	m.view = calendar
-	m.zoomed = true // cursor is active only when zoomed into the grid
+	m.view = activity
+	m.focus = 0     // CALENDAR is the first widget on the Activity tab
+	m.zoomed = true // cursor is active only when zoomed into the calendar
 
 	step := func(k tea.KeyType) {
 		nm, _ := m.Update(tea.KeyMsg{Type: k})
@@ -143,12 +140,12 @@ func TestCalendarCursor(t *testing.T) {
 		t.Fatalf("up should move +1, got %d", m.calCursor)
 	}
 
-	// Off the calendar tab, arrows switch tabs and must not move the cursor.
+	// Off the calendar widget, arrows move widget focus and must not move the cursor.
 	m.view = overview
 	prev := m.calCursor
 	step(tea.KeyLeft)
 	if m.calCursor != prev {
-		t.Fatalf("cursor moved off the calendar tab")
+		t.Fatalf("cursor moved while not zoomed on the calendar")
 	}
 }
 

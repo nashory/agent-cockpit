@@ -15,13 +15,9 @@ type view int
 
 const (
 	overview view = iota
-	agents
-	models
+	breakdown
 	trends
-	speed
-	insights
 	activity
-	calendar
 	numViews
 )
 
@@ -112,10 +108,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case tea.KeyMsg:
 		s := msg.String()
-		n := len(m.zoomTargets())
+		targets := m.zoomTargets()
+		n := len(targets)
 
-		// When zoomed into the calendar, arrows drive the day cursor.
-		if m.zoomed && m.view == calendar {
+		// When zoomed into the calendar widget, arrows drive the day cursor.
+		if m.zoomed && m.focus < n && targets[m.focus].title == "CALENDAR" {
 			switch s {
 			case "left", "h":
 				m.calCursor = clampCursor(m.calCursor + 7)
@@ -145,7 +142,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.startRefresh()
 		case "e":
 			m.compact = !m.compact
-		case "1", "2", "3", "4", "5", "6", "7", "8":
+		case "1", "2", "3", "4":
 			m.view = view(int(s[0] - '1'))
 			m.focus, m.zoomed = 0, false
 		case "tab":
@@ -198,7 +195,7 @@ func (m Model) View() string {
 }
 
 func (m Model) sidebar() string {
-	items := []string{"1 Overview", "2 Agents", "3 Models", "4 Trends", "5 Speed", "6 Insights", "7 Activity", "8 Calendar"}
+	items := []string{"1 Overview", "2 Breakdown", "3 Trends", "4 Activity"}
 	for i := range items {
 		if view(i) == m.view {
 			items[i] = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39")).Render("> " + items[i])
@@ -280,20 +277,12 @@ func (m Model) content() string {
 	switch m.view {
 	case overview:
 		fmt.Fprint(&b, m.overview(w))
-	case agents:
-		fmt.Fprint(&b, m.agentsView(w))
-	case models:
-		fmt.Fprint(&b, m.modelsView(w))
+	case breakdown:
+		fmt.Fprint(&b, m.breakdownView(w))
 	case trends:
 		fmt.Fprint(&b, m.trendsView(w))
-	case speed:
-		fmt.Fprint(&b, m.speedView(w))
-	case insights:
-		fmt.Fprint(&b, m.insightsView(w))
 	case activity:
 		fmt.Fprint(&b, m.activityView(w))
-	case calendar:
-		fmt.Fprint(&b, m.calendarView(w))
 	default:
 		fmt.Fprintln(&b, "Unknown view")
 	}
