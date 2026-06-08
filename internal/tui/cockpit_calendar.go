@@ -19,23 +19,8 @@ var contribRamp = []lipgloss.Color{
 	lipgloss.Color("46"),
 }
 
-// Idle-cell tints: weekends read darker, and weekdays alternate by month parity
-// so month bands are visible without breaking the contiguous grid.
-var (
-	colWeekendIdle   = lipgloss.Color("234")
-	colMonthEvenIdle = lipgloss.Color("236")
-	colMonthOddIdle  = lipgloss.Color("233")
-)
-
-func idleColor(d time.Time, row int) lipgloss.Color {
-	if row == 0 || row == 6 {
-		return colWeekendIdle
-	}
-	if int(d.Month())%2 == 1 {
-		return colMonthOddIdle
-	}
-	return colMonthEvenIdle
-}
+// colEmptyCell is the faint dot for days with no activity.
+var colEmptyCell = lipgloss.Color("240")
 
 func contribStyle(level int) lipgloss.Style {
 	if level < 0 {
@@ -157,20 +142,22 @@ func (m Model) contributionGrid(width int) (string, int) {
 				continue
 			}
 			k := dayKey(d)
-			lvl := contribLevel(tokMap[k], max)
-			style := contribStyle(lvl)
-			if lvl == 0 {
-				style = lipgloss.NewStyle().Foreground(idleColor(d, r))
+			v := tokMap[k]
+			// Empty days are a faint dot, not a solid block, so "no activity"
+			// reads clearly instead of looking like an unlabeled black box.
+			glyph, style := "·", lipgloss.NewStyle().Foreground(colEmptyCell)
+			if v > 0 {
+				glyph, style = "█", contribStyle(contribLevel(v, max))
 			}
 			if k == selKey {
 				style = style.Reverse(true) // cursor
 			}
-			sb.WriteString(style.Render(strings.Repeat("█", cellW)))
+			sb.WriteString(style.Render(strings.Repeat(glyph, cellW)))
 		}
 		rows[r] = sb.String()
 	}
 
-	legend := contribLegend(cellW)
+	legend := contribLegend(cellW, max)
 	tip := lipgloss.NewStyle().Foreground(colCyan).Render("◂ ") +
 		valueStyle.Render(selDate.Format("Mon Jan 02 2006")) +
 		labelStyle.Render(" · ") +
@@ -181,14 +168,18 @@ func (m Model) contributionGrid(width int) (string, int) {
 	return grid, weeks
 }
 
-func contribLegend(cellW int) string {
+// contribLegend explains the cells: a dot is no activity, the green ramp goes
+// less -> more, annotated with the busiest day's token count.
+func contribLegend(cellW int, max int64) string {
+	block := strings.Repeat("█", cellW)
 	var sb strings.Builder
-	sb.WriteString(labelStyle.Render("Less "))
-	for l := 0; l < len(contribRamp); l++ {
-		sb.WriteString(contribStyle(l).Render(strings.Repeat("█", cellW)))
+	sb.WriteString(lipgloss.NewStyle().Foreground(colEmptyCell).Render(strings.Repeat("·", cellW)))
+	sb.WriteString(labelStyle.Render(" none    less "))
+	for l := 1; l < len(contribRamp); l++ { // skip the empty level (handled above)
+		sb.WriteString(contribStyle(l).Render(block))
 		sb.WriteString(" ")
 	}
-	sb.WriteString(labelStyle.Render("More"))
+	sb.WriteString(labelStyle.Render("more    each cell = 1 day · peak " + compact(max) + " tokens/day"))
 	return sb.String()
 }
 
