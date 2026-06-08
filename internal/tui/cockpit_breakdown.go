@@ -1,15 +1,14 @@
 package tui
 
-// breakdownView decomposes usage by agent, model, and speed. It shows the
-// ENGINES share bar plus the models and speed tables side by side; zoom an
-// item (enter) for the full per-agent clusters, all models, or the airspeed
-// tape with every lane.
+// breakdownView decomposes usage by model, agent, and speed. The hero is a
+// 100%-stacked area chart of model share over time; below it are the model load
+// table and the output-speed lanes. Zoom (enter) any of them, or the ENGINES
+// per-agent clusters, for full detail.
 func (m Model) breakdownView(width int) string {
-	prices := m.reportOptions.Pricing
-	engines := panel("◈ ENGINES · share", colCyan, width, m.enginesBar(m.events, prices, width))
+	mix := panel("◈ MODEL MIX · 30d share", colCyan, width, m.modelStack(width, 8))
 
 	if m.compact {
-		return vstack(engines, panel("◈ MODELS · load", colCyan, width, m.modelsBody(width, 5)))
+		return vstack(mix, panel("◈ MODELS · load", colCyan, width, m.modelsBody(width, 5)))
 	}
 
 	gap := 1
@@ -30,5 +29,5 @@ func (m Model) breakdownView(width int) string {
 	}
 	speed := panel("◈ OUTPUT SPEED", colCyan, rw, speedLanes(rows, maxTPS, rw))
 
-	return vstack(engines, arrangePanels(stack, gap, models, speed))
+	return vstack(mix, arrangePanels(stack, gap, models, speed))
 }
