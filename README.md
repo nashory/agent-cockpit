@@ -1,116 +1,148 @@
 <div align="center">
 
-# agent-cockpit
+# 🛩️ agent-cockpit
 
 [![CI](https://github.com/nashory/agent-cockpit/actions/workflows/ci.yml/badge.svg)](https://github.com/nashory/agent-cockpit/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/nashory/agent-cockpit)](https://goreportcard.com/report/github.com/nashory/agent-cockpit)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/nashory/agent-cockpit)](go.mod)
+[![License](https://img.shields.io/github/license/nashory/agent-cockpit)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-555)](#-platforms)
 
-**A live terminal cockpit for usage, cost, and speed across your coding agents.**
+**A live terminal cockpit for token usage, cost, and speed across your coding agents.**
 
-Track Claude Code, Codex, Gemini, OpenCode, Copilot, and more from one local
-TUI. See token burn, USD estimates, observed throughput, and 30-day trends
-without uploading your logs.
+Claude Code, Codex, and Gemini burn tokens all day — `agent-cockpit` reads their
+**local** logs and turns them into a glass-cockpit dashboard: token burn, USD
+estimates, observed throughput, trends, and a GitHub-style year of activity.
+No cloud upload. No API keys. No background daemon.
 
 </div>
 
-> Early MVP: Claude Code, Codex, and Gemini local log parsing are implemented first.
-> More agent adapters (OpenCode, Copilot) are planned.
+```text
+FOCUS  TREND · ENGINES · MODELS · ACTIVITY    ↑↓ select · enter zoom
 
-## Install
-
-Homebrew distribution is planned as the default install path:
-
-```bash
-brew install nashory/tap/agent-cockpit
-ac
+╔════════════════════════════════════════════════════════════════════════════════════╗
+║ ✈ AGENT COCKPIT                                                                    ║
+║ TOKENS   COST        EVENTS   CACHE   CLOCK                                        ║
+║ 14.4M    73.66 USD   446      1.8M    14:32:09                                     ║
+╚════════════════════════════════════════════════════════════════════════════════════╝
+╭───────────────────────────────────────╮ ╭───────────────────────────────────────╮
+│ ◈ ENGINES                             │ │ ◈ TREND · 30d tokens                  │
+│ █████████████████████████████████████ │ │ 54850│⢣    ⢰⡀                         │
+│ ████████████████████▊                 │ │      │ ⢣   ⡇⢱   ⢸⢆   ⢀⢦    ⡀          │
+│ ▏                                     │ │ 36567│  ⢣ ⢰⠁⠘⡄  ⡇ ⠣⡀ ⡸ ⠱⡀ ⢠⠛⢄   ⡰⢄    │
+│ ● codex    63.9%  9.2M                │ │      │   ⠱⡎  ⡇⡸⣤⠃  ⠑⣄⠇  ⢇ ⡜  ⠑⢄⢠⠃ ⠑⢄  │
+│ ● claude   35.8%  5.2M                │ │ 18283│       ⢇⡇⠈    ⠈   ⢸⢠⠃   ⠈⠃    ⠑ │
+│ ● gemini    0.3%  44.8K               │ │      │       ⢸⠁         ⠈⡞            │
+╰───────────────────────────────────────╯ │     0└─────────────────────────────── │
+                                           │      '26 05/10   05/21   05/28        │
+                                           ╰───────────────────────────────────────╯
+╭───────────────────────────────────────╮ ╭───────────────────────────────────────╮
+│ ◈ MODELS                              │ │ ◈ ACTIVITY                            │
+│ gpt-5-codex    █████████████     9.2M │ │ claude               █▇ ▅█▇▆▆▅▇▇▆▅▅   │
+│ claude-opus-4… ███████░░░░░░     5.2M │ │ codex                ▇▅ ▂█▆▅▃▂▇▅▄▃▂   │
+│ gemini-2.5-pro ░░░░░░░░░░░░░    44.8K │ │ gemini                █  █  █  █  █   │
+╰───────────────────────────────────────╯ ╰───────────────────────────────────────╯
 ```
 
-Until the first release is cut, install from source:
+<sub>Colors render in your terminal; the snapshot above is monochrome.</sub>
+
+---
+
+## Contents
+
+[Why](#-why-agent-cockpit) · [Features](#-features) · [Install](#-install) ·
+[Quick start](#-quick-start) · [Dashboards](#-dashboards) · [Privacy](#-what-it-reads) ·
+[Configuration](#-configuration) · [How it works](#-how-it-works) ·
+[Platforms](#-platforms) · [Development](#-development) · [Roadmap](#-roadmap) ·
+[License](#-license)
+
+## ✨ Why agent-cockpit?
+
+- **🔒 Private by design.** It only reads log files already on your disk. Nothing
+  is uploaded, no service runs in the background, no keys are required.
+- **🛩️ One cockpit for every agent.** Claude Code, Codex, and Gemini in a single
+  normalized view — compare engines, models, and projects side by side.
+- **💸 Know the cost.** Per-model pricing turns raw tokens into USD estimates,
+  cache savings, effective `$/1M output`, and a daily burn rate.
+- **⚡ Live.** `ac live` refreshes the instant an agent writes a log, via fsnotify
+  (with a polling backstop).
+- **🧰 Zero setup.** Sensible defaults discover your logs automatically; a config
+  file is optional.
+
+## 🎛️ Features
+
+- **8 instrument tabs** — Overview, Agents, Models, Trends, Speed, Insights,
+  Activity, and a GitHub-style year **Calendar**.
+- **Derived insights** — cache hit rate, cache savings, input:output ratio,
+  reasoning share, effective rate, spending cadence, and activity streaks.
+- **Focus & zoom** — arrow-key focus across widgets, `enter` to blow one up
+  fullscreen for detail.
+- **Expert / compact modes** — pack every instrument in, or a clean, light view.
+- **Caution annunciators** — `HIGH BURN`, `OPUS HEAVY`, `STALE`, `LIVE` lamps.
+- **Static reports & statusline** — pipeable output for scripts, tmux, and CI.
+- **Fast** — a cold scan of hundreds of logs parses in parallel across cores.
+- **Single binary** — CGO-free, cross-platform, ~6 MB. The command is just `ac`.
+
+## 🚀 Install
+
+> **Homebrew** is the planned default once the first release is tagged:
+>
+> ```bash
+> brew install nashory/tap/agent-cockpit
+> ```
+
+**With Go:**
 
 ```bash
 go install github.com/nashory/agent-cockpit/cmd/ac@latest
 ```
 
-Or build from source:
+**From source:**
 
 ```bash
 git clone https://github.com/nashory/agent-cockpit.git
 cd agent-cockpit
-make build
-./ac
+make build && ./ac
 ```
 
-## Quick Start
-
-Open the TUI:
+## ⚡ Quick Start
 
 ```bash
-ac
-```
+ac                       # open the dashboard
+ac live --refresh 2s     # live mode (refreshes on file changes)
 
-Open the live TUI, which refreshes on file changes (via fsnotify, with an
-interval backstop):
-
-```bash
-ac live --refresh 2s
-```
-
-Print a static report:
-
-```bash
+# static, pipeable reports
 ac today
 ac trends --days 30
 ac agents
-ac sessions
 ac speed
-```
+ac statusline            # one line for tmux / your shell prompt
 
-Filter by source, project, or model:
-
-```bash
+# filter by source, project, or model
 ac monthly --source claude
-ac trends --source claude,codex --project agx --days 30
-ac agents --model sonnet
-```
+ac trends  --source claude,codex --project myrepo --days 30
+ac agents  --model sonnet
 
-Use it in tmux or a statusline:
+# JSON for scripts
+ac today --json
 
-```bash
-ac statusline
-```
-
-Create a local config file:
-
-```bash
+# config helpers
 ac config init
-ac config path
+ac doctor                # show detected log locations
 ```
 
-## What It Reads
+## 🧭 Dashboards
 
-agent-cockpit reads local logs only:
-
-| Agent | Default path |
+| Tab | Shows |
 | --- | --- |
-| Claude Code | `~/.claude/projects/**/*.jsonl` |
-| Codex | `~/.codex/sessions/**/*.jsonl`, `~/.codex/archived_sessions/**/*.jsonl` |
-| Gemini | `~/.gemini/tmp/**/chats/session-*.json` |
-
-No cloud upload, no background service, no API keys.
-
-## Dashboards
-
-The TUI is a glass-cockpit dashboard with eight instrument tabs:
-
-| View | Shows |
-| --- | --- |
-| Overview | headline token/cost readouts, per-agent bars, 30-day trend |
-| Agents | per-engine clusters: tokens, cost, share, speed, activity |
-| Models | model-level load, cost, and share |
-| Trends | 30-day token and cost time-series |
-| Speed | airspeed tape and observed output tokens/sec per lane |
-| Insights | cache efficiency, economics, and spending cadence |
-| Activity | hour-of-day heatmap, day-of-week, and top projects |
-| Calendar | GitHub-style year contribution graph of tokens/day |
+| **Overview** | headline token/cost readouts, per-agent bars, 30-day trend |
+| **Agents** | per-engine clusters: tokens, cost, share, speed, activity |
+| **Models** | model-level load, cost, and share |
+| **Trends** | 30-day token and cost time-series |
+| **Speed** | airspeed tape and observed output tokens/sec per lane |
+| **Insights** | cache efficiency, economics, and spending cadence |
+| **Activity** | hour-of-day heatmap, day-of-week, and top projects |
+| **Calendar** | GitHub-style year contribution graph of tokens/day |
 
 ### Keys
 
@@ -118,43 +150,33 @@ The TUI is a glass-cockpit dashboard with eight instrument tabs:
 | --- | --- |
 | `1`–`8` | jump to a tab |
 | `tab` / `shift+tab` | next / previous tab |
-| arrows / `hjkl` | move widget focus (the focus bar shows the selection) |
-| `enter` | zoom the focused widget fullscreen |
-| `esc` | exit zoom |
+| arrows / `hjkl` | move widget focus |
+| `enter` / `esc` | zoom the focused widget / exit zoom |
 | `e` | toggle expert (dense) / compact (light) mode |
 | `r` | refresh now |
 | `q` | quit |
 
-On the Calendar tab, zoom in (`enter`) and then arrows / `hjkl` move the day
-cursor (left/right by week, up/down by day) with a tooltip for the selected day.
+On the **Calendar**, zoom in with `enter`, then arrows move the day cursor
+(left/right by week, up/down by day) with a tooltip for the selected day.
 
-## Native Platforms
+## 🔒 What It Reads
 
-agent-cockpit ships as a CGO-free native binary for:
+`agent-cockpit` reads **local log files only** — no network calls, ever.
 
-| OS | Architectures |
+| Agent | Default path |
 | --- | --- |
-| macOS | Apple Silicon, Intel |
-| Linux | amd64, arm64 |
-| Windows | amd64, arm64 |
+| Claude Code | `~/.claude/projects/**/*.jsonl` |
+| Codex | `~/.codex/sessions/**/*.jsonl`, `~/.codex/archived_sessions/**/*.jsonl` |
+| Gemini | `~/.gemini/tmp/**/chats/session-*.json` |
 
-The command name is intentionally short:
+## ⚙️ Configuration
 
-```text
-repo:    agent-cockpit
-binary:  ac
-```
-
-## Configuration
-
-Default config paths:
+Configuration is optional. To customize paths or pricing, create a config file:
 
 | OS | Path |
 | --- | --- |
-| macOS/Linux | `~/.config/agent-cockpit/config.toml` |
+| macOS / Linux | `~/.config/agent-cockpit/config.toml` |
 | Windows | `%APPDATA%\agent-cockpit\config.toml` |
-
-Example:
 
 ```toml
 timezone = "local"
@@ -163,52 +185,76 @@ currency = "USD"
 
 [paths]
 claude = ["~/.claude/projects"]
-codex = ["~/.codex/sessions", "~/.codex/archived_sessions"]
+codex  = ["~/.codex/sessions", "~/.codex/archived_sessions"]
 gemini = ["~/.gemini/tmp"]
 
+# Prices are USD per million tokens; keys match a model-name substring.
 [pricing."claude-sonnet"]
-input_per_million = 3
-output_per_million = 15
-cache_read_per_million = 0.30
+input_per_million       = 3
+output_per_million      = 15
+cache_read_per_million  = 0.30
 cache_write_per_million = 3.75
 ```
 
-## Development
+Run `ac config init` to drop a starter file in place.
 
-```bash
-make test
-make build
-make run
-```
+## 🏗️ How It Works
 
-See [docs/development.md](docs/development.md) for native macOS, Linux, and
-Windows build/release details.
-
-Contribution guide:
-
-- [CONTRIBUTING.md](CONTRIBUTING.md)
-- [SECURITY.md](SECURITY.md)
-- [docs/architecture.md](docs/architecture.md)
-- [docs/homebrew.md](docs/homebrew.md)
-- [docs/sources.md](docs/sources.md)
-
-Project layout:
+Each adapter parses its agent's logs into a normalized `usage.Event`; events are
+aggregated, priced, and rendered. Scanning runs in parallel across CPUs, live
+mode is driven by an fsnotify watcher, and the TUI is built with
+[Bubble Tea](https://github.com/charmbracelet/bubbletea).
 
 ```text
-cmd/ac/                     main entry
-internal/source/claude/     Claude Code JSONL adapter
-internal/source/codex/      Codex JSONL adapter
-internal/source/gemini/     Gemini session adapter
-internal/scan/              parallel directory walk + file parsing
-internal/watch/             fsnotify watcher for live refresh
-internal/usage/             normalized events, aggregation, derived insights
-internal/report/            static terminal reports
-internal/tui/               Bubble Tea glass-cockpit TUI
+cmd/ac/                 entry point (the `ac` binary)
+internal/source/        Claude / Codex / Gemini log adapters
+internal/scan/          parallel directory walk + file parsing
+internal/watch/         fsnotify watcher for live refresh
+internal/usage/         normalized events, pricing, aggregation, insights
+internal/report/        static terminal reports
+internal/tui/           Bubble Tea glass-cockpit dashboard
 ```
 
-## Roadmap
+See [docs/architecture.md](docs/architecture.md) for the full design.
 
-- Live file watching and active session detection
-- OpenCode and Copilot adapters
-- Homebrew distribution
-- Windows zip releases
+## 🖥️ Platforms
+
+Ships as a CGO-free native binary:
+
+| OS | Architectures |
+| --- | --- |
+| macOS | Apple Silicon, Intel |
+| Linux | amd64, arm64 |
+| Windows | amd64, arm64 |
+
+## 🛠️ Development
+
+```bash
+make ci        # gofmt + go vet + full test suite (mirrors GitHub CI)
+make test      # go test ./...
+make race      # go test -race ./...
+make build     # build ./ac
+make run       # go run ./cmd/ac
+```
+
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md),
+[SECURITY.md](SECURITY.md), and [docs/](docs/).
+
+## 🗺️ Roadmap
+
+- [ ] OpenCode and Copilot adapters
+- [ ] Active-session detection
+- [ ] Homebrew tap & signed releases
+- [ ] Budget alerts and exportable reports
+
+## 📄 License
+
+[Apache-2.0](LICENSE) © agent-cockpit contributors.
+
+## 🙌 Acknowledgements
+
+Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea),
+[Lip Gloss](https://github.com/charmbracelet/lipgloss),
+[ntcharts](https://github.com/NimbleMarkets/ntcharts),
+[Cobra](https://github.com/spf13/cobra), and
+[fsnotify](https://github.com/fsnotify/fsnotify).
