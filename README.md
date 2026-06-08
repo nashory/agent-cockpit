@@ -59,8 +59,7 @@ FOCUS  TREND · ENGINES · MODELS · ACTIVITY    ↑↓ select · enter zoom
 [Why](#-why-agent-cockpit) · [Features](#-features) · [Install](#-install) ·
 [Quick start](#-quick-start) · [Dashboards](#-dashboards) · [Privacy](#-what-it-reads) ·
 [Configuration](#-configuration) · [How it works](#-how-it-works) ·
-[Platforms](#-platforms) · [Development](#-development) · [Roadmap](#-roadmap) ·
-[License](#-license)
+[Platforms](#-platforms) · [Development](#-development) · [License](#-license)
 
 ## ✨ Why agent-cockpit?
 
@@ -245,13 +244,6 @@ make run       # go run ./cmd/ac
 
 Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md),
 [SECURITY.md](SECURITY.md), and [docs/](docs/).
-
-## 🗺️ Roadmap
-
-- [ ] OpenCode and Copilot adapters
-- [ ] Active-session detection
-- [ ] Homebrew tap & signed releases
-- [ ] Budget alerts and exportable reports
 
 ## 📄 License
 

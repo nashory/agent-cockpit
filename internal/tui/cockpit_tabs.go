@@ -162,7 +162,7 @@ func (m Model) agentsView(width int) string {
 			kv("OUTPUT", compact(b.Totals.Output), colText),
 			kv("SPEED", fmt.Sprintf("%.1f t/s", tps), colAmber),
 			"",
-			labelStyle.Render(fmt.Sprintf("%-7s", "SHARE"))+gauge(b.Share, gaugeW)+fmt.Sprintf(" %4.1f%%", b.Share*100),
+			labelStyle.Render(fmt.Sprintf("%-7s", "SHARE"))+gaugeColored(b.Share, gaugeW, c)+fmt.Sprintf(" %4.1f%%", b.Share*100),
 			labelStyle.Render(fmt.Sprintf("%-7s", "14d"))+spark,
 		)
 		panels = append(panels, panel("◈ "+strings.ToUpper(b.Key), c, pw, body))

@@ -33,18 +33,17 @@ func agentColor(name string) lipgloss.Color {
 }
 
 var (
-	labelStyle  = lipgloss.NewStyle().Foreground(colDim)
-	valueStyle  = lipgloss.NewStyle().Foreground(colText).Bold(true)
-	bigStyle    = lipgloss.NewStyle().Foreground(colCyan).Bold(true)
-	titleStyle  = lipgloss.NewStyle().Foreground(colCyan).Bold(true)
-	okStyle     = lipgloss.NewStyle().Foreground(colGreen).Bold(true)
-	warnStyle   = lipgloss.NewStyle().Foreground(colAmber).Bold(true)
-	alertStyle  = lipgloss.NewStyle().Foreground(colRed).Bold(true)
-	litStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("232")).Background(colAmber).Bold(true)
-	alarmStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("231")).Background(colRed).Bold(true)
-	darkLamp    = lipgloss.NewStyle().Foreground(colDim)
-	gaugeFilled = lipgloss.NewStyle().Foreground(colGreen)
-	gaugeEmpty  = lipgloss.NewStyle().Foreground(lipgloss.Color("238"))
+	labelStyle = lipgloss.NewStyle().Foreground(colDim)
+	valueStyle = lipgloss.NewStyle().Foreground(colText).Bold(true)
+	bigStyle   = lipgloss.NewStyle().Foreground(colCyan).Bold(true)
+	titleStyle = lipgloss.NewStyle().Foreground(colCyan).Bold(true)
+	okStyle    = lipgloss.NewStyle().Foreground(colGreen).Bold(true)
+	warnStyle  = lipgloss.NewStyle().Foreground(colAmber).Bold(true)
+	alertStyle = lipgloss.NewStyle().Foreground(colRed).Bold(true)
+	litStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("232")).Background(colAmber).Bold(true)
+	alarmStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("231")).Background(colRed).Bold(true)
+	darkLamp   = lipgloss.NewStyle().Foreground(colDim)
+	gaugeEmpty = lipgloss.NewStyle().Foreground(lipgloss.Color("238"))
 
 	// Airspeed tape zones and needle.
 	zoneGreen   = lipgloss.NewStyle().Foreground(colGreen)
@@ -147,8 +146,14 @@ func arrangePanels(stack bool, gap int, panels ...string) string {
 }
 
 // gauge renders a colored horizontal bar like a fuel/quantity indicator.
-// ratio is clamped to [0,1]; color shifts green -> amber -> red as it fills.
+// ratio is clamped to [0,1]. Load/share bars use a single calm fill: bar length
+// already conveys magnitude, so colour is reserved for genuine warnings
+// (annunciator lamps, the airspeed redline) rather than "this is the biggest".
 func gauge(ratio float64, width int) string {
+	return gaugeColored(ratio, width, colCyan)
+}
+
+func gaugeColored(ratio float64, width int, fill lipgloss.Color) string {
 	if width < 1 {
 		width = 1
 	}
@@ -162,15 +167,8 @@ func gauge(ratio float64, width int) string {
 	if filled > width {
 		filled = width
 	}
-	style := gaugeFilled
-	switch {
-	case ratio >= 0.9:
-		style = lipgloss.NewStyle().Foreground(colRed)
-	case ratio >= 0.7:
-		style = lipgloss.NewStyle().Foreground(colAmber)
-	}
-	bar := style.Render(repeat("█", filled)) + gaugeEmpty.Render(repeat("░", width-filled))
-	return bar
+	bar := lipgloss.NewStyle().Foreground(fill).Render(repeat("█", filled))
+	return bar + gaugeEmpty.Render(repeat("░", width-filled))
 }
 
 // truncate shortens s to at most max runes (never splitting a multibyte rune),
