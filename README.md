@@ -17,6 +17,12 @@ No cloud upload. No API keys. No background daemon.
 
 </div>
 
+<!--
+  TODO(demo): drop a real terminal screenshot or GIF here, e.g.
+  <p align="center"><img src="docs/demo.gif" alt="agent-cockpit demo" width="800"></p>
+  The ASCII preview below is the fallback until then.
+-->
+
 ```text
 FOCUS  TREND · ENGINES · MODELS · ACTIVITY    ↑↓ select · enter zoom
 
