@@ -25,6 +25,60 @@ func TestSummarizeAndGroupBy(t *testing.T) {
 	}
 }
 
+func TestFilter(t *testing.T) {
+	day := func(d int) time.Time { return time.Date(2026, 1, d, 12, 0, 0, 0, time.UTC) }
+	events := []Event{
+		{Source: "claude", Project: "alpha", Model: "claude-opus-4-8", Timestamp: day(1)},
+		{Source: "codex", Project: "beta", Model: "gpt-5-codex", Timestamp: day(5)},
+		{Source: "gemini", Project: "alpha", Model: "gemini-2.5-pro", Timestamp: day(10)},
+	}
+
+	// Date window keeps only the middle event.
+	got := Filter(append([]Event(nil), events...), day(3), day(7), nil, "", "")
+	if len(got) != 1 || got[0].Source != "codex" {
+		t.Fatalf("date filter = %+v, want only codex", got)
+	}
+	// Source filter (case-insensitive).
+	got = Filter(append([]Event(nil), events...), time.Time{}, time.Time{}, []string{"CLAUDE", "gemini"}, "", "")
+	if len(got) != 2 {
+		t.Fatalf("source filter kept %d, want 2", len(got))
+	}
+	// Project substring.
+	got = Filter(append([]Event(nil), events...), time.Time{}, time.Time{}, nil, "alpha", "")
+	if len(got) != 2 {
+		t.Fatalf("project filter kept %d, want 2", len(got))
+	}
+	// Model substring.
+	got = Filter(append([]Event(nil), events...), time.Time{}, time.Time{}, nil, "", "opus")
+	if len(got) != 1 || got[0].Model != "claude-opus-4-8" {
+		t.Fatalf("model filter = %+v, want opus only", got)
+	}
+}
+
+func TestLookupPricingLongestMatch(t *testing.T) {
+	prices := PriceBook{
+		"claude":      {InputPerMillion: 1},
+		"claude-opus": {InputPerMillion: 99},
+		"gpt-5":       {InputPerMillion: 2},
+	}
+	// Longest substring wins.
+	if p := lookupPricing("claude-opus-4-8", prices); p.InputPerMillion != 99 {
+		t.Fatalf("expected longest match (claude-opus), got %v", p.InputPerMillion)
+	}
+	// Unknown model falls back to built-in defaults (opus tier here).
+	if p := lookupPricing("claude-opus-4-8", nil); p.InputPerMillion != 15 {
+		t.Fatalf("default opus input rate = %v, want 15", p.InputPerMillion)
+	}
+}
+
+func TestEstimateCostWith(t *testing.T) {
+	e := Event{Model: "x", Input: 1_000_000, Output: 1_000_000}
+	prices := PriceBook{"x": {InputPerMillion: 2, OutputPerMillion: 10}}
+	if c := EstimateCostWith(e, prices); c != 12 {
+		t.Fatalf("cost = %v, want 12", c)
+	}
+}
+
 func TestComputeInsights(t *testing.T) {
 	day := func(d, h int) time.Time {
 		return time.Date(2026, 1, d, h, 0, 0, 0, time.UTC)
