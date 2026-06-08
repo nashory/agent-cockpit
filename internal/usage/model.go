@@ -129,23 +129,38 @@ func GroupBy(events []Event, key func(Event) string) []Bucket {
 }
 
 func GroupByWith(events []Event, prices PriceBook, key func(Event) string) []Bucket {
-	total := SummarizeWith(events, prices).Total
-	byKey := map[string][]Event{}
+	totals := map[string]*Totals{}
+	order := make([]string, 0)
+	var grand int64
 	for _, e := range events {
 		k := key(e)
 		if k == "" {
 			k = "unknown"
 		}
-		byKey[k] = append(byKey[k], e)
-	}
-	buckets := make([]Bucket, 0, len(byKey))
-	for k, evs := range byKey {
-		t := SummarizeWith(evs, prices)
-		share := 0.0
-		if total > 0 {
-			share = float64(t.Total) / float64(total)
+		t := totals[k]
+		if t == nil {
+			t = &Totals{}
+			totals[k] = t
+			order = append(order, k)
 		}
-		buckets = append(buckets, Bucket{Key: k, Totals: t, Share: share})
+		t.Events++
+		t.Input += e.Input
+		t.Output += e.Output
+		t.CacheRead += e.CacheRead
+		t.CacheCreate += e.CacheCreate
+		t.Reasoning += e.Reasoning
+		t.Total += e.TotalTokens()
+		t.CostUSD += EstimateCostWith(e, prices)
+		grand += e.TotalTokens()
+	}
+	buckets := make([]Bucket, 0, len(totals))
+	for _, k := range order {
+		t := totals[k]
+		share := 0.0
+		if grand > 0 {
+			share = float64(t.Total) / float64(grand)
+		}
+		buckets = append(buckets, Bucket{Key: k, Totals: *t, Share: share})
 	}
 	sort.Slice(buckets, func(i, j int) bool {
 		return buckets[i].Totals.Total > buckets[j].Totals.Total
