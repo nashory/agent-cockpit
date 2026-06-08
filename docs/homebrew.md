@@ -42,20 +42,20 @@ class AgentCockpit < Formula
 
   on_macos do
     if Hardware::CPU.arm?
-      url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.0/cockpit-v0.1.0-darwin-arm64.tar.gz"
+      url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.1/cockpit-v0.1.1-darwin-arm64.tar.gz"
       sha256 "..."
     else
-      url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.0/cockpit-v0.1.0-darwin-amd64.tar.gz"
+      url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.1/cockpit-v0.1.1-darwin-amd64.tar.gz"
       sha256 "..."
     end
   end
 
   on_linux do
     if Hardware::CPU.arm?
-      url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.0/cockpit-v0.1.0-linux-arm64.tar.gz"
+      url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.1/cockpit-v0.1.1-linux-arm64.tar.gz"
       sha256 "..."
     else
-      url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.0/cockpit-v0.1.0-linux-amd64.tar.gz"
+      url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.1/cockpit-v0.1.1-linux-amd64.tar.gz"
       sha256 "..."
     end
   end
@@ -75,8 +75,8 @@ end
 1. Tag and push a release:
 
    ```bash
-   git tag v0.1.0
-   git push origin v0.1.0
+   git tag v0.1.1
+   git push origin v0.1.1
    ```
 
 2. Wait for the GitHub Release workflow.

@@ -67,8 +67,8 @@ Do not commit real agent logs, API keys, bot tokens, or local config files.
 2. Tag a version:
 
    ```bash
-   git tag v0.1.0
-   git push origin v0.1.0
+   git tag v0.1.1
+   git push origin v0.1.1
    ```
 
 3. The release workflow uploads native archives and `checksums.txt`.
@@ -82,7 +82,7 @@ The tap formula should install the shipped binary as `cockpit`:
 class AgentCockpit < Formula
   desc "Terminal cockpit for usage, cost, and speed across coding agents"
   homepage "https://github.com/nashory/agent-cockpit"
-  url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.0/cockpit-v0.1.0-darwin-arm64.tar.gz"
+  url "https://github.com/nashory/agent-cockpit/releases/download/v0.1.1/cockpit-v0.1.1-darwin-arm64.tar.gz"
   sha256 "..."
 
   def install
