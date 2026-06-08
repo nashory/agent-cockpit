@@ -61,11 +61,22 @@ cockpit
 
 Or track `main` with `brew install --HEAD nashory/tap/agent-cockpit`.
 
-**Windows** (no Homebrew): grab the prebuilt binary from the
-[latest release](https://github.com/nashory/agent-cockpit/releases/latest).
-Download `cockpit-<version>-windows-amd64.zip` (or `-arm64`), unzip, and run
-`cockpit.exe`. Drop its folder on your `PATH` to run `cockpit` from anywhere.
-macOS/Linux users who skip Homebrew can grab the matching `.tar.gz` the same way.
+**Windows** (no Homebrew). Grab the prebuilt binary from the
+[latest release](https://github.com/nashory/agent-cockpit/releases/latest):
+download `cockpit-<version>-windows-amd64.zip` (or `-arm64`), unzip it, and run
+`cockpit.exe`. Add its folder to your `PATH` to call `cockpit` from any shell.
+
+Or do the whole thing in PowerShell:
+
+```powershell
+$ver = (Invoke-RestMethod https://api.github.com/repos/nashory/agent-cockpit/releases/latest).tag_name
+Invoke-WebRequest "https://github.com/nashory/agent-cockpit/releases/download/$ver/cockpit-$ver-windows-amd64.zip" -OutFile cockpit.zip
+Expand-Archive cockpit.zip -DestinationPath . -Force
+.\cockpit-$ver-windows-amd64\cockpit.exe
+```
+
+macOS/Linux users who skip Homebrew can grab the matching `.tar.gz` from the
+same release page.
 
 **With Go** (any platform, needs Go installed):
 
