@@ -40,51 +40,6 @@ No cloud upload. No API keys. No background daemon.
 - **📦 No runtime to install.** One static binary. No Node, no Bun, no `npx` /
   `bunx`, no Python. `brew install` and run `cockpit`.
 
-## 🎛️ Features
-
-**Reports and views (6 tabs)**
-- **Overview** headline token/cost readouts, per-agent bars, and a 30-day trend.
-- **Breakdown** per-engine share, per-model load, output speed, and a 100%
-  stacked area chart of your model mix over time.
-- **Trends** token / cost / throughput / velocity time-series next to efficiency,
-  economics, and cadence panels.
-- **Activity** a GitHub-style year **contribution calendar** of token activity,
-  plus hour-of-day, day-of-week, and top-projects views.
-- **Daily** a ccusage-style per-day ledger table (input / output / cache / total
-  tokens, cost, models) with a grand total.
-- **Blocks** 5-hour billing windows with a live **ACTIVE WINDOW** readout
-  (elapsed, remaining, burn rate, and a projected end-of-window cost).
-
-**Accurate cost**
-- Pricing derived from the [LiteLLM](https://github.com/BerriAI/litellm) dataset
-  and **vendored into the binary**, so it is accurate with zero network calls.
-- Correct cache accounting: cached and reasoning tokens are normalized to
-  disjoint components so they are never double-charged.
-- Per-model overrides and a custom display currency via an optional config file.
-
-**Derived insights**
-- Cache hit rate, cache savings, input:output ratio, reasoning share, effective
-  `$/1M output`, output throughput, usage velocity, engaged hours, spending
-  cadence, streaks, and `HIGH BURN` / `OPUS HEAVY` / `STALE` caution lamps.
-
-**Interactive TUI**
-- A live dashboard that refreshes the instant an agent writes a log (fsnotify,
-  with a polling backstop).
-- Focus any widget with the arrows and press `enter` to zoom it fullscreen.
-- Expert (dense) and compact (light) layouts; responsive down to narrow widths.
-
-**Scripting and integration**
-- Static, pipeable reports: `today`, `weekly`, `monthly`, `trends`, `agents`,
-  `speed`, and a one-line `statusline` for tmux or your shell prompt.
-- `--json` on any report, plus `--source` / `--project` / `--model` / `--since`
-  filters.
-
-**Local and lightweight**
-- Read-only: it only reads logs already on your disk. No upload, no keys, no
-  daemon.
-- A cold scan of hundreds of logs parses in parallel across cores.
-- CGO-free, cross-platform binary, about 6 MB. The command is just `cockpit`.
-
 ## 🚀 Install
 
 **Homebrew** (macOS & Linux):
@@ -152,6 +107,18 @@ cockpit today --json
 cockpit config init
 cockpit doctor                # show detected log locations
 ```
+
+## 🎛️ Features
+
+- 🛩️ **Live TUI:** a glass-cockpit dashboard that refreshes the instant an agent writes a log.
+- 📊 **Daily / Trends:** token usage and cost over time, as tables and braille charts.
+- ⏱️ **Blocks:** Claude's 5-hour billing windows with a live burn-rate projection.
+- 🤖 **Unified view:** Claude Code, Codex, and Gemini usage in one normalized cockpit.
+- 💸 **Accurate cost:** per-model pricing from the LiteLLM dataset, vendored for offline use.
+- 🧮 **Insights:** cache hit rate, throughput, velocity, engaged hours, and caution lamps.
+- 🔒 **100% local:** read-only, no upload, no API keys, no daemon.
+- 📦 **No runtime:** one static Go binary. No Node, Bun, `npx`, or Python.
+- 🧰 **Scriptable:** `today` / `weekly` / `monthly` / `trends` / `statusline`, all with `--json`.
 
 ## 🧭 Dashboards
 
