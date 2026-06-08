@@ -22,6 +22,10 @@ var modelPalette = []lipgloss.Color{
 
 var colOther = lipgloss.Color("240")
 
+// colIdle marks days with no activity at all; rendered as a solid white band
+// (same block as the model bands, just white) so an empty day reads cleanly.
+var colIdle = lipgloss.Color("231")
+
 const stackTopModels = 5
 
 // modelMix groups events into the top-N models (plus "other") and returns their
@@ -191,7 +195,7 @@ func (m Model) modelStack(width, height int) string {
 			if g := bandOf[c][rfb]; g >= 0 {
 				b.WriteString(lipgloss.NewStyle().Foreground(colors[g]).Render(strings.Repeat("█", colW)))
 			} else {
-				b.WriteString(gaugeEmpty.Render(strings.Repeat("·", colW)))
+				b.WriteString(lipgloss.NewStyle().Foreground(colIdle).Render(strings.Repeat("█", colW)))
 			}
 		}
 		b.WriteByte('\n')
@@ -215,6 +219,8 @@ func (m Model) modelStack(width, height int) string {
 		leg.WriteString(lipgloss.NewStyle().Foreground(colors[i]).Render("█"))
 		leg.WriteString(labelStyle.Render(fmt.Sprintf(" %s %.0f%%   ", truncate(labels[i], 16), share)))
 	}
+	leg.WriteString(lipgloss.NewStyle().Foreground(colIdle).Render("█"))
+	leg.WriteString(labelStyle.Render(" no activity"))
 	b.WriteString(strings.Repeat(" ", gutter) + strings.TrimRight(leg.String(), " "))
 	return b.String()
 }
