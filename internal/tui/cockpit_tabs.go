@@ -207,52 +207,45 @@ func (m Model) trendsView(width int) string {
 	thrPts := dailyThroughput(m.events, days)
 	velPts := dailyVelocity(m.events, days)
 
-	// Four charts in a 2x2 grid fill the left two columns; the three insight
-	// panels stack in the right column. On narrow terminals everything collapses
-	// to a single full-width column.
-	colW, stack := gridWidths(width, gap, 3, 26)
-	if stack {
+	// Three full-width rows: TOKENS|COST, then VELOCITY|THROUGHPUT (both 50/50),
+	// then EFFICIENCY|ECONOMICS|CADENCE (thirds). Each row equalizes its panels'
+	// box height. Narrow terminals collapse to a single full-width column.
+	half, stackHalf := gridWidths(width, gap, 2, 26)
+	if stackHalf {
 		return vstack(hero,
 			panel("◈ TOKENS · 30d", colCyan, width, seriesChart(tokPts, width, 8, colGreen)),
 			panel("◈ COST · 30d", colCyan, width, seriesChart(costPts, width, 8, colAmber)),
-			panel("◈ THROUGHPUT · out t/s", colCyan, width, seriesChart(thrPts, width, 8, colCyan)),
 			panel("◈ VELOCITY · Δ tok/day", colCyan, width, seriesChart(velPts, width, 8, colAmber)),
+			panel("◈ THROUGHPUT · out t/s", colCyan, width, seriesChart(thrPts, width, 8, colCyan)),
 			panel("◈ EFFICIENCY", colCyan, width, m.efficiencyBody(width-6)),
 			panel("◈ ECONOMICS", colCyan, width, m.economicsBody(width-6)),
 			panel("◈ CADENCE", colCyan, width, m.cadenceBody()),
 		)
 	}
 
-	iw := colW - 6
-	// Insight cards set the right column height; size the chart rows so the 2x2
-	// grid on the left ends on the same row as the three cards on the right.
-	insights := []panelSpec{
-		{"◈ EFFICIENCY", colCyan, colW, m.efficiencyBody(iw)},
-		{"◈ ECONOMICS", colCyan, colW, m.economicsBody(iw)},
-		{"◈ CADENCE", colCyan, colW, m.cadenceBody()},
+	third, stackThird := gridWidths(width, gap, 3, 26)
+	tw := third
+	if stackThird {
+		tw = width
 	}
-	cardBody := maxBodyLines(insights)
-	rightTotal := 3 * (cardBody + 3) // each card box = body + header + 2 borders
-	chBody := rightTotal/2 - 3       // two chart rows fill the same height
-	if chBody < 6 {
-		chBody = 6
-	}
+	iw := tw - 6
 
 	// Borders/headers are uniform cyan like the other tabs; chart line colors
 	// stay distinct since they carry meaning.
-	gridTop := panelsRow(false, gap,
-		panelSpec{"◈ TOKENS · 30d", colCyan, colW, seriesChart(tokPts, colW, chBody, colGreen)},
-		panelSpec{"◈ COST · 30d", colCyan, colW, seriesChart(costPts, colW, chBody, colAmber)},
+	row1 := panelsRow(false, gap,
+		panelSpec{"◈ TOKENS · 30d", colCyan, half, seriesChart(tokPts, half, 8, colGreen)},
+		panelSpec{"◈ COST · 30d", colCyan, half, seriesChart(costPts, half, 8, colAmber)},
 	)
-	gridBot := panelsRow(false, gap,
-		panelSpec{"◈ THROUGHPUT · out t/s", colCyan, colW, seriesChart(thrPts, colW, chBody, colCyan)},
-		panelSpec{"◈ VELOCITY · Δ tok/day", colCyan, colW, seriesChart(velPts, colW, chBody, colAmber)},
+	row2 := panelsRow(false, gap,
+		panelSpec{"◈ VELOCITY · Δ tok/day", colCyan, half, seriesChart(velPts, half, 8, colAmber)},
+		panelSpec{"◈ THROUGHPUT · out t/s", colCyan, half, seriesChart(thrPts, half, 8, colCyan)},
 	)
-	left := lipgloss.JoinVertical(lipgloss.Left, gridTop, gridBot)
-	right := panelsCol(insights...)
-
-	body := lipgloss.JoinHorizontal(lipgloss.Top, left, strings.Repeat(" ", gap), right)
-	return vstack(hero, body)
+	row3 := panelsRow(stackThird, gap,
+		panelSpec{"◈ EFFICIENCY", colCyan, tw, m.efficiencyBody(iw)},
+		panelSpec{"◈ ECONOMICS", colCyan, tw, m.economicsBody(iw)},
+		panelSpec{"◈ CADENCE", colCyan, tw, m.cadenceBody()},
+	)
+	return vstack(hero, row1, row2, row3)
 }
 
 // trendsHero shows the 30-day window summary readouts.

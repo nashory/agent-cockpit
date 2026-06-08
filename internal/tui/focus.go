@@ -83,8 +83,8 @@ func (m Model) zoomTargets() []zoomTarget {
 		return []zoomTarget{
 			tokens,
 			{"COST", colAmber, costChart},
-			{"THROUGHPUT", colCyan, thrChart},
 			{"VELOCITY", colAmber, velChart},
+			{"THROUGHPUT", colCyan, thrChart},
 			{"EFFICIENCY", colGreen, func(w, h int) string { return m.efficiencyBody(w - 6) }},
 			{"ECONOMICS", colAmber, func(w, h int) string { return m.economicsBody(w - 6) }},
 			{"CADENCE", colCyan, func(w, h int) string { return m.cadenceBody() }},
