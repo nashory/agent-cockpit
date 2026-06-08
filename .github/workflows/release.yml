@@ -79,8 +79,13 @@ jobs:
           dir="${dir%.zip}"
           cd dist
           case "$asset" in
-            *.zip) tar -xf "$asset" ;;
-            *)     tar -xzf "$asset" ;;
+            *.zip)
+              # git-bash tar on Windows is GNU tar (no zip support); fall back.
+              if command -v unzip >/dev/null; then unzip -q -o "$asset"
+              elif command -v 7z >/dev/null; then 7z x -y "$asset" >/dev/null
+              else powershell -NoProfile -Command "Expand-Archive -Force '$asset' '.'"
+              fi ;;
+            *) tar -xzf "$asset" ;;
           esac
           bin="$dir/${{ matrix.bin }}"
           echo "running $bin on ${{ matrix.os }}"
