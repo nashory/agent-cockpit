@@ -115,10 +115,15 @@ The TUI is a glass-cockpit dashboard with eight instrument tabs:
 | --- | --- |
 | `1`–`8` | jump to a tab |
 | `tab` / `shift+tab` | next / previous tab |
+| arrows / `hjkl` | move widget focus (the focus bar shows the selection) |
+| `enter` | zoom the focused widget fullscreen |
+| `esc` | exit zoom |
 | `e` | toggle expert (dense) / compact (light) mode |
 | `r` | refresh now |
 | `q` | quit |
-| arrows / `hjkl` | on Calendar: move the day cursor; elsewhere: switch tabs |
+
+On the Calendar tab, zoom in (`enter`) and then arrows / `hjkl` move the day
+cursor (left/right by week, up/down by day) with a tooltip for the selected day.
 
 ## Native Platforms
 

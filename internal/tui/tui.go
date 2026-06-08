@@ -36,6 +36,8 @@ type Model struct {
 	width           int
 	height          int
 	compact         bool           // compact (light) vs expert (dense) layout
+	focus           int            // focused widget within the current tab
+	zoomed          bool           // fullscreen the focused widget
 	calCursor       int            // calendar: selected day, days before today
 	ins             usage.Insights // derived once per data load, not per render
 	err             error
@@ -101,9 +103,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		return m, nil
 	case tea.KeyMsg:
-		// On the calendar, arrow/hjkl drive the day cursor instead of tabs.
-		if m.view == calendar {
-			switch msg.String() {
+		s := msg.String()
+		n := len(m.zoomTargets())
+
+		// When zoomed into the calendar, arrows drive the day cursor.
+		if m.zoomed && m.view == calendar {
+			switch s {
 			case "left", "h":
 				m.calCursor = clampCursor(m.calCursor + 7)
 				return m, nil
@@ -118,33 +123,37 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 		}
-		switch msg.String() {
+
+		switch s {
 		case "ctrl+c", "q":
 			return m, tea.Quit
+		case "esc":
+			m.zoomed = false
+		case "enter":
+			if n > 0 {
+				m.zoomed = true
+			}
 		case "r":
 			return m.startRefresh()
-		case "1":
-			m.view = overview
-		case "2":
-			m.view = agents
-		case "3":
-			m.view = models
-		case "4":
-			m.view = trends
-		case "5":
-			m.view = speed
-		case "6":
-			m.view = insights
-		case "7":
-			m.view = activity
-		case "8":
-			m.view = calendar
 		case "e":
 			m.compact = !m.compact
-		case "tab", "right", "j":
+		case "1", "2", "3", "4", "5", "6", "7", "8":
+			m.view = view(int(s[0] - '1'))
+			m.focus, m.zoomed = 0, false
+		case "tab":
 			m.view = (m.view + 1) % numViews
-		case "shift+tab", "left", "k":
+			m.focus, m.zoomed = 0, false
+		case "shift+tab":
 			m.view = (m.view + numViews - 1) % numViews
+			m.focus, m.zoomed = 0, false
+		case "left", "h", "up", "k":
+			if n > 0 {
+				m.focus = (m.focus - 1 + n) % n
+			}
+		case "right", "l", "down", "j":
+			if n > 0 {
+				m.focus = (m.focus + 1) % n
+			}
 		}
 	case loadedMsg:
 		m.loading = false
@@ -193,7 +202,7 @@ func (m Model) sidebar() string {
 	if m.compact {
 		mode = "compact"
 	}
-	return "agent-cockpit\nac\n" + status + "\nmode " + mode + "\n\n" + lipgloss.JoinVertical(lipgloss.Left, items...) + "\n\ne mode\nr refresh\nq quit"
+	return "agent-cockpit\nac\n" + status + "\nmode " + mode + "\n\n" + lipgloss.JoinVertical(lipgloss.Left, items...) + "\n\n↑↓ focus\nenter zoom\ne mode\nr refresh\nq quit"
 }
 
 // contentWidth is the drawable width to the right of the sidebar, accounting
@@ -207,6 +216,18 @@ func (m Model) contentWidth() int {
 		w = 40
 	}
 	return w
+}
+
+// contentHeight is the drawable height for a fullscreen (zoomed) widget.
+func (m Model) contentHeight() int {
+	if m.height <= 0 {
+		return 30
+	}
+	h := m.height - 8
+	if h < 10 {
+		h = 10
+	}
+	return h
 }
 
 func (m Model) content() string {
@@ -229,6 +250,18 @@ func (m Model) content() string {
 		return b.String()
 	}
 	w := m.contentWidth()
+	targets := m.zoomTargets()
+	if len(targets) > 0 && m.focus >= len(targets) {
+		m.focus = len(targets) - 1
+	}
+	if m.zoomed && len(targets) > 0 {
+		fmt.Fprint(&b, m.zoomedContent(w, m.contentHeight(), targets))
+		return b.String()
+	}
+	if bar := m.focusBar(targets); bar != "" {
+		fmt.Fprintln(&b, clipLines(bar, w))
+		fmt.Fprintln(&b)
+	}
 	switch m.view {
 	case overview:
 		fmt.Fprint(&b, m.overview(w))

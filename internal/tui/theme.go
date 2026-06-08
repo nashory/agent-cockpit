@@ -51,6 +51,9 @@ var (
 	zoneAmber   = lipgloss.NewStyle().Foreground(colAmber)
 	zoneRed     = lipgloss.NewStyle().Foreground(colRed)
 	needleStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("231")).Bold(true)
+
+	// focusChip highlights the selected widget in the focus bar.
+	focusChip = lipgloss.NewStyle().Foreground(lipgloss.Color("232")).Background(colCyan).Bold(true)
 )
 
 // renderCompact selects the lighter, airier compact look. It is set from the

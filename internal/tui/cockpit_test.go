@@ -93,9 +93,36 @@ func TestCockpitRender(t *testing.T) {
 	}
 }
 
+func TestZoomRender(t *testing.T) {
+	views := []view{overview, agents, models, trends, speed, insights, activity, calendar}
+	for _, v := range views {
+		for _, w := range []int{140, 80} {
+			m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
+			m.width = w
+			m.height = 44
+			m.view = v
+			m.zoomed = true
+			for f := 0; f < len(m.zoomTargets()); f++ {
+				m.focus = f
+				out := m.View()
+				if out == "" {
+					t.Fatalf("empty zoom render view=%d focus=%d", v, f)
+				}
+				for _, ln := range strings.Split(out, "\n") {
+					if lw := lipgloss.Width(ln); lw > w {
+						t.Errorf("zoom view=%d focus=%d @ %d: line width %d > %d", v, f, w, lw, w)
+						break
+					}
+				}
+			}
+		}
+	}
+}
+
 func TestCalendarCursor(t *testing.T) {
 	m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
 	m.view = calendar
+	m.zoomed = true // cursor is active only when zoomed into the grid
 
 	step := func(k tea.KeyType) {
 		nm, _ := m.Update(tea.KeyMsg{Type: k})

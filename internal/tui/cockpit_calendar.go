@@ -80,6 +80,15 @@ func dailyTokenMap(events []usage.Event) map[string]int64 {
 // calendarView is the GitHub-style contribution graph: weeks as columns, days
 // of the week as rows, each cell colored by that day's token usage.
 func (m Model) calendarView(width int) string {
+	grid, weeks := m.contributionGrid(width)
+	hero := heroPanel("✈ YEAR", colCyan, width, m.calendarHero(dailyTokenMap(m.events)))
+	gridPanel := panel(fmt.Sprintf("◈ CONTRIBUTIONS · %d weeks · ←→ weeks ↑↓ days", weeks), colGreen, width, grid)
+	return lipgloss.JoinVertical(lipgloss.Left, hero, gridPanel)
+}
+
+// contributionGrid renders the year heat-grid body (month labels, weekday rows,
+// legend, and the selected-day tooltip) and returns it with the week count.
+func (m Model) contributionGrid(width int) (string, int) {
 	tokMap := dailyTokenMap(m.events)
 
 	now := time.Now()
@@ -178,10 +187,7 @@ func (m Model) calendarView(width int) string {
 		lipgloss.NewStyle().Foreground(colCyan).Render(" ▸")
 	grid := lipgloss.JoinVertical(lipgloss.Left,
 		append([]string{monthLine}, append(rows, "", legend, tip)...)...)
-
-	hero := heroPanel("✈ YEAR", colCyan, width, m.calendarHero(tokMap, start, end))
-	gridPanel := panel(fmt.Sprintf("◈ CONTRIBUTIONS · %d weeks · ←→ weeks ↑↓ days", weeks), colGreen, width, grid)
-	return lipgloss.JoinVertical(lipgloss.Left, hero, gridPanel)
+	return grid, weeks
 }
 
 func contribLegend(cellW int) string {
@@ -195,8 +201,14 @@ func contribLegend(cellW int) string {
 	return sb.String()
 }
 
-// calendarHero summarizes the visible year: totals, active days, and streaks.
-func (m Model) calendarHero(tokMap map[string]int64, start, end time.Time) string {
+// calendarHero summarizes the visible year (52 weeks): totals, active days, and
+// streaks.
+func (m Model) calendarHero(tokMap map[string]int64) string {
+	now := time.Now()
+	end := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	start := end.AddDate(0, 0, -(52-1)*7)
+	start = start.AddDate(0, 0, -int(start.Weekday()))
+
 	var total, busiest int64
 	var busiestDay time.Time
 	active, longest, cur := 0, 0, 0

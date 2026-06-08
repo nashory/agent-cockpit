@@ -76,26 +76,7 @@ func (m Model) activityView(width int) string {
 			readout("PROJECTS", compact(int64(ins.Projects)), colAmber),
 		}, "   ")...))
 
-	// HOUR OF DAY heat strip.
-	inner := width - 6
-	cellW := inner / 24
-	if cellW < 1 {
-		cellW = 1
-	}
-	hours := ins.HourHist[:]
-	cells := heatCells(hours, cellW)
-	labels := map[int]string{}
-	for _, h := range []int{0, 3, 6, 9, 12, 15, 18, 21} {
-		labels[h*cellW] = fmt.Sprintf("%02d", h)
-	}
-	legend := heatLegend()
-	hourBody := lipgloss.JoinVertical(lipgloss.Left,
-		cells,
-		labelStyle.Render(axisLine(24*cellW, labels)),
-		"",
-		legend,
-	)
-	hourPanel := panel("◈ HOUR OF DAY · tokens", colCyan, width, hourBody)
+	hourPanel := panel("◈ HOUR OF DAY · tokens", colCyan, width, m.hourStrip(width))
 
 	if m.compact {
 		return vstack(hero, hourPanel)
@@ -113,6 +94,26 @@ func (m Model) activityView(width int) string {
 	row := arrangePanels(stack, gap, weekPanel, projPanel)
 
 	return lipgloss.JoinVertical(lipgloss.Left, hero, hourPanel, row)
+}
+
+// hourStrip renders the 24-hour heat strip with axis labels and a legend.
+func (m Model) hourStrip(width int) string {
+	inner := width - 6
+	cellW := inner / 24
+	if cellW < 1 {
+		cellW = 1
+	}
+	cells := heatCells(m.ins.HourHist[:], cellW)
+	labels := map[int]string{}
+	for _, h := range []int{0, 3, 6, 9, 12, 15, 18, 21} {
+		labels[h*cellW] = fmt.Sprintf("%02d", h)
+	}
+	return lipgloss.JoinVertical(lipgloss.Left,
+		cells,
+		labelStyle.Render(axisLine(24*cellW, labels)),
+		"",
+		heatLegend(),
+	)
 }
 
 func heatLegend() string {

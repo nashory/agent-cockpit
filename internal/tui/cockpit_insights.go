@@ -44,33 +44,46 @@ func (m Model) insightsView(width int) string {
 	}
 	innerW := colW - 6
 
-	eff := panel("◈ EFFICIENCY", colGreen, colW, lipgloss.JoinVertical(lipgloss.Left,
+	eff := panel("◈ EFFICIENCY", colGreen, colW, m.efficiencyBody(innerW))
+	econ := panel("◈ ECONOMICS", colAmber, colW, m.economicsBody(innerW))
+	cad := panel("◈ CADENCE", colCyan, colW, m.cadenceBody())
+
+	row := arrangePanels(stack, gap, eff, econ, cad)
+	return lipgloss.JoinVertical(lipgloss.Left, hero, row)
+}
+
+func (m Model) efficiencyBody(innerW int) string {
+	ins, cur := m.ins, m.currency()
+	return lipgloss.JoinVertical(lipgloss.Left,
 		meter("CACHE HIT", ins.CacheHitRate, innerW),
 		meter("REASONING", ins.ReasoningShare, innerW),
 		"",
 		kv("SAVED", fmt.Sprintf("%.2f %s", ins.CacheSavingsUSD, cur), colGreen),
 		kv("IN:OUT", fmt.Sprintf("%.1f : 1", ins.InputOutputRatio), colText),
 		kv("$/M out", fmt.Sprintf("%.2f %s", ins.EffectiveRateUSD, cur), colAmber),
-	))
+	)
+}
 
-	econ := panel("◈ ECONOMICS", colAmber, colW, lipgloss.JoinVertical(lipgloss.Left,
+func (m Model) economicsBody(innerW int) string {
+	ins, cur := m.ins, m.currency()
+	return lipgloss.JoinVertical(lipgloss.Left,
 		meter("PREMIUM", ins.PremiumCostShare, innerW),
 		"",
 		kv("TOTAL", fmt.Sprintf("%.2f %s", ins.TotalCostUSD, cur), colGreen),
 		kv("PER DAY", fmt.Sprintf("%.2f %s", ins.CostPerActiveDay, cur), colAmber),
 		kv("PROJ 30d", fmt.Sprintf("%.2f %s", ins.ProjectedMonthlyUSD, cur), colAmber),
 		kv("PER SESS", fmt.Sprintf("%.3f %s", ins.AvgCostPerSession, cur), colText),
-	))
+	)
+}
 
-	cad := panel("◈ CADENCE", colCyan, colW, lipgloss.JoinVertical(lipgloss.Left,
+func (m Model) cadenceBody() string {
+	ins := m.ins
+	return lipgloss.JoinVertical(lipgloss.Left,
 		kv("SESSIONS", compact(int64(ins.Sessions)), colCyan),
 		kv("ACTIVE", fmt.Sprintf("%d / %dd", ins.ActiveDays, ins.SpanDays), colText),
 		kv("SESS/DAY", fmt.Sprintf("%.1f", ins.SessionsPerActiveDay), colText),
 		kv("TOK/SESS", compact(int64(ins.AvgTokensPerSession)), colText),
 		kv("PROJECTS", compact(int64(ins.Projects)), colGreen),
 		kv("MODELS", compact(int64(ins.Models)), colGreen),
-	))
-
-	row := arrangePanels(stack, gap, eff, econ, cad)
-	return lipgloss.JoinVertical(lipgloss.Left, hero, row)
+	)
 }

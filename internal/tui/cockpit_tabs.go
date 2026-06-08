@@ -175,16 +175,21 @@ func (m Model) agentsView(width int) string {
 
 // modelsView is the model instrument table: a gauge, cost, and share per model.
 func (m Model) modelsView(width int) string {
+	limit := 10
+	if m.compact {
+		limit = 5
+	}
+	return panel("◈ MODELS · load", colCyan, width, m.modelsBody(width, limit))
+}
+
+// modelsBody renders the per-model load/cost/share table (limit<=0 = all).
+func (m Model) modelsBody(width, limit int) string {
 	prices := m.reportOptions.Pricing
 	buckets := usage.GroupByWith(m.events, prices, func(e usage.Event) string { return e.Model })
 	if len(buckets) == 0 {
 		return labelStyle.Render("no data")
 	}
-	limit := 10
-	if m.compact {
-		limit = 5
-	}
-	if len(buckets) > limit {
+	if limit > 0 && len(buckets) > limit {
 		buckets = buckets[:limit]
 	}
 	cur := m.currency()
@@ -207,7 +212,7 @@ func (m Model) modelsView(width int) string {
 			name, gauge(ratio, barW), compact(bk.Totals.Total),
 			fmt.Sprintf("%.2f %s", bk.Totals.CostUSD, cur), bk.Share*100)
 	}
-	return panel("◈ MODELS · load", colCyan, width, strings.TrimRight(b.String(), "\n"))
+	return strings.TrimRight(b.String(), "\n")
 }
 
 // trendsView is the navigation display: stacked token and cost time-series with
@@ -295,8 +300,16 @@ func (m Model) speedView(width int) string {
 	hero := heroPanel("✈ AIRSPEED · output t/s", colCyan, width,
 		lipgloss.JoinVertical(lipgloss.Left, readouts, "", scale, tape))
 
-	// Per-lane relative speed list.
-	barW := inner - 44 // label(24)+gap+bar+gap+tps(10)+gap+events(6)
+	return lipgloss.JoinVertical(lipgloss.Left, hero,
+		panel("◈ OUTPUT SPEED · all lanes", colCyan, width, speedLanes(rows, maxTPS, width)))
+}
+
+// speedLanes renders the per-lane relative-speed table.
+func speedLanes(rows []speedRow, maxTPS float64, width int) string {
+	if maxTPS <= 0 {
+		maxTPS = 1
+	}
+	barW := width - 6 - 44 // label(24)+gap+bar+gap+tps(10)+gap+events(6)
 	if barW < 8 {
 		barW = 8
 	}
@@ -307,9 +320,7 @@ func (m Model) speedView(width int) string {
 		fmt.Fprintf(&b, "%-24s %s %8.1f   %6d\n",
 			label, gauge(r.tps/maxTPS, barW), r.tps, r.events)
 	}
-
-	return lipgloss.JoinVertical(lipgloss.Left, hero,
-		panel("◈ OUTPUT SPEED · all lanes", colCyan, width, strings.TrimRight(b.String(), "\n")))
+	return strings.TrimRight(b.String(), "\n")
 }
 
 // --- shared helpers ---
