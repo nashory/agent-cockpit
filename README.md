@@ -41,7 +41,8 @@ No cloud upload. No API keys. No background daemon.
 - **4 instrument tabs:** Overview, Breakdown, Trends, and Activity (including a
   GitHub-style year **contribution calendar**).
 - **Derived insights:** cache hit rate, cache savings, input:output ratio,
-  reasoning share, effective rate, spending cadence, and activity streaks.
+  reasoning share, effective rate, output velocity (tokens/sec over time),
+  engaged hours, spending cadence, and activity streaks.
 - **Focus and zoom:** move focus across widgets with the arrows, hit `enter` to
   blow one up fullscreen.
 - **Expert and compact modes:** pack every instrument in, or keep it light.
@@ -127,7 +128,7 @@ fullscreen:
 | --- | --- |
 | **Overview** | headline token/cost readouts, per-agent bars, 30-day trend |
 | **Breakdown** | engine share, model load, and output speed per lane |
-| **Trends** | token/cost time-series plus efficiency, economics, and cadence |
+| **Trends** | token / cost / velocity time-series plus efficiency, economics, and cadence (with engaged hours) |
 | **Activity** | year contribution calendar, hour-of-day, day-of-week, projects |
 
 <table>

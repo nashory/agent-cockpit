@@ -35,6 +35,7 @@ func (m Model) zoomTargets() []zoomTarget {
 	cur := m.currency()
 	tokChart := func(w, h int) string { return seriesChart(dailySeries(ev, 30), w, chartH(h), colGreen) }
 	costChart := func(w, h int) string { return seriesChart(dailyCostSeries(ev, 30, prices), w, chartH(h), colAmber) }
+	velChart := func(w, h int) string { return seriesChart(dailyVelocity(ev, 30), w, chartH(h), colCyan) }
 	enginesBar := func(w, h int) string { return m.enginesBar(ev, prices, w) }
 	enginesClusters := func(w, h int) string { return m.agentClusters(w) }
 	modelsZoom := func(w, h int) string { return m.modelsBody(w, 0) }
@@ -81,6 +82,7 @@ func (m Model) zoomTargets() []zoomTarget {
 		return []zoomTarget{
 			tokens,
 			{"COST", colAmber, costChart},
+			{"VELOCITY", colCyan, velChart},
 			{"EFFICIENCY", colGreen, func(w, h int) string { return m.efficiencyBody(w - 6) }},
 			{"ECONOMICS", colAmber, func(w, h int) string { return m.economicsBody(w - 6) }},
 			{"CADENCE", colCyan, func(w, h int) string { return m.cadenceBody() }},

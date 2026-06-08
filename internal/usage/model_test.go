@@ -134,3 +134,24 @@ func TestComputeInsights(t *testing.T) {
 		t.Fatalf("premium share should be > 0, got %v", ins.PremiumCostShare)
 	}
 }
+
+func TestEngagedHours(t *testing.T) {
+	at := func(d, h, m int) time.Time { return time.Date(2026, 1, d, h, m, 0, 0, time.UTC) }
+	events := []Event{
+		// session a spans 09:00 -> 11:30 = 2.5h
+		{Source: "claude", SessionID: "a", Output: 10, Timestamp: at(1, 9, 0)},
+		{Source: "claude", SessionID: "a", Output: 10, Timestamp: at(1, 10, 15)},
+		{Source: "claude", SessionID: "a", Output: 10, Timestamp: at(1, 11, 30)},
+		// session b spans 14:00 -> 14:45 = 0.75h
+		{Source: "codex", SessionID: "b", Output: 10, Timestamp: at(2, 14, 0)},
+		{Source: "codex", SessionID: "b", Output: 10, Timestamp: at(2, 14, 45)},
+		// session c has a single event -> span 0 (we cannot infer duration)
+		{Source: "gemini", SessionID: "c", Output: 10, Timestamp: at(3, 8, 0)},
+		// no SessionID -> ignored for engaged time
+		{Source: "claude", Output: 10, Timestamp: at(3, 9, 0)},
+	}
+	ins := ComputeInsights(events, nil)
+	if got := ins.EngagedHours; got < 3.24 || got > 3.26 {
+		t.Fatalf("engaged hours = %v, want ~3.25 (2.5 + 0.75 + 0)", got)
+	}
+}

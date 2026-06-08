@@ -23,6 +23,7 @@ type Insights struct {
 	SessionsPerActiveDay float64
 	AvgTokensPerSession  float64
 	AvgCostPerSession    float64
+	EngagedHours         float64 // sum of per-session active spans (first->last event)
 
 	// Economics
 	TotalCostUSD        float64
@@ -52,6 +53,8 @@ func ComputeInsights(events []Event, prices PriceBook) Insights {
 	var totalCost, cacheSavings, opusCost float64
 	var totalTok, totalIn, totalOut, totalCacheRead, totalReasoning int64
 	sessions := map[string]struct{}{}
+	sessFirst := map[string]time.Time{}
+	sessLast := map[string]time.Time{}
 	projects := map[string]struct{}{}
 	models := map[string]struct{}{}
 	agentSet := map[string]struct{}{}
@@ -69,6 +72,14 @@ func ComputeInsights(events []Event, prices PriceBook) Insights {
 
 		if e.SessionID != "" {
 			sessions[e.SessionID] = struct{}{}
+			if !e.Timestamp.IsZero() {
+				if f, ok := sessFirst[e.SessionID]; !ok || e.Timestamp.Before(f) {
+					sessFirst[e.SessionID] = e.Timestamp
+				}
+				if l, ok := sessLast[e.SessionID]; !ok || e.Timestamp.After(l) {
+					sessLast[e.SessionID] = e.Timestamp
+				}
+			}
 		}
 		if e.Project != "" {
 			projects[e.Project] = struct{}{}
@@ -123,6 +134,9 @@ func ComputeInsights(events []Event, prices PriceBook) Insights {
 	if ins.Sessions > 0 {
 		ins.AvgTokensPerSession = float64(totalTok) / float64(ins.Sessions)
 		ins.AvgCostPerSession = totalCost / float64(ins.Sessions)
+	}
+	for id, first := range sessFirst {
+		ins.EngagedHours += sessLast[id].Sub(first).Hours()
 	}
 	if ins.ActiveDays > 0 {
 		ins.CostPerActiveDay = totalCost / float64(ins.ActiveDays)

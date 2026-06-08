@@ -44,6 +44,7 @@ func (m Model) cadenceBody() string {
 	ins := m.ins
 	return lipgloss.JoinVertical(lipgloss.Left,
 		kv("SESSIONS", compact(int64(ins.Sessions)), colCyan),
+		kv("ENGAGED", fmt.Sprintf("%.1f h", ins.EngagedHours), colAmber),
 		kv("ACTIVE", fmt.Sprintf("%d / %dd", ins.ActiveDays, ins.SpanDays), colText),
 		kv("SESS/DAY", fmt.Sprintf("%.1f", ins.SessionsPerActiveDay), colText),
 		kv("TOK/SESS", compact(int64(ins.AvgTokensPerSession)), colText),

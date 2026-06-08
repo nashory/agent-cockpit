@@ -204,17 +204,19 @@ func (m Model) trendsView(width int) string {
 	}
 
 	gap := 1
-	cw, stack := gridWidths(width, gap, 2, 40)
-	lw, rw := cw, cw
+	velPts := dailyVelocity(m.events, days)
+	cw, stack := gridWidths(width, gap, 3, 30)
+	colW := cw
 	if stack {
-		lw, rw = width, width
+		colW = width
 	}
-	tok := panel("◈ TOKENS · 30d", colCyan, lw, seriesChart(tokPts, lw, 8, colGreen))
-	cost := panel("◈ COST · 30d", colAmber, rw, seriesChart(costPts, rw, 8, colAmber))
-	charts := arrangePanels(stack, gap, tok, cost)
+	tok := panel("◈ TOKENS · 30d", colCyan, colW, seriesChart(tokPts, colW, 8, colGreen))
+	cost := panel("◈ COST · 30d", colAmber, colW, seriesChart(costPts, colW, 8, colAmber))
+	vel := panel("◈ VELOCITY · out t/s", colCyan, colW, seriesChart(velPts, colW, 8, colCyan))
+	charts := arrangePanels(stack, gap, tok, cost, vel)
 
 	cw3, stack3 := gridWidths(width, gap, 3, 28)
-	colW := cw3
+	colW = cw3
 	if stack3 {
 		colW = width
 	}
@@ -387,6 +389,45 @@ func subsetSpeed(events []usage.Event) float64 {
 		return 0
 	}
 	return float64(tokens) / secs
+}
+
+// dailyVelocity returns output tokens per second for each of the last `days`
+// days: that day's output divided by its active span (first to last event).
+// Days with fewer than two timestamped events have no measurable span and
+// report 0, since we cannot infer how long a single event took.
+func dailyVelocity(events []usage.Event, days int) []tslc.TimePoint {
+	start := time.Now().AddDate(0, 0, -days+1).Truncate(24 * time.Hour)
+	type acc struct {
+		out         int64
+		first, last time.Time
+	}
+	buckets := make([]acc, days)
+	for _, e := range events {
+		if e.Timestamp.IsZero() {
+			continue
+		}
+		idx := int(e.Timestamp.Truncate(24*time.Hour).Sub(start) / (24 * time.Hour))
+		if idx < 0 || idx >= days {
+			continue
+		}
+		a := &buckets[idx]
+		a.out += e.Output
+		if a.first.IsZero() || e.Timestamp.Before(a.first) {
+			a.first = e.Timestamp
+		}
+		if e.Timestamp.After(a.last) {
+			a.last = e.Timestamp
+		}
+	}
+	pts := make([]tslc.TimePoint, days)
+	for i := range buckets {
+		var v float64
+		if secs := buckets[i].last.Sub(buckets[i].first).Seconds(); secs > 0 {
+			v = float64(buckets[i].out) / secs
+		}
+		pts[i] = tslc.TimePoint{Time: start.AddDate(0, 0, i), Value: v}
+	}
+	return pts
 }
 
 func dailyCostSeries(events []usage.Event, days int, prices usage.PriceBook) []tslc.TimePoint {
