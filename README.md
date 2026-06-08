@@ -17,40 +17,9 @@ No cloud upload. No API keys. No background daemon.
 
 </div>
 
-<!--
-  TODO(demo): drop a real terminal screenshot or GIF here, e.g.
-  <p align="center"><img src="docs/demo.gif" alt="agent-cockpit demo" width="800"></p>
-  The ASCII preview below is the fallback until then.
--->
-
-```text
-FOCUS  TREND · ENGINES · MODELS · ACTIVITY    ↑↓ select · enter zoom
-
-╔════════════════════════════════════════════════════════════════════════════════════╗
-║ ✈ AGENT COCKPIT                                                                    ║
-║ TOKENS   COST        EVENTS   CACHE   CLOCK                                        ║
-║ 14.4M    73.66 USD   446      1.8M    14:32:09                                     ║
-╚════════════════════════════════════════════════════════════════════════════════════╝
-╭───────────────────────────────────────╮ ╭───────────────────────────────────────╮
-│ ◈ ENGINES                             │ │ ◈ TREND · 30d tokens                  │
-│ █████████████████████████████████████ │ │ 54850│⢣    ⢰⡀                         │
-│ ████████████████████▊                 │ │      │ ⢣   ⡇⢱   ⢸⢆   ⢀⢦    ⡀          │
-│ ▏                                     │ │ 36567│  ⢣ ⢰⠁⠘⡄  ⡇ ⠣⡀ ⡸ ⠱⡀ ⢠⠛⢄   ⡰⢄    │
-│ ● codex    63.9%  9.2M                │ │      │   ⠱⡎  ⡇⡸⣤⠃  ⠑⣄⠇  ⢇ ⡜  ⠑⢄⢠⠃ ⠑⢄  │
-│ ● claude   35.8%  5.2M                │ │ 18283│       ⢇⡇⠈    ⠈   ⢸⢠⠃   ⠈⠃    ⠑ │
-│ ● gemini    0.3%  44.8K               │ │      │       ⢸⠁         ⠈⡞            │
-╰───────────────────────────────────────╯ │     0└─────────────────────────────── │
-                                           │      '26 05/10   05/21   05/28        │
-                                           ╰───────────────────────────────────────╯
-╭───────────────────────────────────────╮ ╭───────────────────────────────────────╮
-│ ◈ MODELS                              │ │ ◈ ACTIVITY                            │
-│ gpt-5-codex    █████████████     9.2M │ │ claude               █▇ ▅█▇▆▆▅▇▇▆▅▅   │
-│ claude-opus-4… ███████░░░░░░     5.2M │ │ codex                ▇▅ ▂█▆▅▃▂▇▅▄▃▂   │
-│ gemini-2.5-pro ░░░░░░░░░░░░░    44.8K │ │ gemini                █  █  █  █  █   │
-╰───────────────────────────────────────╯ ╰───────────────────────────────────────╯
-```
-
-<sub>Colors render in your terminal; the snapshot above is monochrome.</sub>
+<p align="center">
+  <img src="docs/imgs/overview.png" alt="agent-cockpit overview dashboard" width="860">
+</p>
 
 ---
 
@@ -147,6 +116,14 @@ fullscreen for detail:
 | **Breakdown** | engine share, model load, and output speed per lane |
 | **Trends** | token/cost time-series plus efficiency, economics, and cadence |
 | **Activity** | year contribution calendar, hour-of-day, day-of-week, projects |
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/imgs/breakdown.png" width="270" alt="Breakdown tab"><br><sub><b>Breakdown</b></sub></td>
+    <td align="center"><img src="docs/imgs/trends.png" width="270" alt="Trends tab"><br><sub><b>Trends</b></sub></td>
+    <td align="center"><img src="docs/imgs/activity.png" width="270" alt="Activity tab"><br><sub><b>Activity</b></sub></td>
+  </tr>
+</table>
 
 ### Keys
 
