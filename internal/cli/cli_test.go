@@ -68,11 +68,11 @@ func TestLoadFiltersConfiguredSources(t *testing.T) {
 
 	cfgPath := filepath.Join(dir, "config.toml")
 	// Point every source at temp dirs so the test never reads real ~/.codex etc.
-	mustWrite(t, cfgPath, `[paths]
-claude = ["`+claudeDir+`"]
-codex = ["`+emptyDir+`"]
-gemini = ["`+emptyDir+`"]
-`)
+	// TOML literal (single-quoted) strings keep Windows backslash paths intact.
+	mustWrite(t, cfgPath, "[paths]\n"+
+		"claude = ['"+claudeDir+"']\n"+
+		"codex = ['"+emptyDir+"']\n"+
+		"gemini = ['"+emptyDir+"']\n")
 
 	events, cfg, err := load(context.Background(), &options{configPath: cfgPath, days: 36500})
 	if err != nil {
