@@ -43,11 +43,13 @@ type Model struct {
 	dayPopup        bool           // Daily tab: show the selected day's per-model breakdown
 	blkSel          int            // Blocks tab: selected row (absolute index, 0 = newest)
 	blkPopup        bool           // Blocks tab: show the selected window's per-model breakdown
+	trendSel        int            // Trends TOKENS/COST zoom: selected day index (0=oldest .. trendDays-1=today)
 	ins             usage.Insights // derived once per data load, not per render
 	err             error
 }
 
 const calMaxCursor = 53*7 - 1
+const trendDays = 30
 
 func clampCursor(c int) int {
 	if c < 0 {
@@ -188,6 +190,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// Zoomed into the TOKENS/COST trend chart: left/right move a date cursor.
+		if m.zoomed && m.focus < n && (targets[m.focus].title == "TOKENS" || targets[m.focus].title == "COST") {
+			switch s {
+			case "left", "h", "up", "k":
+				if m.trendSel > 0 {
+					m.trendSel--
+				}
+				return m, nil
+			case "right", "l", "down", "j":
+				if m.trendSel < trendDays-1 {
+					m.trendSel++
+				}
+				return m, nil
+			}
+		}
+
 		// Daily tab: arrows move a row cursor; enter opens that day's per-model
 		// breakdown; esc closes it. The scroll offset follows the cursor.
 		if m.view == daily {
@@ -309,12 +327,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "1", "2", "3", "4", "5", "6":
 			m.view = view(int(s[0] - '1'))
 			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup, m.blkSel, m.blkPopup = 0, false, 0, 0, false, 0, false
+			m.trendSel = trendDays - 1
 		case "tab":
 			m.view = (m.view + 1) % numViews
 			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup, m.blkSel, m.blkPopup = 0, false, 0, 0, false, 0, false
+			m.trendSel = trendDays - 1
 		case "shift+tab":
 			m.view = (m.view + numViews - 1) % numViews
 			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup, m.blkSel, m.blkPopup = 0, false, 0, 0, false, 0, false
+			m.trendSel = trendDays - 1
 		case "left", "h", "up", "k":
 			if n > 0 {
 				m.focus = (m.focus - 1 + n) % n

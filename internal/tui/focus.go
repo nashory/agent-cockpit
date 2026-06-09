@@ -34,7 +34,6 @@ func (m Model) zoomTargets() []zoomTarget {
 	prices := m.reportOptions.Pricing
 	cur := m.currency()
 	tokChart := func(w, h int) string { return seriesChart(dailySeries(ev, 30), w, chartH(h), colGreen) }
-	costChart := func(w, h int) string { return seriesChart(dailyCostSeries(ev, 30, prices), w, chartH(h), colAmber) }
 	thrChart := func(w, h int) string { return seriesChart(dailyThroughput(ev, 30), w, chartH(h), colCyan) }
 	velChart := func(w, h int) string { return seriesChart(dailyVelocity(ev, 30), w, chartH(h), colCyan) }
 	enginesBar := func(w, h int) string { return m.enginesBar(ev, prices, w) }
@@ -81,8 +80,8 @@ func (m Model) zoomTargets() []zoomTarget {
 			return []zoomTarget{tokens}
 		}
 		return []zoomTarget{
-			tokens,
-			{"COST", colAmber, costChart},
+			{"TOKENS", colGreen, func(w, h int) string { return m.trendSplitZoom(w, h, 0) }},
+			{"COST", colAmber, func(w, h int) string { return m.trendSplitZoom(w, h, 1) }},
 			{"VELOCITY", colCyan, velChart},
 			{"THROUGHPUT", colCyan, thrChart},
 			{"EFFICIENCY", colGreen, func(w, h int) string { return m.efficiencyBody(w - 6) }},

@@ -249,6 +249,106 @@ func (m Model) trendsView(width int) string {
 	return vstack(hero, row1, row2, row3)
 }
 
+// trendSplitZoom is the interactive fullscreen view for the TOKENS/COST charts:
+// the chart fills the top half with a movable date cursor (left/right), and the
+// bottom half is a per-day table scrolled to the selected date. metric 0 = tokens,
+// 1 = cost.
+func (m Model) trendSplitZoom(w, h, metric int) string {
+	days := trendDays
+	prices := m.reportOptions.Pricing
+	tokPts := dailySeries(m.events, days)
+	costPts := dailyCostSeries(m.events, days, prices)
+
+	// Per-day full stats, keyed by date, for the table and readouts.
+	byDay := map[string]dayRow{}
+	for _, r := range dailyLedger(m.events, prices) {
+		byDay[r.date] = r
+	}
+	start := time.Now().AddDate(0, 0, -days+1).Truncate(24 * time.Hour)
+
+	sel := m.trendSel
+	if sel < 0 {
+		sel = 0
+	}
+	if sel > days-1 {
+		sel = days - 1
+	}
+	cur := m.currency()
+
+	series, color, unit := tokPts, colGreen, "tokens"
+	if metric == 1 {
+		series, color, unit = costPts, colAmber, "cost"
+	}
+
+	chartH := h/2 - 1
+	if chartH < 6 {
+		chartH = 6
+	}
+	chart := seriesChart(series, w, chartH, color)
+
+	// Date cursor caret under the chart, positioned proportionally.
+	innerW := w - 6
+	if innerW < 20 {
+		innerW = 20
+	}
+	pos := 0
+	if days > 1 {
+		pos = sel * (innerW - 1) / (days - 1)
+	}
+	caret := lipgloss.NewStyle().Foreground(color).Bold(true).Render(strings.Repeat(" ", pos) + "▲")
+
+	// Selected-day readout.
+	selDate := start.AddDate(0, 0, sel)
+	dk := selDate.Format("2006-01-02")
+	r := byDay[dk]
+	sd := lipgloss.JoinHorizontal(lipgloss.Top, spread([]string{
+		readout("◂ DATE ▸", selDate.Format("01-02 Mon"), colCyan),
+		readout("TOKENS", compact(r.totals.Total), colGreen),
+		readout("COST", fmt.Sprintf("~%.2f %s", r.totals.CostUSD, cur), colAmber),
+		readout("EVENTS", compact(int64(r.totals.Events)), colText),
+		readout("MODELS", compact(int64(len(r.models))), colText),
+	}, "   ")...)
+
+	// Bottom table: all days oldest -> newest, selected highlighted, scrolled.
+	rowsBudget := h - chartH - 6
+	if rowsBudget < 3 {
+		rowsBudget = 3
+	}
+	off := 0
+	if sel >= rowsBudget {
+		off = sel - rowsBudget + 1
+	}
+	const dW, nW, cW = 13, 11, 12
+	tline := func(date, tok, cost, ev, models string) string {
+		return fmt.Sprintf("%-*s %*s %*s %7s  %s", dW, date, nW, tok, cW, cost, ev, models)
+	}
+	var b strings.Builder
+	b.WriteString(labelStyle.Render(tline("DATE", "TOKENS", "COST", "EVENTS", "MODELS")))
+	b.WriteByte('\n')
+	for i := off; i < days && i < off+rowsBudget; i++ {
+		d := start.AddDate(0, 0, i)
+		row := byDay[d.Format("2006-01-02")]
+		modelsW := w - 6 - dW - nW - cW - 11
+		if modelsW < 6 {
+			modelsW = 6
+		}
+		ln := tline(d.Format("2006-01-02 Mon"), compact(row.totals.Total),
+			fmt.Sprintf("~%.2f %s", row.totals.CostUSD, cur),
+			compact(int64(row.totals.Events)), truncate(dayModelList(row.models), modelsW))
+		if i == sel {
+			ln = lipgloss.NewStyle().Reverse(true).Render(ln)
+		}
+		b.WriteString(ln)
+		b.WriteByte('\n')
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left,
+		chart, caret, sd, "",
+		strings.TrimRight(b.String(), "\n"),
+		labelStyle.Render("← → move date · "+unit+" chart"),
+	)
+}
+
 // trendsHero shows the 30-day window summary readouts.
 func (m Model) trendsHero(tokPts, costPts []tslc.TimePoint, days int) string {
 	cur := m.currency()

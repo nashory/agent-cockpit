@@ -47,8 +47,6 @@ func (m Model) blockDetail(width int, bl []usage.Block) string {
 		return panel("◈ BLOCKS", colCyan, width, labelStyle.Render("no data"))
 	}
 	blk := bl[idx]
-	prices := m.reportOptions.Pricing
-	cur := m.currency()
 
 	var winEvents []usage.Event
 	for _, e := range m.events {
@@ -59,31 +57,29 @@ func (m Model) blockDetail(width int, bl []usage.Block) string {
 			winEvents = append(winEvents, e)
 		}
 	}
-	buckets := usage.GroupByWith(winEvents, prices, func(e usage.Event) string { return e.Model })
 
-	const nameW, numW, totW, costW = 22, 9, 11, 12
-	line := func(name, in, out, cache, tot, cost string) string {
-		return fmt.Sprintf("%-*s %*s %*s %*s %*s %*s",
-			nameW, truncate(name, nameW), numW, in, numW, out, numW, cache, totW, tot, costW, cost)
+	// Window-specific context: span, active duration, and burn rate.
+	active := blk.LastActivity.Sub(blk.Start)
+	hrs := active.Hours()
+	burn := "n/a"
+	if hrs > 0 {
+		burn = compact(int64(float64(blk.Totals.Total)/hrs)) + "/h"
 	}
-	var b strings.Builder
-	b.WriteString(labelStyle.Render(line("MODEL", "INPUT", "OUTPUT", "CACHE", "TOTAL", "COST")))
-	b.WriteByte('\n')
-	for _, bk := range buckets {
-		t := bk.Totals
-		b.WriteString(line(shortModel(bk.Key), compact(t.Input), compact(t.Output),
-			compact(t.CacheRead+t.CacheCreate), compact(t.Total),
-			fmt.Sprintf("~%.2f %s", t.CostUSD, cur)))
-		b.WriteByte('\n')
+	live := "closed"
+	if blk.Active {
+		live = "● live"
 	}
-	t := blk.Totals
-	b.WriteString(lipgloss.NewStyle().Foreground(colText).Bold(true).Render(
-		line("TOTAL", compact(t.Input), compact(t.Output), compact(t.CacheRead+t.CacheCreate),
-			compact(t.Total), fmt.Sprintf("~%.2f %s", t.CostUSD, cur))))
+	ctx := lipgloss.JoinHorizontal(lipgloss.Top, spread([]string{
+		readout("WINDOW", blk.Start.Format("01-02 15:04")+"-"+blk.End.Format("15:04"), colCyan),
+		readout("ACTIVE", fmtDur(active), colAmber),
+		readout("BURN", burn, colText),
+		readout("STATE", live, colGreen),
+	}, "   ")...)
 
+	body := lipgloss.JoinVertical(lipgloss.Left, ctx, "", m.usageDetailBody(winEvents))
 	header := fmt.Sprintf("⤢ WINDOW · %s-%s   ·   esc back",
 		blk.Start.Format("01-02 15:04"), blk.End.Format("15:04"))
-	return heroPanel(header, colCyan, width, b.String())
+	return heroPanel(header, colCyan, width, body)
 }
 
 // activeBlockBody renders the readouts for the window containing "now": elapsed,

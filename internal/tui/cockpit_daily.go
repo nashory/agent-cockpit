@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/nashory/agent-cockpit/internal/usage"
@@ -87,43 +88,19 @@ func (m Model) dayDetail(width int) string {
 		return panel("◈ DAILY", colCyan, width, labelStyle.Render("no data"))
 	}
 	date := rows[m.daySel].date
-	prices := m.reportOptions.Pricing
-	cur := m.currency()
 
-	// Models used on that calendar day.
 	var dayEvents []usage.Event
 	for _, e := range m.events {
 		if !e.Timestamp.IsZero() && e.Timestamp.Format("2006-01-02") == date {
 			dayEvents = append(dayEvents, e)
 		}
 	}
-	buckets := usage.GroupByWith(dayEvents, prices, func(e usage.Event) string { return e.Model })
-
-	inner := width - 6
-	if inner < 40 {
-		inner = 40
+	weekday := ""
+	if t, err := time.Parse("2006-01-02", date); err == nil {
+		weekday = t.Format("Mon")
 	}
-	const nameW, numW, totW, costW = 22, 9, 11, 12
-	line := func(name, in, out, cache, tot, cost string) string {
-		return fmt.Sprintf("%-*s %*s %*s %*s %*s %*s",
-			nameW, truncate(name, nameW), numW, in, numW, out, numW, cache, totW, tot, costW, cost)
-	}
-	var b strings.Builder
-	b.WriteString(labelStyle.Render(line("MODEL", "INPUT", "OUTPUT", "CACHE", "TOTAL", "COST")))
-	b.WriteByte('\n')
-	for _, bk := range buckets {
-		t := bk.Totals
-		b.WriteString(line(shortModel(bk.Key), compact(t.Input), compact(t.Output),
-			compact(t.CacheRead+t.CacheCreate), compact(t.Total),
-			fmt.Sprintf("~%.2f %s", t.CostUSD, cur)))
-		b.WriteByte('\n')
-	}
-	tot := rows[m.daySel].totals
-	b.WriteString(lipgloss.NewStyle().Foreground(colText).Bold(true).Render(
-		line("TOTAL", compact(tot.Input), compact(tot.Output), compact(tot.CacheRead+tot.CacheCreate),
-			compact(tot.Total), fmt.Sprintf("~%.2f %s", tot.CostUSD, cur))))
-
-	return heroPanel("⤢ DAILY · "+date+"   ·   esc back", colCyan, width, b.String())
+	header := fmt.Sprintf("⤢ DAILY · %s %s   ·   esc back", date, weekday)
+	return heroPanel(header, colCyan, width, m.usageDetailBody(dayEvents))
 }
 
 // scrollHint shows "· 31-60 / 190 ↑↓" when a table has more rows than fit.
