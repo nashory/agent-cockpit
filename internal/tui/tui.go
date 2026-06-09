@@ -44,6 +44,7 @@ type Model struct {
 	blkSel          int            // Blocks tab: selected row (absolute index, 0 = newest)
 	blkPopup        bool           // Blocks tab: show the selected window's per-model breakdown
 	trendSel        int            // Trends TOKENS/COST zoom: selected day index (0=oldest .. trendDays-1=today)
+	showHelp        bool           // full-screen keyboard help overlay
 	ins             usage.Insights // derived once per data load, not per render
 	err             error
 }
@@ -169,6 +170,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case tea.KeyMsg:
 		s := msg.String()
+
+		// Help overlay takes priority: ? toggles it, esc / q close it, and while
+		// it is open other keys are swallowed so nothing changes underneath.
+		if s == "ctrl+c" {
+			return m, tea.Quit
+		}
+		if m.showHelp {
+			if s == "?" || s == "esc" || s == "q" {
+				m.showHelp = false
+			}
+			return m, nil
+		}
+		if s == "?" {
+			m.showHelp = true
+			return m, nil
+		}
+
 		targets := m.zoomTargets()
 		n := len(targets)
 
@@ -399,7 +417,53 @@ func (m Model) sidebar() string {
 	if m.compact {
 		mode = "compact"
 	}
-	return "agent-cockpit\ncockpit\n" + status + "\nmode " + mode + "\n\n" + lipgloss.JoinVertical(lipgloss.Left, items...) + "\n\n↑↓ focus\nenter zoom\ne mode\nr refresh\nq quit"
+	// Context-sensitive primary hint: the same keys do different things per tab.
+	nav := "↑↓ focus\nenter zoom"
+	switch m.view {
+	case daily:
+		nav = "↑↓ select\nenter day"
+	case blocks:
+		nav = "↑↓ select\nenter window"
+	}
+	hints := nav + "\nesc back\ne mode\nr refresh\n? help\nq quit"
+	return "agent-cockpit\ncockpit\n" + status + "\nmode " + mode + "\n\n" +
+		lipgloss.JoinVertical(lipgloss.Left, items...) + "\n\n" + hints
+}
+
+// helpView is the full-screen keyboard reference (toggled with ?).
+func (m Model) helpView(width int) string {
+	row := func(k, d string) string {
+		return labelStyle.Render(fmt.Sprintf("  %-16s ", k)) + lipgloss.NewStyle().Foreground(colText).Render(d)
+	}
+	lines := []string{
+		titleStyle.Render("KEYBOARD"),
+		"",
+		row("1 - 6", "jump to a tab"),
+		row("tab / shift+tab", "next / previous tab"),
+		row("e", "toggle expert / compact layout"),
+		row("r", "refresh now"),
+		row("? ", "toggle this help"),
+		row("q / ctrl+c", "quit"),
+		"",
+		titleStyle.Render("OVERVIEW · BREAKDOWN · TRENDS · ACTIVITY"),
+		"",
+		row("arrows / hjkl", "move the widget focus"),
+		row("enter", "zoom the focused widget fullscreen"),
+		row("esc", "leave zoom"),
+		row("← →", "on a zoomed TOKENS/COST chart, move the date cursor"),
+		row("arrows", "on a zoomed calendar, move the day cursor"),
+		"",
+		titleStyle.Render("DAILY · BLOCKS"),
+		"",
+		row("↑↓ / jk", "move the row cursor"),
+		row("pgup/pgdn, g/G", "page, jump to top / bottom"),
+		row("enter", "open the row's per-model breakdown"),
+		row("esc", "close the breakdown"),
+		"",
+		labelStyle.Render("Costs are estimated from token counts, shown with a leading ~."),
+		labelStyle.Render("press ? or esc to close"),
+	}
+	return heroPanel("✈ HELP", colCyan, width, lipgloss.JoinVertical(lipgloss.Left, lines...))
 }
 
 // contentWidth is the drawable width to the right of the sidebar, accounting
@@ -447,6 +511,10 @@ func (m Model) content() string {
 		return b.String()
 	}
 	w := m.contentWidth()
+	if m.showHelp {
+		fmt.Fprint(&b, m.helpView(w))
+		return b.String()
+	}
 	targets := m.zoomTargets()
 	if len(targets) > 0 && m.focus >= len(targets) {
 		m.focus = len(targets) - 1

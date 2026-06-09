@@ -33,7 +33,7 @@ func (m Model) blocksView(width int) string {
 	hero := heroPanel("✈ ACTIVE WINDOW · 5h", colCyan, width, m.activeBlockBody(bl))
 
 	vis := m.tableVisible()
-	title := "◈ BLOCKS · 5h windows  · ↑↓ select · enter window"
+	title := fmt.Sprintf("◈ BLOCKS · 5h windows  · row %d/%d · ↑↓ enter", m.blkSel+1, len(bl))
 	table := panel(title, colCyan, width, m.blocksTable(bl, width, m.scroll, vis))
 	return vstack(hero, table)
 }

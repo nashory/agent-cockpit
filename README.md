@@ -155,6 +155,7 @@ fullscreen:
 | `enter` / `esc` | zoom the focused widget / exit zoom |
 | `e` | toggle expert (dense) / compact (light) mode |
 | `r` | refresh now |
+| `?` | toggle the full keyboard help |
 | `q` | quit |
 
 On **Activity**, zoom the calendar (`enter`) and then arrows move the day cursor

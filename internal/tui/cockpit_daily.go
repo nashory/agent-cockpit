@@ -76,7 +76,7 @@ func (m Model) dailyView(width int) string {
 	}
 	span := m.dataSpanLabel()
 	body := m.ledgerTable(width, m.scroll, m.tableVisible())
-	title := "◈ DAILY · last " + span + "  · ↑↓ select · enter day"
+	title := fmt.Sprintf("◈ DAILY · last %s  · row %d/%d · ↑↓ enter", span, m.daySel+1, m.tableTotal())
 	return panel(title, colCyan, width, body)
 }
 

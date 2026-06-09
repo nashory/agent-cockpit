@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/nashory/agent-cockpit/internal/report"
 )
 
@@ -155,5 +156,28 @@ func TestDailyPopup(t *testing.T) {
 	m = upd(m, tea.KeyMsg{Type: tea.KeyEsc})
 	if m.dayPopup {
 		t.Fatal("esc should close the day popup")
+	}
+}
+
+func TestHelpOverlay(t *testing.T) {
+	m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
+	m.width, m.height = 140, 44
+	m = upd(m, runes("?"))
+	if !m.showHelp {
+		t.Fatal("? should open help")
+	}
+	out := stripANSI(m.View())
+	if !strings.Contains(out, "KEYBOARD") || !strings.Contains(out, "per-model breakdown") {
+		t.Fatalf("help should list keys:\n%s", out)
+	}
+	// No line exceeds the terminal width.
+	for _, ln := range strings.Split(m.View(), "\n") {
+		if lipgloss.Width(ln) > 140 {
+			t.Fatalf("help line too wide: %q", ln)
+		}
+	}
+	m = upd(m, tea.KeyMsg{Type: tea.KeyEsc})
+	if m.showHelp {
+		t.Fatal("esc should close help")
 	}
 }
