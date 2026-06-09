@@ -94,6 +94,8 @@ cockpit trends --days 30
 cockpit agents
 cockpit speed
 cockpit statusline            # one line for tmux / your shell prompt
+cockpit report                # text summary (add --json for JSON)
+cockpit report --svg usage.svg  # shareable SVG receipt card
 
 # filter by source, project, or model
 cockpit monthly --source claude
@@ -119,6 +121,7 @@ cockpit doctor                # show detected log locations
 - 🔒 **100% local:** read-only, no upload, no API keys, no daemon.
 - 📦 **No runtime:** one static Go binary. No Node, Bun, `npx`, or Python.
 - 🧰 **Scriptable:** `today` / `weekly` / `monthly` / `trends` / `statusline`, all with `--json`.
+- 🖼️ **Shareable SVG:** `cockpit report --svg` renders a receipt card you can post anywhere.
 
 ## 🧭 Dashboards
 
@@ -155,7 +158,12 @@ fullscreen:
 | `q` | quit |
 
 On **Activity**, zoom the calendar (`enter`) and then arrows move the day cursor
-(left/right by week, up/down by day) with a tooltip for the selected day.
+(left/right by week, up/down by day) with a tooltip for the selected day. On
+**Daily**, arrows move the row cursor and `enter` opens that day's per-model
+breakdown. On **Daily** and **Blocks**, the arrows scroll the table.
+
+Costs are estimates derived from token counts (no per-call cost is recorded in
+the logs), so every USD figure is shown with a leading `~`.
 
 ## 🔒 What It Reads
 
