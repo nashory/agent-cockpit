@@ -90,31 +90,43 @@ func TestTableScroll(t *testing.T) {
 	m.width, m.height = 140, 44
 
 	m = upd(m, runes("6")) // Blocks tab
-	if m.view != blocks || m.scroll != 0 {
-		t.Fatalf("expected blocks/scroll 0, got view=%d scroll=%d", m.view, m.scroll)
+	if m.view != blocks || m.blkSel != 0 {
+		t.Fatalf("expected blocks/blkSel 0, got view=%d blkSel=%d", m.view, m.blkSel)
 	}
-	if m.maxScroll() <= 0 {
-		t.Fatalf("sample data should overflow the blocks table, maxScroll=%d", m.maxScroll())
+	if m.tableTotal() <= 1 {
+		t.Fatalf("sample data should produce many blocks, got %d", m.tableTotal())
 	}
-	// Down scrolls, up clamps at 0.
+	// Down moves the cursor, up clamps at 0.
 	m = upd(m, tea.KeyMsg{Type: tea.KeyDown})
-	if m.scroll != 1 {
-		t.Fatalf("down should scroll to 1, got %d", m.scroll)
+	if m.blkSel != 1 {
+		t.Fatalf("down should move cursor to 1, got %d", m.blkSel)
 	}
 	m = upd(m, tea.KeyMsg{Type: tea.KeyUp})
 	m = upd(m, tea.KeyMsg{Type: tea.KeyUp})
-	if m.scroll != 0 {
-		t.Fatalf("up past top should clamp to 0, got %d", m.scroll)
+	if m.blkSel != 0 {
+		t.Fatalf("up past top should clamp to 0, got %d", m.blkSel)
 	}
-	// end jumps to the bottom, capped at maxScroll.
+	// end jumps the cursor to the last row and scroll follows.
 	m = upd(m, runes("G"))
-	if m.scroll != m.maxScroll() {
-		t.Fatalf("G should jump to maxScroll %d, got %d", m.maxScroll(), m.scroll)
+	if m.blkSel != m.tableTotal()-1 {
+		t.Fatalf("G should move cursor to last row %d, got %d", m.tableTotal()-1, m.blkSel)
 	}
-	// Switching tabs resets the scroll offset.
+	// Enter opens the window popup; esc closes it.
+	m = upd(m, tea.KeyMsg{Type: tea.KeyEnter})
+	if !m.blkPopup {
+		t.Fatal("enter should open the block popup")
+	}
+	if out := stripANSI(m.View()); !strings.Contains(out, "WINDOW ·") || !strings.Contains(out, "MODEL") {
+		t.Fatalf("block popup should show per-model breakdown:\n%s", out)
+	}
+	m = upd(m, tea.KeyMsg{Type: tea.KeyEsc})
+	if m.blkPopup {
+		t.Fatal("esc should close the block popup")
+	}
+	// Switching tabs resets cursor and scroll.
 	m = upd(m, runes("1"))
-	if m.scroll != 0 {
-		t.Fatalf("tab switch should reset scroll, got %d", m.scroll)
+	if m.scroll != 0 || m.blkSel != 0 {
+		t.Fatalf("tab switch should reset, got scroll=%d blkSel=%d", m.scroll, m.blkSel)
 	}
 }
 

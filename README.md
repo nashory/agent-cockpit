@@ -159,8 +159,8 @@ fullscreen:
 
 On **Activity**, zoom the calendar (`enter`) and then arrows move the day cursor
 (left/right by week, up/down by day) with a tooltip for the selected day. On
-**Daily**, arrows move the row cursor and `enter` opens that day's per-model
-breakdown. On **Daily** and **Blocks**, the arrows scroll the table.
+**Daily** and **Blocks**, arrows move a row cursor (the view follows it) and
+`enter` opens that row's per-model breakdown (`esc` closes it).
 
 Costs are estimates derived from token counts (no per-call cost is recorded in
 the logs), so every USD figure is shown with a leading `~`.

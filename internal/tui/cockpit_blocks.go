@@ -27,12 +27,63 @@ func fmtDur(d time.Duration) string {
 // recent windows, mirroring ccusage's blocks report.
 func (m Model) blocksView(width int) string {
 	bl := usage.SessionBlocks(m.events, m.reportOptions.Pricing, usage.DefaultBlockWindow)
+	if m.blkPopup {
+		return m.blockDetail(width, bl)
+	}
 	hero := heroPanel("✈ ACTIVE WINDOW · 5h", colCyan, width, m.activeBlockBody(bl))
 
 	vis := m.tableVisible()
-	title := "◈ BLOCKS · 5h windows" + scrollHint(m.scroll, vis, len(bl))
+	title := "◈ BLOCKS · 5h windows  · ↑↓ select · enter window"
 	table := panel(title, colCyan, width, m.blocksTable(bl, width, m.scroll, vis))
 	return vstack(hero, table)
+}
+
+// blockDetail renders the per-model breakdown for the selected 5-hour window
+// (enter on the Blocks tab).
+func (m Model) blockDetail(width int, bl []usage.Block) string {
+	// blkSel indexes the newest-first display order.
+	idx := len(bl) - 1 - m.blkSel
+	if idx < 0 || idx >= len(bl) {
+		return panel("◈ BLOCKS", colCyan, width, labelStyle.Render("no data"))
+	}
+	blk := bl[idx]
+	prices := m.reportOptions.Pricing
+	cur := m.currency()
+
+	var winEvents []usage.Event
+	for _, e := range m.events {
+		if e.Timestamp.IsZero() {
+			continue
+		}
+		if !e.Timestamp.Before(blk.Start) && e.Timestamp.Before(blk.End) {
+			winEvents = append(winEvents, e)
+		}
+	}
+	buckets := usage.GroupByWith(winEvents, prices, func(e usage.Event) string { return e.Model })
+
+	const nameW, numW, totW, costW = 22, 9, 11, 12
+	line := func(name, in, out, cache, tot, cost string) string {
+		return fmt.Sprintf("%-*s %*s %*s %*s %*s %*s",
+			nameW, truncate(name, nameW), numW, in, numW, out, numW, cache, totW, tot, costW, cost)
+	}
+	var b strings.Builder
+	b.WriteString(labelStyle.Render(line("MODEL", "INPUT", "OUTPUT", "CACHE", "TOTAL", "COST")))
+	b.WriteByte('\n')
+	for _, bk := range buckets {
+		t := bk.Totals
+		b.WriteString(line(shortModel(bk.Key), compact(t.Input), compact(t.Output),
+			compact(t.CacheRead+t.CacheCreate), compact(t.Total),
+			fmt.Sprintf("~%.2f %s", t.CostUSD, cur)))
+		b.WriteByte('\n')
+	}
+	t := blk.Totals
+	b.WriteString(lipgloss.NewStyle().Foreground(colText).Bold(true).Render(
+		line("TOTAL", compact(t.Input), compact(t.Output), compact(t.CacheRead+t.CacheCreate),
+			compact(t.Total), fmt.Sprintf("~%.2f %s", t.CostUSD, cur))))
+
+	header := fmt.Sprintf("⤢ WINDOW · %s-%s   ·   esc back",
+		blk.Start.Format("01-02 15:04"), blk.End.Format("15:04"))
+	return heroPanel(header, colCyan, width, b.String())
 }
 
 // activeBlockBody renders the readouts for the window containing "now": elapsed,
@@ -111,7 +162,7 @@ func (m Model) blocksTable(bl []usage.Block, width, offset, limit int) string {
 	if limit > 0 && len(rows) > limit {
 		rows = rows[:limit]
 	}
-	for _, blk := range rows {
+	for i, blk := range rows {
 		mark := " "
 		accent := colText
 		if blk.Active {
@@ -125,7 +176,11 @@ func (m Model) blocksTable(bl []usage.Block, width, offset, limit int) string {
 			fmt.Sprintf("~%.2f %s", blk.Totals.CostUSD, cur),
 			dayModelList(blk.Models),
 		)
-		b.WriteString(lipgloss.NewStyle().Foreground(accent).Render(row))
+		st := lipgloss.NewStyle().Foreground(accent)
+		if offset+i == m.blkSel { // cursor row
+			st = st.Reverse(true)
+		}
+		b.WriteString(st.Render(row))
 		b.WriteByte('\n')
 	}
 	return strings.TrimRight(b.String(), "\n")

@@ -41,6 +41,8 @@ type Model struct {
 	scroll          int            // row offset for the table tabs (Daily, Blocks)
 	daySel          int            // Daily tab: selected row (absolute index, 0 = newest)
 	dayPopup        bool           // Daily tab: show the selected day's per-model breakdown
+	blkSel          int            // Blocks tab: selected row (absolute index, 0 = newest)
+	blkPopup        bool           // Blocks tab: show the selected window's per-model breakdown
 	ins             usage.Insights // derived once per data load, not per render
 	err             error
 }
@@ -238,27 +240,55 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// Blocks tab: arrows scroll the rows.
+		// Blocks tab: arrows move a row cursor; enter opens that window's per-model
+		// breakdown; esc closes it. The scroll offset follows the cursor.
 		if m.view == blocks {
+			total := m.tableTotal()
+			vis := m.tableVisible()
+			move := func(d int) {
+				m.blkSel += d
+				if m.blkSel < 0 {
+					m.blkSel = 0
+				}
+				if total > 0 && m.blkSel > total-1 {
+					m.blkSel = total - 1
+				}
+				if m.blkSel < m.scroll {
+					m.scroll = m.blkSel
+				}
+				if vis > 0 && m.blkSel >= m.scroll+vis {
+					m.scroll = m.blkSel - vis + 1
+				}
+			}
 			switch s {
 			case "up", "k":
-				m.scroll = clampScroll(m.scroll-1, m.maxScroll())
+				move(-1)
 				return m, nil
 			case "down", "j":
-				m.scroll = clampScroll(m.scroll+1, m.maxScroll())
+				move(1)
 				return m, nil
 			case "pgup":
-				m.scroll = clampScroll(m.scroll-10, m.maxScroll())
+				move(-vis)
 				return m, nil
 			case "pgdown":
-				m.scroll = clampScroll(m.scroll+10, m.maxScroll())
+				move(vis)
 				return m, nil
 			case "home", "g":
-				m.scroll = 0
+				move(-total)
 				return m, nil
 			case "end", "G":
-				m.scroll = m.maxScroll()
+				move(total)
 				return m, nil
+			case "enter":
+				if total > 0 {
+					m.blkPopup = true
+				}
+				return m, nil
+			case "esc":
+				if m.blkPopup {
+					m.blkPopup = false
+					return m, nil
+				}
 			}
 		}
 
@@ -278,13 +308,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.focus, m.zoomed = 0, false // target list changes with the layout
 		case "1", "2", "3", "4", "5", "6":
 			m.view = view(int(s[0] - '1'))
-			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup = 0, false, 0, 0, false
+			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup, m.blkSel, m.blkPopup = 0, false, 0, 0, false, 0, false
 		case "tab":
 			m.view = (m.view + 1) % numViews
-			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup = 0, false, 0, 0, false
+			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup, m.blkSel, m.blkPopup = 0, false, 0, 0, false, 0, false
 		case "shift+tab":
 			m.view = (m.view + numViews - 1) % numViews
-			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup = 0, false, 0, 0, false
+			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup, m.blkSel, m.blkPopup = 0, false, 0, 0, false, 0, false
 		case "left", "h", "up", "k":
 			if n > 0 {
 				m.focus = (m.focus - 1 + n) % n
