@@ -192,14 +192,15 @@ func (m Model) modelsBody(width, limit int) string {
 // trendsView is the analysis tab: token/cost time-series plus derived insight
 // panels (efficiency, economics, cadence).
 func (m Model) trendsView(width int) string {
-	days := 30
+	days := m.windowDays
+	wl := fmt.Sprintf("%dd", days)
 	prices := m.reportOptions.Pricing
 	tokPts := dailySeries(m.events, days)
 	costPts := dailyCostSeries(m.events, days, prices)
 
-	hero := heroPanel("✈ TRENDS · 30d", colCyan, width, m.trendsHero(tokPts, costPts, days))
+	hero := heroPanel("✈ TRENDS · "+wl+"  · w window", colCyan, width, m.trendsHero(tokPts, costPts, days))
 	if m.compact {
-		tok := panel("◈ TOKENS · 30d", colCyan, width, seriesChart(tokPts, width, 8, colGreen))
+		tok := panel("◈ TOKENS · "+wl, colCyan, width, seriesChart(tokPts, width, 8, colGreen))
 		return vstack(hero, tok)
 	}
 
@@ -210,14 +211,14 @@ func (m Model) trendsView(width int) string {
 	// Three full-width rows: TOKENS|COST, then VELOCITY|THROUGHPUT (both 50/50),
 	// then EFFICIENCY|ECONOMICS|CADENCE (thirds). Each row equalizes its panels'
 	// box height. Narrow terminals collapse to a single full-width column.
-	span := m.dataSpanLabel() // insight panels are all-time, unlike the 30d charts
+	span := m.dataSpanLabel() // insight panels are all-time, unlike the windowed charts
 	half, stackHalf := gridWidths(width, gap, 2, 26)
 	if stackHalf {
 		return vstack(hero,
-			panel("◈ TOKENS · 30d", colGreen, width, seriesChart(tokPts, width, 8, colGreen)),
-			panel("◈ COST · 30d", colAmber, width, seriesChart(costPts, width, 8, colAmber)),
-			panel("◈ VELOCITY · Δ tok/day · 30d", colCyan, width, seriesChart(velPts, width, 8, colCyan)),
-			panel("◈ THROUGHPUT · out t/s · 30d", colCyan, width, seriesChart(thrPts, width, 8, colCyan)),
+			panel("◈ TOKENS · "+wl, colGreen, width, seriesChart(tokPts, width, 8, colGreen)),
+			panel("◈ COST · "+wl, colAmber, width, seriesChart(costPts, width, 8, colAmber)),
+			panel("◈ VELOCITY · Δ tok/day · "+wl, colCyan, width, seriesChart(velPts, width, 8, colCyan)),
+			panel("◈ THROUGHPUT · out t/s · "+wl, colCyan, width, seriesChart(thrPts, width, 8, colCyan)),
 			panel("◈ EFFICIENCY · "+span, colGreen, width, m.efficiencyBody(width-6)),
 			panel("◈ ECONOMICS · "+span, colAmber, width, m.economicsBody(width-6)),
 			panel("◈ CADENCE · "+span, colGreen, width, m.cadenceBody()),
@@ -234,12 +235,12 @@ func (m Model) trendsView(width int) string {
 	// Borders/headers are uniform cyan like the other tabs; chart line colors
 	// stay distinct since they carry meaning.
 	row1 := panelsRow(false, gap,
-		panelSpec{"◈ TOKENS · 30d", colGreen, half, seriesChart(tokPts, half, 8, colGreen)},
-		panelSpec{"◈ COST · 30d", colAmber, half, seriesChart(costPts, half, 8, colAmber)},
+		panelSpec{"◈ TOKENS · " + wl, colGreen, half, seriesChart(tokPts, half, 8, colGreen)},
+		panelSpec{"◈ COST · " + wl, colAmber, half, seriesChart(costPts, half, 8, colAmber)},
 	)
 	row2 := panelsRow(false, gap,
-		panelSpec{"◈ VELOCITY · Δ tok/day · 30d", colCyan, half, seriesChart(velPts, half, 8, colCyan)},
-		panelSpec{"◈ THROUGHPUT · out t/s · 30d", colCyan, half, seriesChart(thrPts, half, 8, colCyan)},
+		panelSpec{"◈ VELOCITY · Δ tok/day · " + wl, colCyan, half, seriesChart(velPts, half, 8, colCyan)},
+		panelSpec{"◈ THROUGHPUT · out t/s · " + wl, colCyan, half, seriesChart(thrPts, half, 8, colCyan)},
 	)
 	row3 := panelsRow(stackThird, gap,
 		panelSpec{"◈ EFFICIENCY · " + span, colGreen, tw, m.efficiencyBody(iw)},
@@ -254,7 +255,7 @@ func (m Model) trendsView(width int) string {
 // bottom half is a per-day table scrolled to the selected date. metric 0 = tokens,
 // 1 = cost.
 func (m Model) trendSplitZoom(w, h, metric int) string {
-	days := trendDays
+	days := m.windowDays
 	prices := m.reportOptions.Pricing
 	tokPts := dailySeries(m.events, days)
 	costPts := dailyCostSeries(m.events, days, prices)
@@ -286,14 +287,28 @@ func (m Model) trendSplitZoom(w, h, metric int) string {
 	}
 	chart := seriesChart(series, w, chartH, color)
 
-	// Date cursor caret under the chart, positioned proportionally.
-	innerW := w - 6
-	if innerW < 20 {
-		innerW = 20
+	// Date cursor caret aligned to the chart's plot area: find the x-axis baseline
+	// row (the one with '└') and treat everything after it as the plot columns.
+	gutter, plotW := 0, w-6
+	for _, ln := range strings.Split(chart, "\n") {
+		if i := strings.IndexRune(ln, '└'); i >= 0 {
+			runes := []rune(ln)
+			for j, rn := range runes {
+				if rn == '└' {
+					gutter = j + 1
+					plotW = len(runes) - gutter
+					break
+				}
+			}
+			break
+		}
 	}
-	pos := 0
+	if plotW < 1 {
+		plotW = 1
+	}
+	pos := gutter
 	if days > 1 {
-		pos = sel * (innerW - 1) / (days - 1)
+		pos += sel * (plotW - 1) / (days - 1)
 	}
 	caret := lipgloss.NewStyle().Foreground(color).Bold(true).Render(strings.Repeat(" ", pos) + "▲")
 

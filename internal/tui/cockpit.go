@@ -26,7 +26,7 @@ func (m Model) overview(width int) string {
 	if m.compact {
 		// Light: headline readouts + the two instruments that matter most.
 		engines := panel("◈ ENGINES · "+m.dataSpanLabel(), colCyan, width, m.enginesBar(events, prices, width))
-		trend := panel("◈ TREND · 30d tokens", colCyan, width, m.trendChart(events, width))
+		trend := panel("◈ TREND · "+fmt.Sprintf("%dd", m.windowDays)+" tokens", colCyan, width, m.trendChart(events, width))
 		return vstack(primary, engines, trend)
 	}
 
@@ -44,7 +44,7 @@ func (m Model) overview(width int) string {
 	span := m.dataSpanLabel()
 	row1 := panelsRow(stack, gap,
 		panelSpec{"◈ ENGINES · " + span, colCyan, lw, m.enginesBar(events, prices, lw)},
-		panelSpec{"◈ TREND · 30d tokens", colGreen, rw, m.trendChart(events, rw)},
+		panelSpec{"◈ TREND · " + fmt.Sprintf("%dd", m.windowDays) + " tokens", colGreen, rw, m.trendChart(events, rw)},
 	)
 	row2 := panelsRow(stack, gap,
 		panelSpec{"◈ MODELS · " + span, colCyan, lw, m.modelsBar(events, prices, lw)},
@@ -180,7 +180,7 @@ func (m Model) modelsBar(events []usage.Event, prices usage.PriceBook, width int
 
 // trendChart draws a braille time-series line of daily total tokens.
 func (m Model) trendChart(events []usage.Event, width int) string {
-	days := 30
+	days := m.windowDays
 	inner := width - 6
 	if inner < 20 {
 		inner = 20

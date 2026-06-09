@@ -154,6 +154,8 @@ fullscreen:
 | arrows / `hjkl` | move widget focus |
 | `enter` / `esc` | zoom the focused widget / exit zoom |
 | `e` | toggle expert (dense) / compact (light) mode |
+| `w` | cycle the chart window (7 / 30 / 90 days) |
+| `s` | sort the Daily / Blocks table (date / tokens / cost) |
 | `r` | refresh now |
 | `?` | toggle the full keyboard help |
 | `q` | quit |

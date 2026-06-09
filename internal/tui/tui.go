@@ -43,7 +43,9 @@ type Model struct {
 	dayPopup        bool           // Daily tab: show the selected day's per-model breakdown
 	blkSel          int            // Blocks tab: selected row (absolute index, 0 = newest)
 	blkPopup        bool           // Blocks tab: show the selected window's per-model breakdown
-	trendSel        int            // Trends TOKENS/COST zoom: selected day index (0=oldest .. trendDays-1=today)
+	trendSel        int            // Trends TOKENS/COST zoom: selected day index (0=oldest .. windowDays-1=today)
+	windowDays      int            // chart window in days (7 / 30 / 90), cycled with w
+	sortMode        int            // table sort for Daily/Blocks: 0 date, 1 tokens, 2 cost (cycled with s)
 	showHelp        bool           // full-screen keyboard help overlay
 	filter          string         // active filter description for the sidebar
 	logDirs         []string       // log locations for the empty state
@@ -52,7 +54,6 @@ type Model struct {
 }
 
 const calMaxCursor = 53*7 - 1
-const trendDays = 30
 
 func clampCursor(c int) int {
 	if c < 0 {
@@ -143,6 +144,8 @@ func New(events []usage.Event, opts Options) Model {
 		fsEvents:        opts.FSEvents,
 		filter:          opts.Filter,
 		logDirs:         opts.LogDirs,
+		windowDays:      30,
+		trendSel:        29,
 	}
 	if len(events) > 0 {
 		m.lastRefresh = time.Now()
@@ -223,7 +226,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, nil
 			case "right", "l", "down", "j":
-				if m.trendSel < trendDays-1 {
+				if m.trendSel < m.windowDays-1 {
 					m.trendSel++
 				}
 				return m, nil
@@ -348,18 +351,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "e":
 			m.compact = !m.compact
 			m.focus, m.zoomed = 0, false // target list changes with the layout
+		case "w":
+			// Cycle the chart window: 7 -> 30 -> 90 -> 7.
+			switch m.windowDays {
+			case 7:
+				m.windowDays = 30
+			case 30:
+				m.windowDays = 90
+			default:
+				m.windowDays = 7
+			}
+			m.trendSel = m.windowDays - 1
+		case "s":
+			// Cycle the Daily/Blocks table sort: date -> tokens -> cost.
+			m.sortMode = (m.sortMode + 1) % 3
+			m.scroll, m.daySel, m.blkSel = 0, 0, 0
 		case "1", "2", "3", "4", "5", "6":
 			m.view = view(int(s[0] - '1'))
 			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup, m.blkSel, m.blkPopup = 0, false, 0, 0, false, 0, false
-			m.trendSel = trendDays - 1
+			m.trendSel = m.windowDays - 1
 		case "tab":
 			m.view = (m.view + 1) % numViews
 			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup, m.blkSel, m.blkPopup = 0, false, 0, 0, false, 0, false
-			m.trendSel = trendDays - 1
+			m.trendSel = m.windowDays - 1
 		case "shift+tab":
 			m.view = (m.view + numViews - 1) % numViews
 			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup, m.blkSel, m.blkPopup = 0, false, 0, 0, false, 0, false
-			m.trendSel = trendDays - 1
+			m.trendSel = m.windowDays - 1
 		case "left", "h", "up", "k":
 			if n > 0 {
 				m.focus = (m.focus - 1 + n) % n
@@ -431,11 +449,11 @@ func (m Model) sidebar() string {
 	nav := "↑↓ focus\nenter zoom"
 	switch m.view {
 	case daily:
-		nav = "↑↓ select\nenter day"
+		nav = "↑↓ select\nenter day\ns sort"
 	case blocks:
-		nav = "↑↓ select\nenter window"
+		nav = "↑↓ select\nenter window\ns sort"
 	}
-	hints := nav + "\nesc back\ne mode\nr refresh\n? help\nq quit"
+	hints := nav + "\nesc back\ne mode\nw window\nr refresh\n? help\nq quit"
 	head := "agent-cockpit\ncockpit\n" + status + "\nmode " + mode
 	if m.filter != "" {
 		head += "\n" + warnStyle.Render("filtered") + "\n" + labelStyle.Render(m.filter)
@@ -454,6 +472,7 @@ func (m Model) helpView(width int) string {
 		row("1 - 6", "jump to a tab"),
 		row("tab / shift+tab", "next / previous tab"),
 		row("e", "toggle expert / compact layout"),
+		row("w", "cycle the chart window (7 / 30 / 90 days)"),
 		row("r", "refresh now"),
 		row("? ", "toggle this help"),
 		row("q / ctrl+c", "quit"),
@@ -470,6 +489,7 @@ func (m Model) helpView(width int) string {
 		"",
 		row("↑↓ / jk", "move the row cursor"),
 		row("pgup/pgdn, g/G", "page, jump to top / bottom"),
+		row("s", "sort by date / tokens / cost"),
 		row("enter", "open the row's per-model breakdown"),
 		row("esc", "close the breakdown"),
 		"",

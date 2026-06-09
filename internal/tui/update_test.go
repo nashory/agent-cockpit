@@ -181,3 +181,45 @@ func TestHelpOverlay(t *testing.T) {
 		t.Fatal("esc should close help")
 	}
 }
+
+func TestWindowCycle(t *testing.T) {
+	m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
+	m.width, m.height = 140, 44
+	if m.windowDays != 30 {
+		t.Fatalf("default window should be 30, got %d", m.windowDays)
+	}
+	m = upd(m, runes("w"))
+	if m.windowDays != 90 {
+		t.Fatalf("w should go 30->90, got %d", m.windowDays)
+	}
+	m = upd(m, runes("w"))
+	if m.windowDays != 7 {
+		t.Fatalf("w should go 90->7, got %d", m.windowDays)
+	}
+	// trendSel is reclamped into the new window.
+	if m.trendSel != 6 {
+		t.Fatalf("trendSel should reset to window-1 (6), got %d", m.trendSel)
+	}
+}
+
+func TestSortCycle(t *testing.T) {
+	m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
+	m.width, m.height = 140, 44
+	m = upd(m, runes("5")) // daily
+	m = upd(m, tea.KeyMsg{Type: tea.KeyDown})
+	if m.daySel == 0 {
+		t.Fatal("cursor should have moved")
+	}
+	m = upd(m, runes("s"))
+	if m.sortMode != 1 || m.daySel != 0 {
+		t.Fatalf("s should set sort=1 and reset cursor, got sort=%d daySel=%d", m.sortMode, m.daySel)
+	}
+	// Sorted by tokens desc: first row >= second row.
+	rows := m.sortedLedger()
+	if len(rows) >= 2 && rows[0].totals.Total < rows[1].totals.Total {
+		t.Fatalf("tokens sort not descending: %d < %d", rows[0].totals.Total, rows[1].totals.Total)
+	}
+	if out := stripANSI(m.View()); !strings.Contains(out, "sort tokens") {
+		t.Fatalf("title should show sort mode:\n%s", out[:200])
+	}
+}

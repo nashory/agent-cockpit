@@ -33,9 +33,10 @@ func (m Model) zoomTargets() []zoomTarget {
 	ev := m.events
 	prices := m.reportOptions.Pricing
 	cur := m.currency()
-	tokChart := func(w, h int) string { return seriesChart(dailySeries(ev, 30), w, chartH(h), colGreen) }
-	thrChart := func(w, h int) string { return seriesChart(dailyThroughput(ev, 30), w, chartH(h), colCyan) }
-	velChart := func(w, h int) string { return seriesChart(dailyVelocity(ev, 30), w, chartH(h), colCyan) }
+	wd := m.windowDays
+	tokChart := func(w, h int) string { return seriesChart(dailySeries(ev, wd), w, chartH(h), colGreen) }
+	thrChart := func(w, h int) string { return seriesChart(dailyThroughput(ev, wd), w, chartH(h), colCyan) }
+	velChart := func(w, h int) string { return seriesChart(dailyVelocity(ev, wd), w, chartH(h), colCyan) }
 	enginesBar := func(w, h int) string { return m.enginesBar(ev, prices, w) }
 	enginesClusters := func(w, h int) string { return m.agentClusters(w) }
 	modelsZoom := func(w, h int) string { return m.modelsBody(w, 0) }

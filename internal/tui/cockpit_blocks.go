@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -22,27 +23,44 @@ func fmtDur(d time.Duration) string {
 	return fmt.Sprintf("%dm", m)
 }
 
+// displayBlocks returns the windows in display order for the active sort mode:
+// newest first (the default), or by tokens / cost descending.
+func (m Model) displayBlocks() []usage.Block {
+	bl := usage.SessionBlocks(m.events, m.reportOptions.Pricing, usage.DefaultBlockWindow)
+	switch m.sortMode {
+	case 1:
+		sort.Slice(bl, func(i, j int) bool { return bl[i].Totals.Total > bl[j].Totals.Total })
+	case 2:
+		sort.Slice(bl, func(i, j int) bool { return bl[i].Totals.CostUSD > bl[j].Totals.CostUSD })
+	default: // date: newest first
+		for i, j := 0, len(bl)-1; i < j; i, j = i+1, j-1 {
+			bl[i], bl[j] = bl[j], bl[i]
+		}
+	}
+	return bl
+}
+
 // blocksView is the billing-window tab: an ACTIVE WINDOW hero (how much of the
 // current 5-hour window is spent, with a burn-rate projection) over a table of
 // recent windows, mirroring ccusage's blocks report.
 func (m Model) blocksView(width int) string {
-	bl := usage.SessionBlocks(m.events, m.reportOptions.Pricing, usage.DefaultBlockWindow)
+	bl := m.displayBlocks()
 	if m.blkPopup {
 		return m.blockDetail(width, bl)
 	}
 	hero := heroPanel("✈ ACTIVE WINDOW · 5h", colCyan, width, m.activeBlockBody(bl))
 
 	vis := m.tableVisible()
-	title := fmt.Sprintf("◈ BLOCKS · 5h windows  · row %d/%d · ↑↓ enter", m.blkSel+1, len(bl))
+	title := fmt.Sprintf("◈ BLOCKS · 5h windows · row %d/%d · sort %s · ↑↓ enter · s sort",
+		m.blkSel+1, len(bl), sortLabel(m.sortMode))
 	table := panel(title, colCyan, width, m.blocksTable(bl, width, m.scroll, vis))
 	return vstack(hero, table)
 }
 
 // blockDetail renders the per-model breakdown for the selected 5-hour window
-// (enter on the Blocks tab).
+// (enter on the Blocks tab). bl is already in display order.
 func (m Model) blockDetail(width int, bl []usage.Block) string {
-	// blkSel indexes the newest-first display order.
-	idx := len(bl) - 1 - m.blkSel
+	idx := m.blkSel
 	if idx < 0 || idx >= len(bl) {
 		return panel("◈ BLOCKS", colCyan, width, labelStyle.Render("no data"))
 	}
@@ -145,11 +163,8 @@ func (m Model) blocksTable(bl []usage.Block, width, offset, limit int) string {
 	b.WriteString(labelStyle.Render(line("", "STARTED", "ACTIVE", "TOKENS", "COST", "MODELS")))
 	b.WriteByte('\n')
 
-	// Newest first.
-	rows := make([]usage.Block, len(bl))
-	for i, x := range bl {
-		rows[len(bl)-1-i] = x
-	}
+	// bl is already in display order (see displayBlocks).
+	rows := bl
 	if offset > 0 && offset < len(rows) {
 		rows = rows[offset:]
 	} else if offset >= len(rows) {

@@ -51,6 +51,30 @@ func dailyLedger(events []usage.Event, prices usage.PriceBook) []dayRow {
 	return rows
 }
 
+// sortedLedger returns the per-day rows ordered by the active sort mode: date
+// (newest first, the default), tokens, or cost (both descending).
+func (m Model) sortedLedger() []dayRow {
+	rows := dailyLedger(m.events, m.reportOptions.Pricing)
+	switch m.sortMode {
+	case 1:
+		sort.Slice(rows, func(i, j int) bool { return rows[i].totals.Total > rows[j].totals.Total })
+	case 2:
+		sort.Slice(rows, func(i, j int) bool { return rows[i].totals.CostUSD > rows[j].totals.CostUSD })
+	}
+	return rows
+}
+
+// sortLabel names the active table sort for a title.
+func sortLabel(mode int) string {
+	switch mode {
+	case 1:
+		return "tokens"
+	case 2:
+		return "cost"
+	}
+	return "date"
+}
+
 // shortModel trims a provider/version-heavy model id to something readable in a
 // table cell: "claude-opus-4-8" -> "opus-4-8", "gpt-5-codex" -> "gpt-5-codex".
 func shortModel(m string) string {
@@ -76,14 +100,15 @@ func (m Model) dailyView(width int) string {
 	}
 	span := m.dataSpanLabel()
 	body := m.ledgerTable(width, m.scroll, m.tableVisible())
-	title := fmt.Sprintf("◈ DAILY · last %s  · row %d/%d · ↑↓ enter", span, m.daySel+1, m.tableTotal())
+	title := fmt.Sprintf("◈ DAILY · last %s · row %d/%d · sort %s · ↑↓ enter · s sort",
+		span, m.daySel+1, m.tableTotal(), sortLabel(m.sortMode))
 	return panel(title, colCyan, width, body)
 }
 
 // dayDetail renders the per-model breakdown for the selected day (enter on the
 // Daily tab), the drill-down ccusage shows on its daily rows.
 func (m Model) dayDetail(width int) string {
-	rows := dailyLedger(m.events, m.reportOptions.Pricing)
+	rows := m.sortedLedger()
 	if m.daySel < 0 || m.daySel >= len(rows) {
 		return panel("◈ DAILY", colCyan, width, labelStyle.Render("no data"))
 	}
@@ -119,7 +144,7 @@ func scrollHint(offset, visible, total int) string {
 // ledgerTable formats the daily ledger to the given content width, showing
 // `limit` rows starting at `offset`. The TOTAL row always reflects every day.
 func (m Model) ledgerTable(width, offset, limit int) string {
-	rows := dailyLedger(m.events, m.reportOptions.Pricing)
+	rows := m.sortedLedger()
 	if len(rows) == 0 {
 		return labelStyle.Render("no data")
 	}
