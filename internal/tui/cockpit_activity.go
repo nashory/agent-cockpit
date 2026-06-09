@@ -147,7 +147,7 @@ func (m Model) projectBars(width int, cur string) string {
 		name := truncate(bk.Key, 16)
 		fmt.Fprintf(&b, "%-16s%s %8s %9s\n",
 			name, gauge(float64(bk.Totals.Total)/float64(maxTok), barW),
-			compact(bk.Totals.Total), fmt.Sprintf("%.2f %s", bk.Totals.CostUSD, cur))
+			compact(bk.Totals.Total), fmt.Sprintf("~%.2f %s", bk.Totals.CostUSD, cur))
 	}
 	return strings.TrimRight(b.String(), "\n")
 }

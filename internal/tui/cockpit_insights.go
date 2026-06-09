@@ -22,9 +22,9 @@ func (m Model) efficiencyBody(innerW int) string {
 		meter("CACHE HIT", ins.CacheHitRate, innerW),
 		meter("REASONING", ins.ReasoningShare, innerW),
 		"",
-		kv("SAVED", fmt.Sprintf("%.2f %s", ins.CacheSavingsUSD, cur), colGreen),
+		kv("SAVED", fmt.Sprintf("~%.2f %s", ins.CacheSavingsUSD, cur), colGreen),
 		kv("IN:OUT", fmt.Sprintf("%.1f : 1", ins.InputOutputRatio), colText),
-		kv("$/M out", fmt.Sprintf("%.2f %s", ins.EffectiveRateUSD, cur), colAmber),
+		kv("$/M out", fmt.Sprintf("~%.2f %s", ins.EffectiveRateUSD, cur), colAmber),
 	)
 }
 
@@ -33,10 +33,10 @@ func (m Model) economicsBody(innerW int) string {
 	return lipgloss.JoinVertical(lipgloss.Left,
 		meter("PREMIUM", ins.PremiumCostShare, innerW),
 		"",
-		kv("TOTAL", fmt.Sprintf("%.2f %s", ins.TotalCostUSD, cur), colGreen),
-		kv("PER DAY", fmt.Sprintf("%.2f %s", ins.CostPerActiveDay, cur), colAmber),
-		kv("PROJ 30d", fmt.Sprintf("%.2f %s", ins.ProjectedMonthlyUSD, cur), colAmber),
-		kv("PER SESS", fmt.Sprintf("%.3f %s", ins.AvgCostPerSession, cur), colText),
+		kv("TOTAL", fmt.Sprintf("~%.2f %s", ins.TotalCostUSD, cur), colGreen),
+		kv("PER DAY", fmt.Sprintf("~%.2f %s", ins.CostPerActiveDay, cur), colAmber),
+		kv("PROJ 30d", fmt.Sprintf("~%.2f %s", ins.ProjectedMonthlyUSD, cur), colAmber),
+		kv("PER SESS", fmt.Sprintf("~%.3f %s", ins.AvgCostPerSession, cur), colText),
 	)
 }
 

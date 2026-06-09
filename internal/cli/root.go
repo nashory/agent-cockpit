@@ -29,6 +29,7 @@ type options struct {
 	configPath string
 	refresh    string
 	json       bool
+	svgPath    string
 }
 
 var version = "dev"
@@ -86,6 +87,34 @@ func Execute() error {
 	root.AddCommand(reportCommand("speed", "Show observed output token speed by agent/model", opts, func(w *os.File, events []usage.Event, ro report.Options) {
 		report.Speed(w, events, 20)
 	}, nil))
+	reportCmd := &cobra.Command{
+		Use:   "report",
+		Short: "Print a usage summary, or write a shareable SVG card with --svg",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			events, cfg, err := load(cmd.Context(), opts)
+			if err != nil {
+				return err
+			}
+			ro := reportOptions(cfg)
+			if opts.svgPath != "" {
+				f, err := os.Create(opts.svgPath)
+				if err != nil {
+					return err
+				}
+				defer f.Close()
+				report.SVG(f, "Usage summary", events, ro)
+				fmt.Fprintf(os.Stderr, "wrote %s\n", opts.svgPath)
+				return nil
+			}
+			if opts.json {
+				return writeJSON(events, cfg)
+			}
+			report.Overview(os.Stdout, "Usage summary", events, ro)
+			return nil
+		},
+	}
+	reportCmd.Flags().StringVar(&opts.svgPath, "svg", "", "write a shareable SVG card to this path")
+	root.AddCommand(reportCmd)
 	root.AddCommand(&cobra.Command{
 		Use:   "live",
 		Short: "Open the TUI and refresh local logs on an interval",

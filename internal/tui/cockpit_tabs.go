@@ -143,7 +143,7 @@ func (m Model) agentClusters(width int) string {
 		}
 		body := lipgloss.JoinVertical(lipgloss.Left,
 			kv("TOKENS", compact(b.Totals.Total), c),
-			kv("COST", fmt.Sprintf("%.2f %s", b.Totals.CostUSD, cur), colGreen),
+			kv("COST", fmt.Sprintf("~%.2f %s", b.Totals.CostUSD, cur), colGreen),
 			kv("EVENTS", compact(int64(b.Totals.Events)), colText),
 			kv("OUTPUT", compact(b.Totals.Output), colText),
 			kv("SPEED", fmt.Sprintf("%.1f t/s", tps), colAmber),
@@ -184,7 +184,7 @@ func (m Model) modelsBody(width, limit int) string {
 		name := truncate(bk.Key, 18)
 		fmt.Fprintf(&b, "%-18s %s %9s %11s %5.1f%%\n",
 			name, gauge(ratio, barW), compact(bk.Totals.Total),
-			fmt.Sprintf("%.2f %s", bk.Totals.CostUSD, cur), bk.Share*100)
+			fmt.Sprintf("~%.2f %s", bk.Totals.CostUSD, cur), bk.Share*100)
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
@@ -271,7 +271,7 @@ func (m Model) trendsHero(tokPts, costPts []tslc.TimePoint, days int) string {
 		readout("TOKENS", compact(int64(totalTok)), colCyan),
 		readout("TOK/DAY", compact(int64(totalTok/float64(days))), colText),
 		readout("PEAK TOK", compact(int64(peakTok)), colGreen),
-		readout("COST", fmt.Sprintf("%.2f %s", totalCost, cur), colGreen),
+		readout("COST", fmt.Sprintf("~%.2f %s", totalCost, cur), colGreen),
 		readout("PEAK COST", fmt.Sprintf("%.2f", peakCost), colAmber),
 	}, "   ")...)
 }

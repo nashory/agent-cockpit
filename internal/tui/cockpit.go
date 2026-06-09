@@ -74,7 +74,7 @@ func (m Model) primaryStrip(t usage.Totals, width int) string {
 	}
 	cells := []string{
 		readout("TOKENS", compact(t.Total), colCyan),
-		readout("COST", fmt.Sprintf("%.2f %s", t.CostUSD, cur), colGreen),
+		readout("COST", fmt.Sprintf("~%.2f %s", t.CostUSD, cur), colGreen),
 		readout("EVENTS", compact(int64(t.Events)), colText),
 		readout("CACHE", compact(t.CacheRead+t.CacheCreate), colDim),
 	}

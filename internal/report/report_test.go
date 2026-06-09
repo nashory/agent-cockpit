@@ -63,3 +63,22 @@ func TestFormatInt(t *testing.T) {
 		}
 	}
 }
+
+func TestSVGReport(t *testing.T) {
+	events := []usage.Event{
+		{Source: "claude", Model: "claude-opus-4-8", Input: 1000, Output: 200, Timestamp: time.Date(2026, 1, 1, 9, 0, 0, 0, time.UTC)},
+		{Source: "codex", Model: "gpt-5-codex", Input: 500, Output: 100, Timestamp: time.Date(2026, 1, 2, 9, 0, 0, 0, time.UTC)},
+	}
+	var b strings.Builder
+	SVG(&b, "Usage summary", events, Options{Currency: "USD"})
+	out := b.String()
+	for _, want := range []string{"<svg", "</svg>", "agent-cockpit", "TOKENS", "TOP MODELS", "~"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("SVG output missing %q", want)
+		}
+	}
+	// XML-escapes model/text safely (no raw unescaped ampersand in a way that breaks).
+	if strings.Count(out, "<svg") != 1 {
+		t.Errorf("expected exactly one <svg root")
+	}
+}

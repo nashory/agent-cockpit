@@ -65,9 +65,9 @@ func (m Model) activeBlockBody(bl []usage.Block) string {
 		readout("WINDOW", active.Start.Format("15:04")+"-"+active.End.Format("15:04"), colCyan),
 		readout("LEFT", fmtDur(left), colAmber),
 		readout("TOKENS", compact(t.Total), colGreen),
-		readout("COST", fmt.Sprintf("%.2f %s", t.CostUSD, cur), colGreen),
+		readout("COST", fmt.Sprintf("~%.2f %s", t.CostUSD, cur), colGreen),
 		readout("BURN", compact(int64(burn))+"/h", colText),
-		readout("PROJ", fmt.Sprintf("%.2f %s", proj, cur), colAmber),
+		readout("PROJ", fmt.Sprintf("~%.2f %s", proj, cur), colAmber),
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, spread(cells, "   ")...)
 }
@@ -122,7 +122,7 @@ func (m Model) blocksTable(bl []usage.Block, width, offset, limit int) string {
 			blk.Start.Format("01-02 15:04"),
 			fmtDur(blk.LastActivity.Sub(blk.Start)),
 			compact(blk.Totals.Total),
-			fmt.Sprintf("%.2f %s", blk.Totals.CostUSD, cur),
+			fmt.Sprintf("~%.2f %s", blk.Totals.CostUSD, cur),
 			dayModelList(blk.Models),
 		)
 		b.WriteString(lipgloss.NewStyle().Foreground(accent).Render(row))

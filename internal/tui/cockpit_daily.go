@@ -133,7 +133,7 @@ func (m Model) ledgerTable(width, offset, limit int) string {
 		b.WriteString(line(
 			r.date,
 			compact(t.Input), compact(t.Output), compact(t.CacheRead+t.CacheCreate),
-			compact(t.Total), fmt.Sprintf("%.2f %s", t.CostUSD, cur),
+			compact(t.Total), fmt.Sprintf("~%.2f %s", t.CostUSD, cur),
 			dayModelList(r.models),
 		))
 		b.WriteByte('\n')
@@ -154,7 +154,7 @@ func (m Model) ledgerTable(width, offset, limit int) string {
 		note = fmt.Sprintf("%d days", len(rows))
 	}
 	total := line("TOTAL", compact(g.Input), compact(g.Output), compact(g.CacheRead+g.CacheCreate),
-		compact(g.Total), fmt.Sprintf("%.2f %s", g.CostUSD, cur), note)
+		compact(g.Total), fmt.Sprintf("~%.2f %s", g.CostUSD, cur), note)
 	b.WriteString(lipgloss.NewStyle().Foreground(colText).Bold(true).Render(total))
 	return b.String()
 }
