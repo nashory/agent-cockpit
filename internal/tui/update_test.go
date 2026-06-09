@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -114,5 +115,33 @@ func TestTableScroll(t *testing.T) {
 	m = upd(m, runes("1"))
 	if m.scroll != 0 {
 		t.Fatalf("tab switch should reset scroll, got %d", m.scroll)
+	}
+}
+
+func TestDailyPopup(t *testing.T) {
+	m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
+	m.width, m.height = 140, 44
+	m = upd(m, runes("5")) // Daily tab
+	if m.view != daily {
+		t.Fatalf("expected daily, got %d", m.view)
+	}
+	// Cursor moves down.
+	m = upd(m, tea.KeyMsg{Type: tea.KeyDown})
+	if m.daySel != 1 {
+		t.Fatalf("down should move daySel to 1, got %d", m.daySel)
+	}
+	// Enter opens the per-model popup.
+	m = upd(m, tea.KeyMsg{Type: tea.KeyEnter})
+	if !m.dayPopup {
+		t.Fatal("enter should open the day popup")
+	}
+	out := stripANSI(m.View())
+	if !strings.Contains(out, "DAILY ·") || !strings.Contains(out, "MODEL") {
+		t.Fatalf("popup should show the day's per-model breakdown:\n%s", out)
+	}
+	// Esc closes it.
+	m = upd(m, tea.KeyMsg{Type: tea.KeyEsc})
+	if m.dayPopup {
+		t.Fatal("esc should close the day popup")
 	}
 }

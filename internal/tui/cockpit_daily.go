@@ -67,12 +67,63 @@ func dayModelList(set map[string]struct{}) string {
 }
 
 // dailyView renders the Daily ledger tab: a table of per-day usage and cost with
-// a TOTAL footer, the way ccusage prints its daily report.
+// a TOTAL footer, the way ccusage prints its daily report. Arrows move a row
+// cursor; enter opens that day's per-model breakdown.
 func (m Model) dailyView(width int) string {
+	if m.dayPopup {
+		return m.dayDetail(width)
+	}
 	span := m.dataSpanLabel()
 	body := m.ledgerTable(width, m.scroll, m.tableVisible())
-	title := "◈ DAILY · last " + span + scrollHint(m.scroll, m.tableVisible(), m.tableTotal())
+	title := "◈ DAILY · last " + span + "  · ↑↓ select · enter day"
 	return panel(title, colCyan, width, body)
+}
+
+// dayDetail renders the per-model breakdown for the selected day (enter on the
+// Daily tab), the drill-down ccusage shows on its daily rows.
+func (m Model) dayDetail(width int) string {
+	rows := dailyLedger(m.events, m.reportOptions.Pricing)
+	if m.daySel < 0 || m.daySel >= len(rows) {
+		return panel("◈ DAILY", colCyan, width, labelStyle.Render("no data"))
+	}
+	date := rows[m.daySel].date
+	prices := m.reportOptions.Pricing
+	cur := m.currency()
+
+	// Models used on that calendar day.
+	var dayEvents []usage.Event
+	for _, e := range m.events {
+		if !e.Timestamp.IsZero() && e.Timestamp.Format("2006-01-02") == date {
+			dayEvents = append(dayEvents, e)
+		}
+	}
+	buckets := usage.GroupByWith(dayEvents, prices, func(e usage.Event) string { return e.Model })
+
+	inner := width - 6
+	if inner < 40 {
+		inner = 40
+	}
+	const nameW, numW, totW, costW = 22, 9, 11, 12
+	line := func(name, in, out, cache, tot, cost string) string {
+		return fmt.Sprintf("%-*s %*s %*s %*s %*s %*s",
+			nameW, truncate(name, nameW), numW, in, numW, out, numW, cache, totW, tot, costW, cost)
+	}
+	var b strings.Builder
+	b.WriteString(labelStyle.Render(line("MODEL", "INPUT", "OUTPUT", "CACHE", "TOTAL", "COST")))
+	b.WriteByte('\n')
+	for _, bk := range buckets {
+		t := bk.Totals
+		b.WriteString(line(shortModel(bk.Key), compact(t.Input), compact(t.Output),
+			compact(t.CacheRead+t.CacheCreate), compact(t.Total),
+			fmt.Sprintf("~%.2f %s", t.CostUSD, cur)))
+		b.WriteByte('\n')
+	}
+	tot := rows[m.daySel].totals
+	b.WriteString(lipgloss.NewStyle().Foreground(colText).Bold(true).Render(
+		line("TOTAL", compact(tot.Input), compact(tot.Output), compact(tot.CacheRead+tot.CacheCreate),
+			compact(tot.Total), fmt.Sprintf("~%.2f %s", tot.CostUSD, cur))))
+
+	return heroPanel("⤢ DAILY · "+date+"   ·   esc back", colCyan, width, b.String())
 }
 
 // scrollHint shows "· 31-60 / 190 ↑↓" when a table has more rows than fit.
@@ -128,14 +179,18 @@ func (m Model) ledgerTable(width, offset, limit int) string {
 	if limit > 0 && len(shown) > limit {
 		shown = shown[:limit]
 	}
-	for _, r := range shown {
+	for i, r := range shown {
 		t := r.totals
-		b.WriteString(line(
+		row := line(
 			r.date,
 			compact(t.Input), compact(t.Output), compact(t.CacheRead+t.CacheCreate),
 			compact(t.Total), fmt.Sprintf("~%.2f %s", t.CostUSD, cur),
 			dayModelList(r.models),
-		))
+		)
+		if offset+i == m.daySel { // cursor row
+			row = lipgloss.NewStyle().Reverse(true).Render(row)
+		}
+		b.WriteString(row)
 		b.WriteByte('\n')
 	}
 

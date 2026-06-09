@@ -39,6 +39,8 @@ type Model struct {
 	zoomed          bool           // fullscreen the focused widget
 	calCursor       int            // calendar: selected day, days before today
 	scroll          int            // row offset for the table tabs (Daily, Blocks)
+	daySel          int            // Daily tab: selected row (absolute index, 0 = newest)
+	dayPopup        bool           // Daily tab: show the selected day's per-model breakdown
 	ins             usage.Insights // derived once per data load, not per render
 	err             error
 }
@@ -184,8 +186,60 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		// On the table tabs (Daily, Blocks) arrows scroll the rows.
-		if m.view == daily || m.view == blocks {
+		// Daily tab: arrows move a row cursor; enter opens that day's per-model
+		// breakdown; esc closes it. The scroll offset follows the cursor.
+		if m.view == daily {
+			total := m.tableTotal()
+			vis := m.tableVisible()
+			move := func(d int) {
+				m.daySel += d
+				if m.daySel < 0 {
+					m.daySel = 0
+				}
+				if total > 0 && m.daySel > total-1 {
+					m.daySel = total - 1
+				}
+				if m.daySel < m.scroll {
+					m.scroll = m.daySel
+				}
+				if vis > 0 && m.daySel >= m.scroll+vis {
+					m.scroll = m.daySel - vis + 1
+				}
+			}
+			switch s {
+			case "up", "k":
+				move(-1)
+				return m, nil
+			case "down", "j":
+				move(1)
+				return m, nil
+			case "pgup":
+				move(-vis)
+				return m, nil
+			case "pgdown":
+				move(vis)
+				return m, nil
+			case "home", "g":
+				move(-total)
+				return m, nil
+			case "end", "G":
+				move(total)
+				return m, nil
+			case "enter":
+				if total > 0 {
+					m.dayPopup = true
+				}
+				return m, nil
+			case "esc":
+				if m.dayPopup {
+					m.dayPopup = false
+					return m, nil
+				}
+			}
+		}
+
+		// Blocks tab: arrows scroll the rows.
+		if m.view == blocks {
 			switch s {
 			case "up", "k":
 				m.scroll = clampScroll(m.scroll-1, m.maxScroll())
@@ -224,13 +278,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.focus, m.zoomed = 0, false // target list changes with the layout
 		case "1", "2", "3", "4", "5", "6":
 			m.view = view(int(s[0] - '1'))
-			m.focus, m.zoomed, m.scroll = 0, false, 0
+			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup = 0, false, 0, 0, false
 		case "tab":
 			m.view = (m.view + 1) % numViews
-			m.focus, m.zoomed, m.scroll = 0, false, 0
+			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup = 0, false, 0, 0, false
 		case "shift+tab":
 			m.view = (m.view + numViews - 1) % numViews
-			m.focus, m.zoomed, m.scroll = 0, false, 0
+			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup = 0, false, 0, 0, false
 		case "left", "h", "up", "k":
 			if n > 0 {
 				m.focus = (m.focus - 1 + n) % n

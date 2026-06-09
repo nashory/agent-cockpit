@@ -103,16 +103,9 @@ func (m Model) zoomTargets() []zoomTarget {
 			{"TOP PROJECTS", colCyan, func(w, h int) string { return m.projectBars(w, cur) }},
 		}
 	case daily:
-		// One table; zoom shows as many day rows as the height allows.
-		return []zoomTarget{
-			{"DAILY", colCyan, func(w, h int) string {
-				limit := h - 4
-				if limit < 6 {
-					limit = 6
-				}
-				return m.ledgerTable(w, m.scroll, limit)
-			}},
-		}
+		// No zoom target: the Daily tab uses a row cursor (arrows) and enter
+		// opens the selected day's per-model breakdown popup instead.
+		return nil
 	case blocks:
 		return []zoomTarget{
 			{"BLOCKS", colCyan, func(w, h int) string {
