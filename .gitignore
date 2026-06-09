@@ -7,3 +7,6 @@ coverage.out
 /cockpit.exe
 *.test
 /ac
+
+# raw demo video sources (GIFs are committed instead)
+*.mp4

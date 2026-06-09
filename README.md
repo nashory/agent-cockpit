@@ -18,7 +18,7 @@ No cloud upload. No API keys. No background daemon.
 </div>
 
 <p align="center">
-  <img src="docs/imgs/overview.png" alt="agent-cockpit overview dashboard" width="860">
+  <img src="docs/imgs/demo.gif" alt="agent-cockpit live terminal dashboard demo" width="860">
 </p>
 
 ---
