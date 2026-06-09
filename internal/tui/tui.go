@@ -45,6 +45,8 @@ type Model struct {
 	blkPopup        bool           // Blocks tab: show the selected window's per-model breakdown
 	trendSel        int            // Trends TOKENS/COST zoom: selected day index (0=oldest .. trendDays-1=today)
 	showHelp        bool           // full-screen keyboard help overlay
+	filter          string         // active filter description for the sidebar
+	logDirs         []string       // log locations for the empty state
 	ins             usage.Insights // derived once per data load, not per render
 	err             error
 }
@@ -119,6 +121,8 @@ type Options struct {
 	RefreshInterval time.Duration
 	Reload          func() ([]usage.Event, error)
 	FSEvents        <-chan struct{} // optional fsnotify-driven refresh signal
+	Filter          string          // human-readable active filters (source/project/...), shown in the sidebar
+	LogDirs         []string        // log locations, shown in the empty state
 }
 
 type tickMsg time.Time
@@ -137,6 +141,8 @@ func New(events []usage.Event, opts Options) Model {
 		refreshInterval: opts.RefreshInterval,
 		reload:          opts.Reload,
 		fsEvents:        opts.FSEvents,
+		filter:          opts.Filter,
+		logDirs:         opts.LogDirs,
 	}
 	if len(events) > 0 {
 		m.lastRefresh = time.Now()
@@ -392,6 +398,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) View() string {
 	renderCompact = m.compact // render-context flag for panel/heroPanel/vstack
+	// Below this the boxed layout cannot render legibly; ask for more room.
+	if m.width > 0 && m.width < 60 || m.height > 0 && m.height < 16 {
+		return fmt.Sprintf("agent-cockpit needs a larger terminal\n(at least 60x16, this is %dx%d)\n", m.width, m.height)
+	}
 	sidebar := lipgloss.NewStyle().Width(18).Padding(1, 2).Foreground(lipgloss.Color("244")).Render(m.sidebar())
 	content := lipgloss.NewStyle().Padding(1, 2).Render(m.content())
 	return lipgloss.JoinHorizontal(lipgloss.Top, sidebar, content) + "\n"
@@ -426,8 +436,11 @@ func (m Model) sidebar() string {
 		nav = "↑↓ select\nenter window"
 	}
 	hints := nav + "\nesc back\ne mode\nr refresh\n? help\nq quit"
-	return "agent-cockpit\ncockpit\n" + status + "\nmode " + mode + "\n\n" +
-		lipgloss.JoinVertical(lipgloss.Left, items...) + "\n\n" + hints
+	head := "agent-cockpit\ncockpit\n" + status + "\nmode " + mode
+	if m.filter != "" {
+		head += "\n" + warnStyle.Render("filtered") + "\n" + labelStyle.Render(m.filter)
+	}
+	return head + "\n\n" + lipgloss.JoinVertical(lipgloss.Left, items...) + "\n\n" + hints
 }
 
 // helpView is the full-screen keyboard reference (toggled with ?).
@@ -508,6 +521,24 @@ func (m Model) content() string {
 		fmt.Fprintln(&b, alertStyle.Render(" FAILED TO LOAD LOGS "))
 		fmt.Fprintf(&b, "\n%v\n\n", m.err)
 		fmt.Fprintln(&b, labelStyle.Render("press r to retry · q to quit"))
+		return b.String()
+	}
+	if !m.loading && len(m.events) == 0 {
+		fmt.Fprintln(&b, warnStyle.Render(" NO AGENT LOGS FOUND "))
+		fmt.Fprintln(&b)
+		if m.filter != "" {
+			fmt.Fprintf(&b, "No events matched your filter (%s).\n\n", m.filter)
+		} else {
+			fmt.Fprintln(&b, "Nothing to show yet. Looked in:")
+			if len(m.logDirs) == 0 {
+				fmt.Fprintln(&b, labelStyle.Render("  (default Claude Code / Codex / Gemini locations)"))
+			}
+			for _, d := range m.logDirs {
+				fmt.Fprintln(&b, labelStyle.Render("  "+d))
+			}
+			fmt.Fprintln(&b)
+		}
+		fmt.Fprintln(&b, labelStyle.Render("Run `cockpit doctor` to see detected paths · r retry · q quit"))
 		return b.String()
 	}
 	w := m.contentWidth()

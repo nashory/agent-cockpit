@@ -59,7 +59,7 @@ func Execute() error {
 				events, _, err := load(cmd.Context(), opts)
 				return events, err
 			}
-			_, err = tea.NewProgram(tui.New(nil, tuiOptions(cfg, reload, 0)), tea.WithAltScreen()).Run()
+			_, err = tea.NewProgram(tui.New(nil, tuiOptions(cfg, opts, reload, 0)), tea.WithAltScreen()).Run()
 			return err
 		},
 	}
@@ -135,7 +135,7 @@ func Execute() error {
 				events, _, err := load(cmd.Context(), opts)
 				return events, err
 			}
-			tuiOpts := tuiOptions(cfg, reload, interval)
+			tuiOpts := tuiOptions(cfg, opts, reload, interval)
 			// Refresh on file-system events when possible; the interval tick
 			// above stays as a backstop if the watcher can't start.
 			roots := append(append(append([]string{}, cfg.Paths.Claude...), cfg.Paths.Codex...), cfg.Paths.Gemini...)
@@ -323,8 +323,38 @@ func reportOptions(cfg config.Config) report.Options {
 	return report.Options{Pricing: cfg.Pricing, Currency: cfg.Currency}
 }
 
-func tuiOptions(cfg config.Config, reload func() ([]usage.Event, error), interval time.Duration) tui.Options {
-	return tui.Options{Report: reportOptions(cfg), RefreshInterval: interval, Reload: reload}
+func tuiOptions(cfg config.Config, opts *options, reload func() ([]usage.Event, error), interval time.Duration) tui.Options {
+	return tui.Options{
+		Report:          reportOptions(cfg),
+		RefreshInterval: interval,
+		Reload:          reload,
+		Filter:          filterLabel(opts),
+		LogDirs:         append(append(append([]string{}, cfg.Paths.Claude...), cfg.Paths.Codex...), cfg.Paths.Gemini...),
+	}
+}
+
+// filterLabel summarizes any active --since/--days/--source/--project/--model
+// filters for display in the TUI sidebar (empty when nothing is filtered).
+func filterLabel(opts *options) string {
+	var parts []string
+	if opts.sources != "" {
+		parts = append(parts, "source="+opts.sources)
+	}
+	if opts.project != "" {
+		parts = append(parts, "project="+opts.project)
+	}
+	if opts.model != "" {
+		parts = append(parts, "model="+opts.model)
+	}
+	if opts.since != "" {
+		parts = append(parts, "since="+opts.since)
+	}
+	if opts.until != "" {
+		parts = append(parts, "until="+opts.until)
+	}
+	// days has a default (30), so it is part of the window, not an explicit
+	// filter; the period labels on the panels already convey it.
+	return strings.Join(parts, "\n")
 }
 
 func configTemplate() string {
