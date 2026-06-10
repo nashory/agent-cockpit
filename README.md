@@ -93,9 +93,12 @@ cockpit today
 cockpit trends --days 30
 cockpit agents
 cockpit speed
-cockpit statusline            # one line for tmux / your shell prompt
+cockpit statusline --compact  # one line for tmux / your shell prompt
+cockpit statusline --json     # structured statusline payload
 cockpit report                # text summary (add --json for JSON)
 cockpit report --svg usage.svg  # shareable SVG receipt card
+cockpit export --group daily > usage.csv  # CSV: daily/session/model/project/event
+cockpit pricing status        # show vendored pricing coverage
 
 # filter by source, project, or model
 cockpit monthly --source claude
@@ -118,9 +121,10 @@ cockpit doctor                # show detected log locations
 - 🤖 **Unified view:** Claude Code, Codex, and Gemini usage in one normalized cockpit.
 - 💸 **Accurate cost:** per-model pricing from the LiteLLM dataset, vendored for offline use.
 - 🧮 **Insights:** cache hit rate, throughput, velocity, engaged hours, and caution lamps.
+- 🚦 **Budgets & limits:** optional daily / weekly / monthly USD budgets and Claude 5h / 7d token limits, surfaced in the TUI and statusline.
 - 🔒 **100% local:** read-only, no upload, no API keys, no daemon.
 - 📦 **No runtime:** one static Go binary. No Node, Bun, `npx`, or Python.
-- 🧰 **Scriptable:** `today` / `weekly` / `monthly` / `trends` / `statusline`, all with `--json`.
+- 🧰 **Scriptable:** `today` / `weekly` / `monthly` / `trends` / `statusline`, JSON output, and CSV export.
 - 🖼️ **Shareable SVG:** `cockpit report --svg` renders a receipt card you can post anywhere.
 
 ## 🧭 Dashboards
@@ -134,8 +138,8 @@ fullscreen:
 | **Breakdown** | engine share, model load, and output speed per lane |
 | **Trends** | token / cost / throughput / velocity time-series plus efficiency, economics, and cadence (with engaged hours) |
 | **Activity** | year contribution calendar, hour-of-day, day-of-week, projects |
-| **Daily** | a ccusage-style per-day table: input / output / cache / total tokens, cost, and models, newest first with a grand total |
-| **Blocks** | 5-hour activity/billing windows: a live ACTIVE WINDOW with elapsed/remaining, burn rate, and a cost projection, over a table of recent windows |
+| **Daily** | a ccusage-style ledger with day / week / month periods: input / output / cache / total tokens, cost, and models, newest first with a grand total |
+| **Blocks** | 5-hour activity/billing windows: a live ACTIVE WINDOW with elapsed/remaining, burn rate, cost projection, and optional configured-limit usage |
 | **Sessions** | a per-session table — project, engine, start, active span, tokens, cost, and models — so you can see which sessions cost the most |
 
 <table>
@@ -156,6 +160,7 @@ fullscreen:
 | `enter` / `esc` | zoom the focused widget / exit zoom |
 | `e` | toggle expert (dense) / compact (light) mode |
 | `w` | cycle the chart window (7 / 30 / 90 days) |
+| `p` | cycle the Daily ledger period (day / week / month) |
 | `s` | sort the Daily / Blocks / Sessions table (date / tokens / cost) |
 | `r` | refresh now |
 | `?` | toggle the full keyboard help |
@@ -167,7 +172,9 @@ Your last `e` / `w` / `s` choices are remembered across runs (saved to
 light backgrounds.
 
 On **Activity**, zoom the calendar (`enter`) and then arrows move the day cursor
-(left/right by week, up/down by day) with a tooltip for the selected day. On
+(left/right by week, up/down by day) with a tooltip for the selected day. Zoom
+**Top Projects** and arrows select a project; `enter` opens a project drill-down.
+On
 **Daily**, **Blocks**, and **Sessions**, arrows move a row cursor (the view
 follows it) and `enter` opens that row's per-model breakdown (`esc` closes it).
 
@@ -197,6 +204,22 @@ Configuration is optional. To customize paths or pricing, create a config file:
 timezone = "local"
 refresh_interval = "3s"
 currency = "USD"
+
+[budget]
+# Optional USD budgets. When set, the TUI LIMITS panel and statusline show
+# ok / warn / critical state for each period.
+# daily_usd = 25
+# weekly_usd = 100
+# monthly_usd = 300
+# warn_pct = 80
+# critical_pct = 95
+
+[limits]
+# Optional Claude Code token limits for local quota-style monitoring.
+# claude_5h_tokens = 88000
+# claude_7d_tokens = 500000
+# warn_pct = 80
+# critical_pct = 95
 
 [paths]
 claude = ["~/.claude/projects"]
