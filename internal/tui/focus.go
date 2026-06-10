@@ -32,7 +32,6 @@ func chartH(h int) int {
 func (m Model) zoomTargets() []zoomTarget {
 	ev := m.events
 	prices := m.reportOptions.Pricing
-	cur := m.currency()
 	wd := m.windowDays
 	tokChart := func(w, h int) string { return seriesChart(dailySeries(ev, wd), w, chartH(h), colGreen) }
 	thrChart := func(w, h int) string { return seriesChart(dailyThroughput(ev, wd), w, chartH(h), colCyan) }
@@ -99,7 +98,7 @@ func (m Model) zoomTargets() []zoomTarget {
 			cal,
 			{"HOUR OF DAY", colCyan, func(w, h int) string { return m.hourStrip(w) }},
 			{"DAY OF WEEK", colCyan, func(w, h int) string { return m.weekdayBars(m.ins, w) }},
-			{"TOP PROJECTS", colCyan, func(w, h int) string { return m.projectBars(w, cur) }},
+			{"TOP PROJECTS", colCyan, func(w, h int) string { return m.projectDrilldownView(w, h) }},
 		}
 	case daily:
 		// No zoom target: the Daily tab uses a row cursor (arrows) and enter

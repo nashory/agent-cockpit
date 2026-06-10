@@ -126,13 +126,25 @@ func (m Model) weekdayBars(ins usage.Insights, width int) string {
 }
 
 func (m Model) projectBars(width int, cur string) string {
-	buckets := usage.GroupByWith(m.events, m.reportOptions.Pricing, func(e usage.Event) string { return e.Project })
+	buckets := m.projectRows()
 	if len(buckets) == 0 {
 		return labelStyle.Render("no data")
 	}
 	if len(buckets) > 7 {
 		buckets = buckets[:7]
 	}
+	return m.projectRowsTable(buckets, width, cur, false)
+}
+
+func (m Model) projectRows() []usage.Bucket {
+	buckets := usage.GroupByWith(m.events, m.reportOptions.Pricing, func(e usage.Event) string { return e.Project })
+	if len(buckets) == 0 {
+		return nil
+	}
+	return buckets
+}
+
+func (m Model) projectRowsTable(buckets []usage.Bucket, width int, cur string, selectable bool) string {
 	maxTok := buckets[0].Totals.Total
 	if maxTok < 1 {
 		maxTok = 1
@@ -143,11 +155,62 @@ func (m Model) projectBars(width int, cur string) string {
 		barW = 6
 	}
 	var b strings.Builder
-	for _, bk := range buckets {
+	for i, bk := range buckets {
 		name := truncate(bk.Key, 16)
-		fmt.Fprintf(&b, "%-16s%s %8s %9s\n",
+		row := fmt.Sprintf("%-16s%s %8s %9s",
 			name, gauge(float64(bk.Totals.Total)/float64(maxTok), barW),
 			compact(bk.Totals.Total), fmt.Sprintf("~%.2f %s", bk.Totals.CostUSD, cur))
+		if selectable && i == m.projectSel {
+			row = lipgloss.NewStyle().Reverse(true).Render(row)
+		}
+		fmt.Fprintln(&b, row)
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+func (m Model) projectDrilldownView(width, height int) string {
+	if m.projectPopup {
+		return m.projectDetail(width)
+	}
+	rows := m.projectRows()
+	if len(rows) == 0 {
+		return labelStyle.Render("no data")
+	}
+	limit := height - 4
+	if limit < 6 {
+		limit = 6
+	}
+	if len(rows) > limit {
+		rows = rows[:limit]
+	}
+	if m.projectSel >= len(rows) {
+		m.projectSel = len(rows) - 1
+	}
+	return lipgloss.JoinVertical(lipgloss.Left,
+		m.projectRowsTable(rows, width, m.currency(), true),
+		"",
+		labelStyle.Render("↑↓ select project · enter drill down · esc back"),
+	)
+}
+
+func (m Model) projectDetail(width int) string {
+	rows := m.projectRows()
+	if m.projectSel < 0 || m.projectSel >= len(rows) {
+		return labelStyle.Render("no data")
+	}
+	project := rows[m.projectSel].Key
+	var ev []usage.Event
+	for _, e := range m.events {
+		if e.Project == project {
+			ev = append(ev, e)
+		}
+	}
+	t := usage.SummarizeWith(ev, m.reportOptions.Pricing)
+	ctx := lipgloss.JoinHorizontal(lipgloss.Top, spread([]string{
+		readout("PROJECT", truncate(project, 22), colCyan),
+		readout("TOKENS", compact(t.Total), colGreen),
+		readout("COST", fmt.Sprintf("~%.2f %s", t.CostUSD, m.currency()), colAmber),
+		readout("EVENTS", compact(int64(t.Events)), colText),
+	}, "   ")...)
+	return lipgloss.JoinVertical(lipgloss.Left, ctx, "", m.usageDetailBody(ev), "", labelStyle.Render("esc back"))
 }

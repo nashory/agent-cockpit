@@ -42,6 +42,8 @@ type Model struct {
 	scroll          int            // row offset for the table tabs (Daily, Blocks)
 	daySel          int            // Daily tab: selected row (absolute index, 0 = newest)
 	dayPopup        bool           // Daily tab: show the selected day's per-model breakdown
+	projectSel      int            // Activity TOP PROJECTS zoom: selected project row
+	projectPopup    bool           // Activity TOP PROJECTS zoom: show selected project's breakdown
 	blkSel          int            // Blocks tab: selected row (absolute index, 0 = newest)
 	blkPopup        bool           // Blocks tab: show the selected window's per-model breakdown
 	sessSel         int            // Sessions tab: selected row (absolute index)
@@ -85,6 +87,7 @@ func clampScroll(c, max int) int {
 func (m *Model) resetTabState() {
 	m.focus, m.zoomed, m.scroll = 0, false, 0
 	m.daySel, m.dayPopup = 0, false
+	m.projectSel, m.projectPopup = 0, false
 	m.blkSel, m.blkPopup = 0, false
 	m.sessSel, m.sessPopup = 0, false
 	m.trendSel = m.windowDays - 1
@@ -247,6 +250,43 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "down", "j":
 				m.calCursor = clampCursor(m.calCursor - 1)
 				return m, nil
+			}
+		}
+
+		if m.zoomed && m.focus < n && targets[m.focus].title == "TOP PROJECTS" {
+			total := len(m.projectRows())
+			move := func(d int) {
+				m.projectSel += d
+				if m.projectSel < 0 {
+					m.projectSel = 0
+				}
+				if total > 0 && m.projectSel > total-1 {
+					m.projectSel = total - 1
+				}
+			}
+			switch s {
+			case "up", "k":
+				move(-1)
+				return m, nil
+			case "down", "j":
+				move(1)
+				return m, nil
+			case "home", "g":
+				move(-total)
+				return m, nil
+			case "end", "G":
+				move(total)
+				return m, nil
+			case "enter":
+				if total > 0 {
+					m.projectPopup = true
+				}
+				return m, nil
+			case "esc":
+				if m.projectPopup {
+					m.projectPopup = false
+					return m, nil
+				}
 			}
 		}
 
@@ -427,6 +467,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "esc":
 			m.zoomed = false
+			m.projectPopup = false
 		case "enter":
 			if n > 0 {
 				m.zoomed = true
@@ -586,6 +627,7 @@ func (m Model) helpView(width int) string {
 		row("esc", "leave zoom"),
 		row("← →", "on a zoomed TOKENS/COST chart, move the date cursor"),
 		row("arrows", "on a zoomed calendar, move the day cursor"),
+		row("↑↓ + enter", "on zoomed TOP PROJECTS, open project drill-down"),
 		"",
 		titleStyle.Render("DAILY · BLOCKS · SESSIONS"),
 		"",

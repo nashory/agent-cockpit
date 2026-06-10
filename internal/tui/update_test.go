@@ -177,6 +177,30 @@ func TestDailyPeriodToggle(t *testing.T) {
 	}
 }
 
+func TestProjectDrilldown(t *testing.T) {
+	m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
+	m.width, m.height = 140, 44
+	m.view = activity
+	m.focus = 3 // TOP PROJECTS in the Activity focus list.
+	m.zoomed = true
+	m = upd(m, tea.KeyMsg{Type: tea.KeyDown})
+	if m.projectSel != 1 {
+		t.Fatalf("down should move projectSel to 1, got %d", m.projectSel)
+	}
+	m = upd(m, tea.KeyMsg{Type: tea.KeyEnter})
+	if !m.projectPopup {
+		t.Fatal("enter should open project drill-down")
+	}
+	out := stripANSI(m.View())
+	if !strings.Contains(out, "PROJECT") || !strings.Contains(out, "MODEL") {
+		t.Fatalf("project drill-down should show project usage detail:\n%s", out)
+	}
+	m = upd(m, tea.KeyMsg{Type: tea.KeyEsc})
+	if m.projectPopup {
+		t.Fatal("esc should close project drill-down")
+	}
+}
+
 func TestSessionsPopup(t *testing.T) {
 	m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
 	m.width, m.height = 140, 44
