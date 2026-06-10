@@ -77,14 +77,14 @@ func EstimateCost(e Event) float64 {
 }
 
 func EstimateCostWith(e Event, prices PriceBook) float64 {
-	p := lookupPricing(e.Model, prices)
+	p, _ := ResolvePricing(e.Model, prices)
 	return (float64(e.Input)*p.InputPerMillion +
 		float64(e.Output)*p.OutputPerMillion +
 		float64(e.CacheRead)*p.CacheReadPerMillion +
 		float64(e.CacheCreate)*p.CacheWritePerMillion) / 1_000_000
 }
 
-func lookupPricing(model string, prices PriceBook) Pricing {
+func ResolvePricing(model string, prices PriceBook) (Pricing, string) {
 	model = strings.ToLower(model)
 	var bestKey string
 	var best Pricing
@@ -96,9 +96,12 @@ func lookupPricing(model string, prices PriceBook) Pricing {
 		}
 	}
 	if bestKey != "" {
-		return best
+		return best, "config:" + bestKey
 	}
-	return DefaultPricing(model)
+	if p, ok := litellmPricing(model); ok {
+		return p, "vendored"
+	}
+	return fallbackPricing(model), "fallback"
 }
 
 type Totals struct {
@@ -191,7 +194,7 @@ func Filter(events []Event, since, until time.Time, sources []string, project, m
 	project = strings.ToLower(project)
 	model = strings.ToLower(model)
 
-	out := events[:0]
+	out := make([]Event, 0, len(events))
 	for _, e := range events {
 		if !since.IsZero() && e.Timestamp.Before(since) {
 			continue

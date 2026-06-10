@@ -64,12 +64,12 @@ func TestLookupPricingLongestMatch(t *testing.T) {
 		"gpt-5":       {InputPerMillion: 2},
 	}
 	// Longest substring wins.
-	if p := lookupPricing("claude-opus-4-8", prices); p.InputPerMillion != 99 {
+	if p, _ := ResolvePricing("claude-opus-4-8", prices); p.InputPerMillion != 99 {
 		t.Fatalf("expected longest match (claude-opus), got %v", p.InputPerMillion)
 	}
 	// With no config, rates come from the vendored LiteLLM table. Opus 4.8 is the
 	// newer, cheaper Opus tier ($5/M in), not the legacy $15/M.
-	if p := lookupPricing("claude-opus-4-8", nil); p.InputPerMillion != 5 {
+	if p, _ := ResolvePricing("claude-opus-4-8", nil); p.InputPerMillion != 5 {
 		t.Fatalf("litellm opus-4-8 input rate = %v, want 5", p.InputPerMillion)
 	}
 }

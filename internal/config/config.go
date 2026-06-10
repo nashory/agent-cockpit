@@ -15,6 +15,8 @@ type Config struct {
 	Timezone        string                   `toml:"timezone"`
 	RefreshInterval string                   `toml:"refresh_interval"`
 	Currency        string                   `toml:"currency"`
+	Budget          usage.Budget             `toml:"budget"`
+	Limits          usage.Limits             `toml:"limits"`
 	Paths           Paths                    `toml:"paths"`
 	Pricing         map[string]usage.Pricing `toml:"pricing"`
 }

@@ -49,6 +49,13 @@ func TestLoadOverridesAndExpands(t *testing.T) {
 	body := `currency = "EUR"
 refresh_interval = "5s"
 
+[budget]
+daily_usd = 12.5
+warn_pct = 70
+
+[limits]
+claude_5h_tokens = 100000
+
 [paths]
 claude = ["~/.claude/projects"]
 
@@ -65,6 +72,12 @@ output_per_million = 75
 	}
 	if cfg.Currency != "EUR" || cfg.RefreshInterval != "5s" {
 		t.Fatalf("overrides not applied: %+v", cfg)
+	}
+	if cfg.Budget.DailyUSD != 12.5 || cfg.Budget.WarnPct != 70 {
+		t.Fatalf("budget overrides not applied: %+v", cfg.Budget)
+	}
+	if cfg.Limits.Claude5HTokens != 100000 {
+		t.Fatalf("limit overrides not applied: %+v", cfg.Limits)
 	}
 	home, _ := os.UserHomeDir()
 	if want := filepath.Join(home, ".claude", "projects"); cfg.Paths.Claude[0] != want {

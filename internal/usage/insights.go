@@ -104,7 +104,7 @@ func ComputeInsights(events []Event, prices PriceBook) Insights {
 		if strings.Contains(strings.ToLower(e.Model), "opus") {
 			opusCost += c
 		}
-		p := lookupPricing(e.Model, prices)
+		p, _ := ResolvePricing(e.Model, prices)
 		if p.InputPerMillion > p.CacheReadPerMillion {
 			cacheSavings += float64(e.CacheRead) * (p.InputPerMillion - p.CacheReadPerMillion) / 1_000_000
 		}

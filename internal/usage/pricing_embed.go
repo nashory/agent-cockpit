@@ -28,6 +28,12 @@ func litellmTable() map[string]Pricing {
 	return pricingTable
 }
 
+// VendoredPricingCount returns the number of model entries bundled into the
+// binary from LiteLLM's pricing data. It is used by diagnostics and tests.
+func VendoredPricingCount() int {
+	return len(litellmTable())
+}
+
 // litellmPricing resolves a model against the vendored LiteLLM table: an exact
 // (case-insensitive) match first, then the longest table key that is a
 // substring of the model name (so dated or suffixed ids like
