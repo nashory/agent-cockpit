@@ -125,7 +125,7 @@ cockpit doctor                # show detected log locations
 
 ## 🧭 Dashboards
 
-Six tabs, each packed with instruments. Press `enter` to zoom any widget
+Seven tabs, each packed with instruments. Press `enter` to zoom any widget
 fullscreen:
 
 | Tab | Shows |
@@ -136,6 +136,7 @@ fullscreen:
 | **Activity** | year contribution calendar, hour-of-day, day-of-week, projects |
 | **Daily** | a ccusage-style per-day table: input / output / cache / total tokens, cost, and models, newest first with a grand total |
 | **Blocks** | 5-hour activity/billing windows: a live ACTIVE WINDOW with elapsed/remaining, burn rate, and a cost projection, over a table of recent windows |
+| **Sessions** | a per-session table — project, engine, start, active span, tokens, cost, and models — so you can see which sessions cost the most |
 
 <table>
   <tr>
@@ -149,21 +150,26 @@ fullscreen:
 
 | Key | Action |
 | --- | --- |
-| `1`-`6` | jump to a tab |
+| `1`-`7` | jump to a tab |
 | `tab` / `shift+tab` | next / previous tab |
 | arrows / `hjkl` | move widget focus |
 | `enter` / `esc` | zoom the focused widget / exit zoom |
 | `e` | toggle expert (dense) / compact (light) mode |
 | `w` | cycle the chart window (7 / 30 / 90 days) |
-| `s` | sort the Daily / Blocks table (date / tokens / cost) |
+| `s` | sort the Daily / Blocks / Sessions table (date / tokens / cost) |
 | `r` | refresh now |
 | `?` | toggle the full keyboard help |
 | `q` | quit |
 
+Your last `e` / `w` / `s` choices are remembered across runs (saved to
+`ui.json` next to the config). The palette adapts to the terminal: it honors
+[`NO_COLOR`](https://no-color.org) and switches to a higher-contrast ink set on
+light backgrounds.
+
 On **Activity**, zoom the calendar (`enter`) and then arrows move the day cursor
 (left/right by week, up/down by day) with a tooltip for the selected day. On
-**Daily** and **Blocks**, arrows move a row cursor (the view follows it) and
-`enter` opens that row's per-model breakdown (`esc` closes it).
+**Daily**, **Blocks**, and **Sessions**, arrows move a row cursor (the view
+follows it) and `enter` opens that row's per-model breakdown (`esc` closes it).
 
 Costs are estimates derived from token counts (no per-call cost is recorded in
 the logs), so every USD figure is shown with a leading `~`.

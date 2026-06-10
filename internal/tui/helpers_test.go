@@ -175,6 +175,53 @@ func TestDailyLedger(t *testing.T) {
 	}
 }
 
+func TestSessionLedger(t *testing.T) {
+	at := func(h int) time.Time { return time.Date(2026, 1, 2, h, 0, 0, 0, time.UTC) }
+	events := []usage.Event{
+		{SessionID: "a", Source: "claude", Project: "cockpit", Model: "claude-opus-4-8", Input: 100, Output: 50, Timestamp: at(9)},
+		{SessionID: "a", Source: "claude", Project: "cockpit", Model: "claude-opus-4-8", Input: 200, Output: 20, Timestamp: at(11)},
+		{SessionID: "b", Source: "codex", Project: "ttygg", Model: "gpt-5-codex", Input: 10, Output: 5, Timestamp: at(10)},
+	}
+	rows := sessionLedger(events, nil)
+	if len(rows) != 2 {
+		t.Fatalf("expected 2 sessions, got %d", len(rows))
+	}
+	// Default order: most recent last-activity first -> session "a" (last 11:00).
+	if rows[0].id != "a" {
+		t.Fatalf("expected session a first, got %q", rows[0].id)
+	}
+	a := rows[0]
+	if a.totals.Input != 300 || a.totals.Output != 70 || a.totals.Total != 370 {
+		t.Fatalf("session a totals = %+v", a.totals)
+	}
+	if a.source != "claude" || a.project != "cockpit" {
+		t.Fatalf("session a context = %q / %q", a.source, a.project)
+	}
+	if a.last.Sub(a.first) != 2*time.Hour {
+		t.Fatalf("session a span = %v, want 2h", a.last.Sub(a.first))
+	}
+}
+
+func TestUIPrefsRoundTrip(t *testing.T) {
+	// Persist into an isolated config dir so the test never touches real prefs.
+	// os.UserConfigDir reads XDG_CONFIG_HOME on Linux and $HOME on macOS, so set
+	// both to a temp dir for cross-platform isolation.
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	t.Setenv("HOME", dir)
+	savePrefs(uiPrefs{Compact: true, WindowDays: 90, SortMode: 2})
+	got := loadPrefs()
+	if !got.Compact || got.WindowDays != 90 || got.SortMode != 2 {
+		t.Fatalf("round-trip prefs = %+v", got)
+	}
+	// An out-of-range window falls back to the default rather than corrupting state.
+	savePrefs(uiPrefs{WindowDays: 12345, SortMode: 99})
+	got = loadPrefs()
+	if got.WindowDays != 30 || got.SortMode != 0 {
+		t.Fatalf("invalid prefs not sanitized: %+v", got)
+	}
+}
+
 func TestDailyVelocity(t *testing.T) {
 	// Day-over-day change in total tokens (Output only, so Total == Output):
 	// day-2 = 1000, day-1 = 3000, day0 = 2000.

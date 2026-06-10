@@ -74,8 +74,8 @@ func TestUpdateKeyHandling(t *testing.T) {
 	// shift+tab wraps backwards from overview to the last tab.
 	m = upd(m, runes("1"))
 	m = upd(m, tea.KeyMsg{Type: tea.KeyShiftTab})
-	if m.view != blocks {
-		t.Fatalf("shift+tab from overview should wrap to blocks, got %d", m.view)
+	if m.view != sessions {
+		t.Fatalf("shift+tab from overview should wrap to sessions, got %d", m.view)
 	}
 }
 
@@ -156,6 +156,37 @@ func TestDailyPopup(t *testing.T) {
 	m = upd(m, tea.KeyMsg{Type: tea.KeyEsc})
 	if m.dayPopup {
 		t.Fatal("esc should close the day popup")
+	}
+}
+
+func TestSessionsPopup(t *testing.T) {
+	m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
+	m.width, m.height = 140, 44
+	m = upd(m, runes("7")) // Sessions tab
+	if m.view != sessions {
+		t.Fatalf("'7' should select sessions, got %d", m.view)
+	}
+	if m.tableTotal() <= 1 {
+		t.Fatalf("sample data should produce many sessions, got %d", m.tableTotal())
+	}
+	// Cursor moves down.
+	m = upd(m, tea.KeyMsg{Type: tea.KeyDown})
+	if m.sessSel != 1 {
+		t.Fatalf("down should move sessSel to 1, got %d", m.sessSel)
+	}
+	// Enter opens the per-model popup.
+	m = upd(m, tea.KeyMsg{Type: tea.KeyEnter})
+	if !m.sessPopup {
+		t.Fatal("enter should open the session popup")
+	}
+	out := stripANSI(m.View())
+	if !strings.Contains(out, "SESSION ·") || !strings.Contains(out, "MODEL") {
+		t.Fatalf("popup should show the session's per-model breakdown:\n%s", out)
+	}
+	// Esc closes it.
+	m = upd(m, tea.KeyMsg{Type: tea.KeyEsc})
+	if m.sessPopup {
+		t.Fatal("esc should close the session popup")
 	}
 }
 

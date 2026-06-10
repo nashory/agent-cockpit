@@ -109,6 +109,10 @@ func (m Model) zoomTargets() []zoomTarget {
 		// No zoom target: the Blocks tab uses a row cursor (arrows) and enter
 		// opens the selected window's per-model breakdown popup instead.
 		return nil
+	case sessions:
+		// No zoom target: the Sessions tab uses a row cursor (arrows) and enter
+		// opens the selected session's per-model breakdown popup instead.
+		return nil
 	}
 	return nil
 }

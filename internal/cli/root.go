@@ -59,6 +59,7 @@ func Execute() error {
 				events, _, err := load(cmd.Context(), opts)
 				return events, err
 			}
+			tui.ApplyTerminalTheme()
 			_, err = tea.NewProgram(tui.New(nil, tuiOptions(cfg, opts, reload, 0)), tea.WithAltScreen()).Run()
 			return err
 		},
@@ -143,6 +144,7 @@ func Execute() error {
 				defer w.Close()
 				tuiOpts.FSEvents = w.Events()
 			}
+			tui.ApplyTerminalTheme()
 			_, err = tea.NewProgram(tui.New(nil, tuiOpts), tea.WithAltScreen()).Run()
 			return err
 		},
@@ -330,6 +332,7 @@ func tuiOptions(cfg config.Config, opts *options, reload func() ([]usage.Event, 
 		Reload:          reload,
 		Filter:          filterLabel(opts),
 		LogDirs:         append(append(append([]string{}, cfg.Paths.Claude...), cfg.Paths.Codex...), cfg.Paths.Gemini...),
+		RestorePrefs:    true,
 	}
 }
 

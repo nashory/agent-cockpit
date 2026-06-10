@@ -1,21 +1,27 @@
 package tui
 
 import (
+	"os"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/muesli/termenv"
 )
 
 // Glass-cockpit palette: dark background with vivid phosphor cyan/green/amber/
 // red accents, the way a modern flight deck PFD reads under night lighting.
+// These are mutable so ApplyTerminalTheme can swap in a light-background variant
+// at startup; initStyles rebuilds the derived styles after any change.
 var (
-	colCyan  = lipgloss.Color("51")  // primary instruments (bright cyan)
-	colGreen = lipgloss.Color("48")  // nominal (spring green)
-	colAmber = lipgloss.Color("220") // caution (gold)
-	colRed   = lipgloss.Color("196") // warning
-	colDim   = lipgloss.Color("245") // chrome / labels
-	colText  = lipgloss.Color("231") // readouts (bright white)
+	colCyan   = lipgloss.Color("51")  // primary instruments (bright cyan)
+	colGreen  = lipgloss.Color("48")  // nominal (spring green)
+	colAmber  = lipgloss.Color("220") // caution (gold)
+	colRed    = lipgloss.Color("196") // warning
+	colDim    = lipgloss.Color("245") // chrome / labels
+	colText   = lipgloss.Color("231") // readouts (bright white)
+	colTrack  = lipgloss.Color("238") // empty gauge track
+	colNeedle = lipgloss.Color("231") // airspeed needle
 
 	// Per-engine (agent) colors, like separate engine instruments.
 	agentColors = map[string]lipgloss.Color{
@@ -33,27 +39,77 @@ func agentColor(name string) lipgloss.Color {
 }
 
 var (
+	labelStyle  lipgloss.Style
+	valueStyle  lipgloss.Style
+	bigStyle    lipgloss.Style
+	titleStyle  lipgloss.Style
+	okStyle     lipgloss.Style
+	warnStyle   lipgloss.Style
+	alertStyle  lipgloss.Style
+	litStyle    lipgloss.Style
+	alarmStyle  lipgloss.Style
+	darkLamp    lipgloss.Style
+	gaugeEmpty  lipgloss.Style
+	zoneGreen   lipgloss.Style
+	zoneAmber   lipgloss.Style
+	zoneRed     lipgloss.Style
+	needleStyle lipgloss.Style
+	focusChip   lipgloss.Style
+)
+
+// initStyles (re)builds every derived style from the current color vars. It runs
+// once at package init and again whenever ApplyTerminalTheme changes the palette.
+func initStyles() {
 	labelStyle = lipgloss.NewStyle().Foreground(colDim)
 	valueStyle = lipgloss.NewStyle().Foreground(colText).Bold(true)
-	bigStyle   = lipgloss.NewStyle().Foreground(colCyan).Bold(true)
+	bigStyle = lipgloss.NewStyle().Foreground(colCyan).Bold(true)
 	titleStyle = lipgloss.NewStyle().Foreground(colCyan).Bold(true)
-	okStyle    = lipgloss.NewStyle().Foreground(colGreen).Bold(true)
-	warnStyle  = lipgloss.NewStyle().Foreground(colAmber).Bold(true)
+	okStyle = lipgloss.NewStyle().Foreground(colGreen).Bold(true)
+	warnStyle = lipgloss.NewStyle().Foreground(colAmber).Bold(true)
 	alertStyle = lipgloss.NewStyle().Foreground(colRed).Bold(true)
-	litStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("232")).Background(colAmber).Bold(true)
+	litStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("232")).Background(colAmber).Bold(true)
 	alarmStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("231")).Background(colRed).Bold(true)
-	darkLamp   = lipgloss.NewStyle().Foreground(colDim)
-	gaugeEmpty = lipgloss.NewStyle().Foreground(lipgloss.Color("238"))
-
+	darkLamp = lipgloss.NewStyle().Foreground(colDim)
+	gaugeEmpty = lipgloss.NewStyle().Foreground(colTrack)
 	// Airspeed tape zones and needle.
-	zoneGreen   = lipgloss.NewStyle().Foreground(colGreen)
-	zoneAmber   = lipgloss.NewStyle().Foreground(colAmber)
-	zoneRed     = lipgloss.NewStyle().Foreground(colRed)
-	needleStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("231")).Bold(true)
-
+	zoneGreen = lipgloss.NewStyle().Foreground(colGreen)
+	zoneAmber = lipgloss.NewStyle().Foreground(colAmber)
+	zoneRed = lipgloss.NewStyle().Foreground(colRed)
+	needleStyle = lipgloss.NewStyle().Foreground(colNeedle).Bold(true)
 	// focusChip highlights the selected widget in the focus bar.
 	focusChip = lipgloss.NewStyle().Foreground(lipgloss.Color("232")).Background(colCyan).Bold(true)
-)
+}
+
+func init() { initStyles() }
+
+// ApplyTerminalTheme adapts the palette to the host terminal: it honors the
+// NO_COLOR convention (https://no-color.org) by stripping color entirely, and on
+// a light-background terminal swaps the night-flight-deck palette for darker,
+// higher-contrast inks so white-on-white readouts stay legible. Call it once at
+// startup, before the Bubble Tea program renders.
+func ApplyTerminalTheme() {
+	if os.Getenv("NO_COLOR") != "" {
+		lipgloss.SetColorProfile(termenv.Ascii)
+		return
+	}
+	if !lipgloss.HasDarkBackground() {
+		// Light terminal: saturated, dark-enough accents and black readout text.
+		colCyan = lipgloss.Color("31")   // deep cyan
+		colGreen = lipgloss.Color("28")  // forest green
+		colAmber = lipgloss.Color("166") // burnt orange
+		colRed = lipgloss.Color("160")   // signal red
+		colDim = lipgloss.Color("240")   // legible grey on white
+		colText = lipgloss.Color("16")   // black readouts
+		colTrack = lipgloss.Color("252") // pale gauge track
+		colNeedle = lipgloss.Color("16") // dark needle
+		agentColors = map[string]lipgloss.Color{
+			"claude": lipgloss.Color("127"), // deep magenta
+			"codex":  lipgloss.Color("31"),  // deep cyan
+			"gemini": lipgloss.Color("26"),  // deep blue
+		}
+		initStyles()
+	}
+}
 
 // renderCompact selects the lighter, airier compact look. It is set from the
 // model at the start of each frame; Bubble Tea rendering is single-threaded, so

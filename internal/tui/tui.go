@@ -20,6 +20,7 @@ const (
 	activity
 	daily
 	blocks
+	sessions
 	numViews
 )
 
@@ -43,6 +44,9 @@ type Model struct {
 	dayPopup        bool           // Daily tab: show the selected day's per-model breakdown
 	blkSel          int            // Blocks tab: selected row (absolute index, 0 = newest)
 	blkPopup        bool           // Blocks tab: show the selected window's per-model breakdown
+	sessSel         int            // Sessions tab: selected row (absolute index)
+	sessPopup       bool           // Sessions tab: show the selected session's per-model breakdown
+	persist         bool           // write view preferences (compact/window/sort) across runs
 	trendSel        int            // Trends TOKENS/COST zoom: selected day index (0=oldest .. windowDays-1=today)
 	windowDays      int            // chart window in days (7 / 30 / 90), cycled with w
 	sortMode        int            // table sort for Daily/Blocks: 0 date, 1 tokens, 2 cost (cycled with s)
@@ -75,6 +79,16 @@ func clampScroll(c, max int) int {
 	return c
 }
 
+// resetTabState clears per-tab cursors, scroll, zoom, and open popups when the
+// active tab changes, and re-arms the trend date cursor for the current window.
+func (m *Model) resetTabState() {
+	m.focus, m.zoomed, m.scroll = 0, false, 0
+	m.daySel, m.dayPopup = 0, false
+	m.blkSel, m.blkPopup = 0, false
+	m.sessSel, m.sessPopup = 0, false
+	m.trendSel = m.windowDays - 1
+}
+
 // tableTotal is the number of rows the current table tab can show.
 func (m Model) tableTotal() int {
 	switch m.view {
@@ -82,6 +96,8 @@ func (m Model) tableTotal() int {
 		return len(dailyLedger(m.events, m.reportOptions.Pricing))
 	case blocks:
 		return len(usage.SessionBlocks(m.events, m.reportOptions.Pricing, usage.DefaultBlockWindow))
+	case sessions:
+		return len(sessionLedger(m.events, m.reportOptions.Pricing))
 	}
 	return 0
 }
@@ -106,6 +122,11 @@ func (m Model) tableVisible() int {
 			return v
 		}
 		return 5
+	case sessions:
+		if v := m.height - 14; v > 6 {
+			return v
+		}
+		return 6
 	}
 	return 0
 }
@@ -124,6 +145,7 @@ type Options struct {
 	FSEvents        <-chan struct{} // optional fsnotify-driven refresh signal
 	Filter          string          // human-readable active filters (source/project/...), shown in the sidebar
 	LogDirs         []string        // log locations, shown in the empty state
+	RestorePrefs    bool            // load + persist view preferences (compact/window/sort) across runs
 }
 
 type tickMsg time.Time
@@ -146,6 +168,15 @@ func New(events []usage.Event, opts Options) Model {
 		logDirs:         opts.LogDirs,
 		windowDays:      30,
 		trendSel:        29,
+		persist:         opts.RestorePrefs,
+	}
+	// Restore the layout the user left last time (compact / chart window / sort).
+	if opts.RestorePrefs {
+		p := loadPrefs()
+		m.compact = p.Compact
+		m.windowDays = p.WindowDays
+		m.sortMode = p.SortMode
+		m.trendSel = m.windowDays - 1
 	}
 	if len(events) > 0 {
 		m.lastRefresh = time.Now()
@@ -337,6 +368,58 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		// Sessions tab: arrows move a row cursor; enter opens that session's
+		// per-model breakdown; esc closes it. The scroll offset follows the cursor.
+		if m.view == sessions {
+			total := m.tableTotal()
+			vis := m.tableVisible()
+			move := func(d int) {
+				m.sessSel += d
+				if m.sessSel < 0 {
+					m.sessSel = 0
+				}
+				if total > 0 && m.sessSel > total-1 {
+					m.sessSel = total - 1
+				}
+				if m.sessSel < m.scroll {
+					m.scroll = m.sessSel
+				}
+				if vis > 0 && m.sessSel >= m.scroll+vis {
+					m.scroll = m.sessSel - vis + 1
+				}
+			}
+			switch s {
+			case "up", "k":
+				move(-1)
+				return m, nil
+			case "down", "j":
+				move(1)
+				return m, nil
+			case "pgup":
+				move(-vis)
+				return m, nil
+			case "pgdown":
+				move(vis)
+				return m, nil
+			case "home", "g":
+				move(-total)
+				return m, nil
+			case "end", "G":
+				move(total)
+				return m, nil
+			case "enter":
+				if total > 0 {
+					m.sessPopup = true
+				}
+				return m, nil
+			case "esc":
+				if m.sessPopup {
+					m.sessPopup = false
+					return m, nil
+				}
+			}
+		}
+
 		switch s {
 		case "ctrl+c", "q":
 			return m, tea.Quit
@@ -351,6 +434,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "e":
 			m.compact = !m.compact
 			m.focus, m.zoomed = 0, false // target list changes with the layout
+			if m.persist {
+				return m, savePrefsCmd(m.prefs())
+			}
 		case "w":
 			// Cycle the chart window: 7 -> 30 -> 90 -> 7.
 			switch m.windowDays {
@@ -362,22 +448,25 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.windowDays = 7
 			}
 			m.trendSel = m.windowDays - 1
+			if m.persist {
+				return m, savePrefsCmd(m.prefs())
+			}
 		case "s":
-			// Cycle the Daily/Blocks table sort: date -> tokens -> cost.
+			// Cycle the Daily/Blocks/Sessions table sort: date -> tokens -> cost.
 			m.sortMode = (m.sortMode + 1) % 3
-			m.scroll, m.daySel, m.blkSel = 0, 0, 0
-		case "1", "2", "3", "4", "5", "6":
+			m.scroll, m.daySel, m.blkSel, m.sessSel = 0, 0, 0, 0
+			if m.persist {
+				return m, savePrefsCmd(m.prefs())
+			}
+		case "1", "2", "3", "4", "5", "6", "7":
 			m.view = view(int(s[0] - '1'))
-			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup, m.blkSel, m.blkPopup = 0, false, 0, 0, false, 0, false
-			m.trendSel = m.windowDays - 1
+			m.resetTabState()
 		case "tab":
 			m.view = (m.view + 1) % numViews
-			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup, m.blkSel, m.blkPopup = 0, false, 0, 0, false, 0, false
-			m.trendSel = m.windowDays - 1
+			m.resetTabState()
 		case "shift+tab":
 			m.view = (m.view + numViews - 1) % numViews
-			m.focus, m.zoomed, m.scroll, m.daySel, m.dayPopup, m.blkSel, m.blkPopup = 0, false, 0, 0, false, 0, false
-			m.trendSel = m.windowDays - 1
+			m.resetTabState()
 		case "left", "h", "up", "k":
 			if n > 0 {
 				m.focus = (m.focus - 1 + n) % n
@@ -426,7 +515,7 @@ func (m Model) View() string {
 }
 
 func (m Model) sidebar() string {
-	items := []string{"1 Overview", "2 Breakdown", "3 Trends", "4 Activity", "5 Daily", "6 Blocks"}
+	items := []string{"1 Overview", "2 Breakdown", "3 Trends", "4 Activity", "5 Daily", "6 Blocks", "7 Sessions"}
 	for i := range items {
 		if view(i) == m.view {
 			items[i] = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39")).Render("> " + items[i])
@@ -452,6 +541,8 @@ func (m Model) sidebar() string {
 		nav = "↑↓ select\nenter day\ns sort"
 	case blocks:
 		nav = "↑↓ select\nenter window\ns sort"
+	case sessions:
+		nav = "↑↓ select\nenter session\ns sort"
 	}
 	hints := nav + "\nesc back\ne mode\nw window\nr refresh\n? help\nq quit"
 	head := "agent-cockpit\ncockpit\n" + status + "\nmode " + mode
@@ -469,7 +560,7 @@ func (m Model) helpView(width int) string {
 	lines := []string{
 		titleStyle.Render("KEYBOARD"),
 		"",
-		row("1 - 6", "jump to a tab"),
+		row("1 - 7", "jump to a tab"),
 		row("tab / shift+tab", "next / previous tab"),
 		row("e", "toggle expert / compact layout"),
 		row("w", "cycle the chart window (7 / 30 / 90 days)"),
@@ -485,7 +576,7 @@ func (m Model) helpView(width int) string {
 		row("← →", "on a zoomed TOKENS/COST chart, move the date cursor"),
 		row("arrows", "on a zoomed calendar, move the day cursor"),
 		"",
-		titleStyle.Render("DAILY · BLOCKS"),
+		titleStyle.Render("DAILY · BLOCKS · SESSIONS"),
 		"",
 		row("↑↓ / jk", "move the row cursor"),
 		row("pgup/pgdn, g/G", "page, jump to top / bottom"),
@@ -591,6 +682,8 @@ func (m Model) content() string {
 		fmt.Fprint(&b, m.dailyView(w))
 	case blocks:
 		fmt.Fprint(&b, m.blocksView(w))
+	case sessions:
+		fmt.Fprint(&b, m.sessionsView(w))
 	default:
 		fmt.Fprintln(&b, "Unknown view")
 	}
