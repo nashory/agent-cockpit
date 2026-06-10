@@ -2,10 +2,13 @@ package cli
 
 import (
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -20,16 +23,19 @@ import (
 )
 
 type options struct {
-	days       int
-	since      string
-	until      string
-	sources    string
-	project    string
-	model      string
-	configPath string
-	refresh    string
-	json       bool
-	svgPath    string
+	days        int
+	since       string
+	until       string
+	sources     string
+	project     string
+	model       string
+	configPath  string
+	refresh     string
+	json        bool
+	svgPath     string
+	compact     bool
+	exportGroup string
+	outputPath  string
 }
 
 var version = "dev"
@@ -150,13 +156,45 @@ func Execute() error {
 		},
 	})
 	root.AddCommand(reportCommand("statusline", "Print one-line usage for tmux/statusline integrations", opts, func(w *os.File, events []usage.Event, ro report.Options) {
-		t := usage.SummarizeWith(events, ro.Pricing)
-		currency := ro.Currency
-		if currency == "" {
-			currency = "USD"
-		}
-		fmt.Fprintf(w, "tokens %d | cost %.2f %s | events %d\n", t.Total, t.CostUSD, currency, t.Events)
+		writeStatusline(w, events, ro, opts)
 	}, nil))
+	exportCmd := &cobra.Command{
+		Use:   "export",
+		Short: "Export usage rows as CSV",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			events, cfg, err := load(cmd.Context(), opts)
+			if err != nil {
+				return err
+			}
+			var w io.Writer = os.Stdout
+			var f *os.File
+			if opts.outputPath != "" {
+				f, err = os.Create(opts.outputPath)
+				if err != nil {
+					return err
+				}
+				defer f.Close()
+				w = f
+			}
+			return writeCSV(w, events, reportOptions(cfg), opts.exportGroup)
+		},
+	}
+	exportCmd.Flags().StringVar(&opts.exportGroup, "group", "daily", "CSV rows: daily, session, model, project, event")
+	exportCmd.Flags().StringVarP(&opts.outputPath, "output", "o", "", "write CSV to a file instead of stdout")
+	root.AddCommand(exportCmd)
+	pricingCmd := &cobra.Command{Use: "pricing", Short: "Pricing diagnostics"}
+	pricingCmd.AddCommand(&cobra.Command{
+		Use:   "status",
+		Short: "Show vendored pricing coverage for the current logs",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			events, cfg, err := load(cmd.Context(), opts)
+			if err != nil {
+				return err
+			}
+			return writePricingStatus(os.Stdout, events, cfg, opts.json)
+		},
+	})
+	root.AddCommand(pricingCmd)
 	root.AddCommand(&cobra.Command{
 		Use:   "doctor",
 		Short: "Show detected log locations",
@@ -197,6 +235,7 @@ func addFlags(cmd *cobra.Command, opts *options) {
 	cmd.PersistentFlags().StringVar(&opts.configPath, "config", "", "config file path")
 	cmd.PersistentFlags().StringVar(&opts.refresh, "refresh", "", "live refresh interval, for example 2s")
 	cmd.PersistentFlags().BoolVar(&opts.json, "json", false, "print JSON instead of a table")
+	cmd.PersistentFlags().BoolVar(&opts.compact, "compact", false, "print compact one-line output where supported")
 }
 
 func reportCommand(use, short string, opts *options, render func(*os.File, []usage.Event, report.Options), before func()) *cobra.Command {
@@ -267,9 +306,182 @@ func writeJSON(events []usage.Event, cfg config.Config) error {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
 	return enc.Encode(struct {
-		Totals usage.Totals  `json:"totals"`
-		Events []usage.Event `json:"events"`
-	}{Totals: usage.SummarizeWith(events, cfg.Pricing), Events: events})
+		Totals  usage.Totals            `json:"totals"`
+		Budgets []usage.ThresholdStatus `json:"budgets,omitempty"`
+		Limits  []usage.ThresholdStatus `json:"limits,omitempty"`
+		Events  []usage.Event           `json:"events"`
+	}{
+		Totals:  usage.SummarizeWith(events, cfg.Pricing),
+		Budgets: usage.BudgetStatuses(events, cfg.Pricing, cfg.Budget, time.Now()),
+		Limits:  usage.ClaudeLimitStatuses(events, cfg.Pricing, cfg.Limits, time.Now()),
+		Events:  events,
+	})
+}
+
+func writeStatusline(w io.Writer, events []usage.Event, ro report.Options, opts *options) {
+	t := usage.SummarizeWith(events, ro.Pricing)
+	currency := ro.Currency
+	if currency == "" {
+		currency = "USD"
+	}
+	cfg, _ := config.Load(opts.configPath)
+	budgets := usage.BudgetStatuses(events, ro.Pricing, cfg.Budget, time.Now())
+	limits := usage.ClaudeLimitStatuses(events, ro.Pricing, cfg.Limits, time.Now())
+	if opts.json {
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		_ = enc.Encode(struct {
+			Totals   usage.Totals            `json:"totals"`
+			Currency string                  `json:"currency"`
+			Budgets  []usage.ThresholdStatus `json:"budgets,omitempty"`
+			Limits   []usage.ThresholdStatus `json:"limits,omitempty"`
+		}{Totals: t, Currency: currency, Budgets: budgets, Limits: limits})
+		return
+	}
+	if opts.compact {
+		parts := []string{fmt.Sprintf("tok %s", formatCompact(t.Total)), fmt.Sprintf("~%.2f %s", t.CostUSD, currency)}
+		if s := usage.WorstStatus(append(budgets, limits...)); s.Name != "" {
+			parts = append(parts, fmt.Sprintf("%s %.0f%% %s", s.Name, s.Ratio*100, s.Level))
+		}
+		fmt.Fprintln(w, strings.Join(parts, " | "))
+		return
+	}
+	fmt.Fprintf(w, "tokens %d | cost %.2f %s | events %d", t.Total, t.CostUSD, currency, t.Events)
+	if s := usage.WorstStatus(append(budgets, limits...)); s.Name != "" {
+		fmt.Fprintf(w, " | %s %.0f%% %s", s.Name, s.Ratio*100, s.Level)
+	}
+	fmt.Fprintln(w)
+}
+
+func writeCSV(w io.Writer, events []usage.Event, ro report.Options, group string) error {
+	cw := csv.NewWriter(w)
+	defer cw.Flush()
+	cur := ro.Currency
+	if cur == "" {
+		cur = "USD"
+	}
+	writeTotals := func(key string, t usage.Totals) []string {
+		return []string{key, fmt.Sprint(t.Events), fmt.Sprint(t.Input), fmt.Sprint(t.Output), fmt.Sprint(t.CacheRead + t.CacheCreate), fmt.Sprint(t.Reasoning), fmt.Sprint(t.Total), fmt.Sprintf("%.6f", t.CostUSD), cur}
+	}
+	switch group {
+	case "", "daily":
+		if err := cw.Write([]string{"date", "events", "input_tokens", "output_tokens", "cache_tokens", "reasoning_tokens", "total_tokens", "estimated_cost", "currency"}); err != nil {
+			return err
+		}
+		for _, b := range timeBuckets(events, ro.Pricing, "day") {
+			if err := cw.Write(writeTotals(b.Key, b.Totals)); err != nil {
+				return err
+			}
+		}
+	case "session":
+		if err := cw.Write([]string{"session", "events", "input_tokens", "output_tokens", "cache_tokens", "reasoning_tokens", "total_tokens", "estimated_cost", "currency"}); err != nil {
+			return err
+		}
+		for _, b := range usage.GroupByWith(events, ro.Pricing, func(e usage.Event) string { return e.SessionID }) {
+			if err := cw.Write(writeTotals(b.Key, b.Totals)); err != nil {
+				return err
+			}
+		}
+	case "model":
+		if err := cw.Write([]string{"model", "events", "input_tokens", "output_tokens", "cache_tokens", "reasoning_tokens", "total_tokens", "estimated_cost", "currency"}); err != nil {
+			return err
+		}
+		for _, b := range usage.GroupByWith(events, ro.Pricing, func(e usage.Event) string { return e.Model }) {
+			if err := cw.Write(writeTotals(b.Key, b.Totals)); err != nil {
+				return err
+			}
+		}
+	case "project":
+		if err := cw.Write([]string{"project", "events", "input_tokens", "output_tokens", "cache_tokens", "reasoning_tokens", "total_tokens", "estimated_cost", "currency"}); err != nil {
+			return err
+		}
+		for _, b := range usage.GroupByWith(events, ro.Pricing, func(e usage.Event) string { return e.Project }) {
+			if err := cw.Write(writeTotals(b.Key, b.Totals)); err != nil {
+				return err
+			}
+		}
+	case "event":
+		if err := cw.Write([]string{"timestamp", "source", "project", "session", "model", "input_tokens", "output_tokens", "cache_tokens", "reasoning_tokens", "total_tokens", "estimated_cost", "currency"}); err != nil {
+			return err
+		}
+		for _, e := range events {
+			if err := cw.Write([]string{
+				e.Timestamp.Format(time.RFC3339), e.Source, e.Project, e.SessionID, e.Model,
+				fmt.Sprint(e.Input), fmt.Sprint(e.Output), fmt.Sprint(e.CacheRead + e.CacheCreate), fmt.Sprint(e.Reasoning),
+				fmt.Sprint(e.TotalTokens()), fmt.Sprintf("%.6f", usage.EstimateCostWith(e, ro.Pricing)), cur,
+			}); err != nil {
+				return err
+			}
+		}
+	default:
+		return fmt.Errorf("unknown export group %q", group)
+	}
+	return cw.Error()
+}
+
+func timeBuckets(events []usage.Event, prices usage.PriceBook, period string) []usage.Bucket {
+	key := func(e usage.Event) string {
+		if e.Timestamp.IsZero() {
+			return "unknown"
+		}
+		switch period {
+		case "week":
+			y, w := e.Timestamp.ISOWeek()
+			return fmt.Sprintf("%04d-W%02d", y, w)
+		case "month":
+			return e.Timestamp.Format("2006-01")
+		default:
+			return e.Timestamp.Format("2006-01-02")
+		}
+	}
+	rows := usage.GroupByWith(events, prices, key)
+	sort.Slice(rows, func(i, j int) bool { return rows[i].Key > rows[j].Key })
+	return rows
+}
+
+func writePricingStatus(w io.Writer, events []usage.Event, cfg config.Config, asJSON bool) error {
+	type row struct {
+		Model  string `json:"model"`
+		Source string `json:"pricing_source"`
+		Events int    `json:"events"`
+		Tokens int64  `json:"tokens"`
+	}
+	byModel := map[string]*row{}
+	for _, e := range events {
+		model := e.Model
+		if model == "" {
+			model = "unknown"
+		}
+		r := byModel[model]
+		if r == nil {
+			_, src := usage.ResolvePricing(model, cfg.Pricing)
+			r = &row{Model: model, Source: src}
+			byModel[model] = r
+		}
+		r.Events++
+		r.Tokens += e.TotalTokens()
+	}
+	rows := make([]row, 0, len(byModel))
+	for _, r := range byModel {
+		rows = append(rows, *r)
+	}
+	sort.Slice(rows, func(i, j int) bool { return rows[i].Tokens > rows[j].Tokens })
+	if asJSON {
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		return enc.Encode(struct {
+			VendoredModels  int   `json:"vendored_models"`
+			ConfigOverrides int   `json:"config_overrides"`
+			Models          []row `json:"models"`
+		}{VendoredModels: usage.VendoredPricingCount(), ConfigOverrides: len(cfg.Pricing), Models: rows})
+	}
+	fmt.Fprintf(w, "Vendored pricing models: %d\n", usage.VendoredPricingCount())
+	fmt.Fprintf(w, "Config overrides: %d\n\n", len(cfg.Pricing))
+	fmt.Fprintln(w, "Model pricing coverage")
+	for _, r := range rows {
+		fmt.Fprintf(w, "  %-28s %-18s %8s tokens  %d events\n", truncateASCII(r.Model, 28), r.Source, formatCompact(r.Tokens), r.Events)
+	}
+	return nil
 }
 
 func printPath(path string) {
@@ -360,10 +572,44 @@ func filterLabel(opts *options) string {
 	return strings.Join(parts, "\n")
 }
 
+func formatCompact(n int64) string {
+	switch {
+	case n >= 1_000_000:
+		return fmt.Sprintf("%.1fM", float64(n)/1_000_000)
+	case n >= 1_000:
+		return fmt.Sprintf("%.1fk", float64(n)/1_000)
+	default:
+		return fmt.Sprint(n)
+	}
+}
+
+func truncateASCII(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	if max <= 1 {
+		return s[:max]
+	}
+	return s[:max-1] + "~"
+}
+
 func configTemplate() string {
 	return `timezone = "local"
 refresh_interval = "3s"
 currency = "USD"
+
+[budget]
+# daily_usd = 25
+# weekly_usd = 100
+# monthly_usd = 300
+# warn_pct = 80
+# critical_pct = 95
+
+[limits]
+# claude_5h_tokens = 88000
+# claude_7d_tokens = 500000
+# warn_pct = 80
+# critical_pct = 95
 
 [paths]
 claude = ["~/.claude/projects"]

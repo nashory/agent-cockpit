@@ -112,6 +112,47 @@ func TestSmokeStatuslineContent(t *testing.T) {
 	}
 }
 
+func TestSmokeStatuslineJSON(t *testing.T) {
+	cfg := tempConfig(t)
+	out, err := runAC(t, "--config", cfg, "--json", "statusline")
+	if err != nil {
+		t.Fatalf("statusline --json failed: %v\n%s", err, out)
+	}
+	var doc struct {
+		Totals struct {
+			Total int64 `json:"total_tokens"`
+		} `json:"totals"`
+	}
+	if err := json.Unmarshal([]byte(out), &doc); err != nil {
+		t.Fatalf("invalid statusline JSON: %v\n%s", err, out)
+	}
+	if doc.Totals.Total != 150 {
+		t.Fatalf("statusline total = %d, want 150", doc.Totals.Total)
+	}
+}
+
+func TestSmokeExportCSV(t *testing.T) {
+	cfg := tempConfig(t)
+	out, err := runAC(t, "--config", cfg, "export", "--group", "daily")
+	if err != nil {
+		t.Fatalf("export failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "date,events,input_tokens") || !strings.Contains(out, "150") {
+		t.Fatalf("export output unexpected: %s", out)
+	}
+}
+
+func TestSmokePricingStatus(t *testing.T) {
+	cfg := tempConfig(t)
+	out, err := runAC(t, "--config", cfg, "pricing", "status")
+	if err != nil {
+		t.Fatalf("pricing status failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "Vendored pricing models") || !strings.Contains(out, "claude-opus") {
+		t.Fatalf("pricing status unexpected: %s", out)
+	}
+}
+
 func TestSmokeDoctor(t *testing.T) {
 	cfg := tempConfig(t)
 	out, err := runAC(t, "--config", cfg, "doctor")
