@@ -209,15 +209,15 @@ func TestUIPrefsRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
 	t.Setenv("HOME", dir)
-	savePrefs(uiPrefs{Compact: true, WindowDays: 90, SortMode: 2})
+	savePrefs(uiPrefs{Compact: true, WindowDays: 90, SortMode: 2, PeriodMode: 2})
 	got := loadPrefs()
-	if !got.Compact || got.WindowDays != 90 || got.SortMode != 2 {
+	if !got.Compact || got.WindowDays != 90 || got.SortMode != 2 || got.PeriodMode != 2 {
 		t.Fatalf("round-trip prefs = %+v", got)
 	}
 	// An out-of-range window falls back to the default rather than corrupting state.
-	savePrefs(uiPrefs{WindowDays: 12345, SortMode: 99})
+	savePrefs(uiPrefs{WindowDays: 12345, SortMode: 99, PeriodMode: 99})
 	got = loadPrefs()
-	if got.WindowDays != 30 || got.SortMode != 0 {
+	if got.WindowDays != 30 || got.SortMode != 0 || got.PeriodMode != 0 {
 		t.Fatalf("invalid prefs not sanitized: %+v", got)
 	}
 }

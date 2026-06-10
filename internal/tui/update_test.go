@@ -149,13 +149,31 @@ func TestDailyPopup(t *testing.T) {
 		t.Fatal("enter should open the day popup")
 	}
 	out := stripANSI(m.View())
-	if !strings.Contains(out, "DAILY ·") || !strings.Contains(out, "MODEL") {
+	if !strings.Contains(out, "LEDGER ·") || !strings.Contains(out, "MODEL") {
 		t.Fatalf("popup should show the day's per-model breakdown:\n%s", out)
 	}
 	// Esc closes it.
 	m = upd(m, tea.KeyMsg{Type: tea.KeyEsc})
 	if m.dayPopup {
 		t.Fatal("esc should close the day popup")
+	}
+}
+
+func TestDailyPeriodToggle(t *testing.T) {
+	m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
+	m.width, m.height = 140, 44
+	m = upd(m, runes("5")) // Daily tab
+	m = upd(m, runes("p"))
+	if m.periodMode != 1 {
+		t.Fatalf("p should switch to weekly period, got %d", m.periodMode)
+	}
+	out := stripANSI(m.View())
+	if !strings.Contains(out, "weekly") || !strings.Contains(out, "PERIOD") {
+		t.Fatalf("weekly ledger not rendered:\n%s", out)
+	}
+	m = upd(m, runes("p"))
+	if m.periodMode != 2 {
+		t.Fatalf("second p should switch to monthly period, got %d", m.periodMode)
 	}
 }
 

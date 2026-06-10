@@ -16,6 +16,7 @@ type uiPrefs struct {
 	Compact    bool `json:"compact"`
 	WindowDays int  `json:"window_days"`
 	SortMode   int  `json:"sort_mode"`
+	PeriodMode int  `json:"period_mode"`
 }
 
 // prefsPath puts ui.json next to the config file (same agent-cockpit dir), so a
@@ -48,6 +49,9 @@ func loadPrefs() uiPrefs {
 	if loaded.SortMode >= 0 && loaded.SortMode <= 2 {
 		p.SortMode = loaded.SortMode
 	}
+	if loaded.PeriodMode >= 0 && loaded.PeriodMode <= 2 {
+		p.PeriodMode = loaded.PeriodMode
+	}
 	p.Compact = loaded.Compact
 	return p
 }
@@ -71,7 +75,7 @@ func savePrefs(p uiPrefs) {
 
 // prefs snapshots the model's persistable view preferences.
 func (m Model) prefs() uiPrefs {
-	return uiPrefs{Compact: m.compact, WindowDays: m.windowDays, SortMode: m.sortMode}
+	return uiPrefs{Compact: m.compact, WindowDays: m.windowDays, SortMode: m.sortMode, PeriodMode: m.periodMode}
 }
 
 // savePrefsCmd writes preferences off the render path as a Bubble Tea command, so

@@ -27,7 +27,8 @@ func (m Model) overview(width int) string {
 		// Light: headline readouts + the two instruments that matter most.
 		engines := panel("◈ ENGINES · "+m.dataSpanLabel(), colCyan, width, m.enginesBar(events, prices, width))
 		trend := panel("◈ TREND · "+fmt.Sprintf("%dd", m.windowDays)+" tokens", colCyan, width, m.trendChart(events, width))
-		return vstack(primary, engines, trend)
+		limits := panel("◈ LIMITS", colAmber, width, m.monitorBody(width))
+		return vstack(primary, limits, engines, trend)
 	}
 
 	gap := 1
@@ -50,8 +51,9 @@ func (m Model) overview(width int) string {
 		panelSpec{"◈ MODELS · " + span, colCyan, lw, m.modelsBar(events, prices, lw)},
 		panelSpec{"◈ ACTIVITY · 14d", colCyan, rw, m.agentSparks(events, rw)},
 	)
+	limits := panel("◈ LIMITS · budgets / quotas", colAmber, width, m.monitorBody(width))
 	mid := lipgloss.JoinVertical(lipgloss.Left, row1, row2)
-	return lipgloss.JoinVertical(lipgloss.Left, primary, mid, annun)
+	return lipgloss.JoinVertical(lipgloss.Left, primary, mid, limits, annun)
 }
 
 // primaryStrip is the PFD-style top row: the headline readouts.
@@ -276,8 +278,53 @@ func (m Model) annunciator(events []usage.Event, t usage.Totals, width int) stri
 		lamps = append(lamps, darkLamp.Render("⧗ fresh"))
 	}
 
+	if s := usage.WorstStatus(m.monitorStatuses()); s.Name != "" && s.Level != "ok" {
+		label := strings.ToUpper(s.Name)
+		if s.Level == "critical" {
+			lamps = append(lamps, alarmStyle.Render(" ! "+label+" "))
+		} else {
+			lamps = append(lamps, litStyle.Render(" ! "+label+" "))
+		}
+	}
+
 	body := strings.Join(lamps, lipgloss.NewStyle().Foreground(colDim).Render("   "))
 	return heroPanel("◈ ANNUNCIATOR", colAmber, width, body)
+}
+
+func (m Model) monitorStatuses() []usage.ThresholdStatus {
+	now := time.Now()
+	out := usage.BudgetStatuses(m.events, m.reportOptions.Pricing, m.reportOptions.Budget, now)
+	out = append(out, usage.ClaudeLimitStatuses(m.events, m.reportOptions.Pricing, m.reportOptions.Limits, now)...)
+	return out
+}
+
+func (m Model) monitorBody(width int) string {
+	statuses := m.monitorStatuses()
+	if len(statuses) == 0 {
+		return labelStyle.Render("no budgets or Claude limits configured")
+	}
+	inner := width - 6
+	barW := inner - 34
+	if barW < 8 {
+		barW = 8
+	}
+	var b strings.Builder
+	for _, s := range statuses {
+		fill := colGreen
+		switch s.Level {
+		case "critical":
+			fill = colRed
+		case "warn":
+			fill = colAmber
+		}
+		reset := ""
+		if !s.ResetTime.IsZero() {
+			reset = " reset " + fmtDur(time.Until(s.ResetTime))
+		}
+		fmt.Fprintf(&b, "%-14s %s %5.0f%% %s%s\n",
+			truncate(s.Name, 14), gaugeColored(s.Ratio, barW, fill), s.Ratio*100, s.Level, reset)
+	}
+	return strings.TrimRight(b.String(), "\n")
 }
 
 // --- data helpers ---

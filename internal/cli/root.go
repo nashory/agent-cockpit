@@ -534,7 +534,7 @@ func configPath(opts *options) string {
 }
 
 func reportOptions(cfg config.Config) report.Options {
-	return report.Options{Pricing: cfg.Pricing, Currency: cfg.Currency}
+	return report.Options{Pricing: cfg.Pricing, Currency: cfg.Currency, Budget: cfg.Budget, Limits: cfg.Limits}
 }
 
 func tuiOptions(cfg config.Config, opts *options, reload func() ([]usage.Event, error), interval time.Duration) tui.Options {

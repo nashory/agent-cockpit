@@ -14,6 +14,8 @@ import (
 type Options struct {
 	Pricing  usage.PriceBook
 	Currency string
+	Budget   usage.Budget
+	Limits   usage.Limits
 }
 
 type speedStats struct {

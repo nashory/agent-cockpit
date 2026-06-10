@@ -13,6 +13,8 @@ import (
 // dayRow is one calendar day of aggregated usage for the Daily ledger.
 type dayRow struct {
 	date   string
+	start  time.Time
+	end    time.Time
 	totals usage.Totals
 	models map[string]struct{}
 }
@@ -21,15 +23,49 @@ type dayRow struct {
 // ccusage-style: per-day input/output/cache/total tokens, cost, and the set of
 // models touched that day.
 func dailyLedger(events []usage.Event, prices usage.PriceBook) []dayRow {
+	return periodLedger(events, prices, 0)
+}
+
+func periodLabel(mode int) string {
+	switch mode {
+	case 1:
+		return "weekly"
+	case 2:
+		return "monthly"
+	default:
+		return "daily"
+	}
+}
+
+func periodBounds(t time.Time, mode int) (string, time.Time, time.Time) {
+	switch mode {
+	case 1:
+		wd := int(t.Weekday())
+		if wd == 0 {
+			wd = 7
+		}
+		start := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).AddDate(0, 0, 1-wd)
+		y, w := t.ISOWeek()
+		return fmt.Sprintf("%04d-W%02d", y, w), start, start.AddDate(0, 0, 7)
+	case 2:
+		start := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, t.Location())
+		return t.Format("2006-01"), start, start.AddDate(0, 1, 0)
+	default:
+		start := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
+		return t.Format("2006-01-02"), start, start.AddDate(0, 0, 1)
+	}
+}
+
+func periodLedger(events []usage.Event, prices usage.PriceBook, mode int) []dayRow {
 	byDay := map[string]*dayRow{}
 	for _, e := range events {
 		if e.Timestamp.IsZero() {
 			continue
 		}
-		k := e.Timestamp.Format("2006-01-02")
+		k, start, end := periodBounds(e.Timestamp, mode)
 		r := byDay[k]
 		if r == nil {
-			r = &dayRow{date: k, models: map[string]struct{}{}}
+			r = &dayRow{date: k, start: start, end: end, models: map[string]struct{}{}}
 			byDay[k] = r
 		}
 		r.totals.Events++
@@ -47,14 +83,14 @@ func dailyLedger(events []usage.Event, prices usage.PriceBook) []dayRow {
 	for _, r := range byDay {
 		rows = append(rows, *r)
 	}
-	sort.Slice(rows, func(i, j int) bool { return rows[i].date > rows[j].date }) // newest first
+	sort.Slice(rows, func(i, j int) bool { return rows[i].start.After(rows[j].start) }) // newest first
 	return rows
 }
 
 // sortedLedger returns the per-day rows ordered by the active sort mode: date
 // (newest first, the default), tokens, or cost (both descending).
 func (m Model) sortedLedger() []dayRow {
-	rows := dailyLedger(m.events, m.reportOptions.Pricing)
+	rows := periodLedger(m.events, m.reportOptions.Pricing, m.periodMode)
 	switch m.sortMode {
 	case 1:
 		sort.Slice(rows, func(i, j int) bool { return rows[i].totals.Total > rows[j].totals.Total })
@@ -100,8 +136,8 @@ func (m Model) dailyView(width int) string {
 	}
 	span := m.dataSpanLabel()
 	body := m.ledgerTable(width, m.scroll, m.tableVisible())
-	title := fmt.Sprintf("◈ DAILY · last %s · row %d/%d · sort %s · ↑↓ enter · s sort",
-		span, m.daySel+1, m.tableTotal(), sortLabel(m.sortMode))
+	title := fmt.Sprintf("◈ LEDGER · %s · last %s · row %d/%d · sort %s · p period · ↑↓ enter · s sort",
+		periodLabel(m.periodMode), span, m.daySel+1, m.tableTotal(), sortLabel(m.sortMode))
 	return panel(title, colCyan, width, body)
 }
 
@@ -112,19 +148,19 @@ func (m Model) dayDetail(width int) string {
 	if m.daySel < 0 || m.daySel >= len(rows) {
 		return panel("◈ DAILY", colCyan, width, labelStyle.Render("no data"))
 	}
-	date := rows[m.daySel].date
+	row := rows[m.daySel]
 
 	var dayEvents []usage.Event
 	for _, e := range m.events {
-		if !e.Timestamp.IsZero() && e.Timestamp.Format("2006-01-02") == date {
+		if !e.Timestamp.IsZero() && !e.Timestamp.Before(row.start) && e.Timestamp.Before(row.end) {
 			dayEvents = append(dayEvents, e)
 		}
 	}
-	weekday := ""
-	if t, err := time.Parse("2006-01-02", date); err == nil {
-		weekday = t.Format("Mon")
+	label := row.date
+	if m.periodMode == 0 {
+		label = row.start.Format("2006-01-02 Mon")
 	}
-	header := fmt.Sprintf("⤢ DAILY · %s %s   ·   esc back", date, weekday)
+	header := fmt.Sprintf("⤢ LEDGER · %s   ·   esc back", label)
 	return heroPanel(header, colCyan, width, m.usageDetailBody(dayEvents))
 }
 
@@ -169,7 +205,7 @@ func (m Model) ledgerTable(width, offset, limit int) string {
 	}
 
 	var b strings.Builder
-	b.WriteString(labelStyle.Render(line("DATE", "INPUT", "OUTPUT", "CACHE", "TOTAL", "COST", "MODELS")))
+	b.WriteString(labelStyle.Render(line("PERIOD", "INPUT", "OUTPUT", "CACHE", "TOTAL", "COST", "MODELS")))
 	b.WriteByte('\n')
 
 	shown := rows
@@ -208,7 +244,7 @@ func (m Model) ledgerTable(width, offset, limit int) string {
 	}
 	note := ""
 	if limit > 0 && len(rows) > limit {
-		note = fmt.Sprintf("%d days", len(rows))
+		note = fmt.Sprintf("%d %s rows", len(rows), periodLabel(m.periodMode))
 	}
 	total := line("TOTAL", compact(g.Input), compact(g.Output), compact(g.CacheRead+g.CacheCreate),
 		compact(g.Total), fmt.Sprintf("~%.2f %s", g.CostUSD, cur), note)

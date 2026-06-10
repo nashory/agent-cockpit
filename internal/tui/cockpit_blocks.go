@@ -134,6 +134,9 @@ func (m Model) activeBlockBody(bl []usage.Block) string {
 		readout("BURN", compact(int64(burn))+"/h", colText),
 		readout("PROJ", fmt.Sprintf("~%.2f %s", proj, cur), colAmber),
 	}
+	if limit := m.reportOptions.Limits.Claude5HTokens; limit > 0 {
+		cells = append(cells, readout("5H USED", fmt.Sprintf("%.0f%%", float64(t.Total)/float64(limit)*100), colAmber))
+	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, spread(cells, "   ")...)
 }
 

@@ -50,6 +50,7 @@ type Model struct {
 	trendSel        int            // Trends TOKENS/COST zoom: selected day index (0=oldest .. windowDays-1=today)
 	windowDays      int            // chart window in days (7 / 30 / 90), cycled with w
 	sortMode        int            // table sort for Daily/Blocks: 0 date, 1 tokens, 2 cost (cycled with s)
+	periodMode      int            // ledger period: 0 day, 1 week, 2 month (cycled with p)
 	showHelp        bool           // full-screen keyboard help overlay
 	filter          string         // active filter description for the sidebar
 	logDirs         []string       // log locations for the empty state
@@ -93,7 +94,7 @@ func (m *Model) resetTabState() {
 func (m Model) tableTotal() int {
 	switch m.view {
 	case daily:
-		return len(dailyLedger(m.events, m.reportOptions.Pricing))
+		return len(periodLedger(m.events, m.reportOptions.Pricing, m.periodMode))
 	case blocks:
 		return len(usage.SessionBlocks(m.events, m.reportOptions.Pricing, usage.DefaultBlockWindow))
 	case sessions:
@@ -176,6 +177,7 @@ func New(events []usage.Event, opts Options) Model {
 		m.compact = p.Compact
 		m.windowDays = p.WindowDays
 		m.sortMode = p.SortMode
+		m.periodMode = p.PeriodMode
 		m.trendSel = m.windowDays - 1
 	}
 	if len(events) > 0 {
@@ -458,6 +460,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.persist {
 				return m, savePrefsCmd(m.prefs())
 			}
+		case "p":
+			if m.view == daily {
+				m.periodMode = (m.periodMode + 1) % 3
+				m.scroll, m.daySel, m.dayPopup = 0, 0, false
+				if m.persist {
+					return m, savePrefsCmd(m.prefs())
+				}
+			}
 		case "1", "2", "3", "4", "5", "6", "7":
 			m.view = view(int(s[0] - '1'))
 			m.resetTabState()
@@ -538,7 +548,7 @@ func (m Model) sidebar() string {
 	nav := "↑↓ focus\nenter zoom"
 	switch m.view {
 	case daily:
-		nav = "↑↓ select\nenter day\ns sort"
+		nav = "↑↓ select\nenter row\np period\ns sort"
 	case blocks:
 		nav = "↑↓ select\nenter window\ns sort"
 	case sessions:
@@ -564,6 +574,7 @@ func (m Model) helpView(width int) string {
 		row("tab / shift+tab", "next / previous tab"),
 		row("e", "toggle expert / compact layout"),
 		row("w", "cycle the chart window (7 / 30 / 90 days)"),
+		row("p", "cycle Daily period (day / week / month)"),
 		row("r", "refresh now"),
 		row("? ", "toggle this help"),
 		row("q / ctrl+c", "quit"),
