@@ -102,6 +102,7 @@ jobs:
 
           ./cockpit --config "$tmp/config.toml" export --group daily > "$tmp/daily.csv"
           test -s "$tmp/daily.csv"
+          python3 scripts/release-notes.py --check HEAD
 
   cross-compile:
     name: Cross Compile
