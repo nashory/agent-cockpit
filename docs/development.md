@@ -63,6 +63,9 @@ OpenCode:
   ~/.local/share/opencode/opencode-*.db
   ~/.local/share/opencode/storage/message/*.json
   ~/.opencode/opencode.db
+
+Amp:
+  ~/.local/share/amp/threads/**/*.json
 ```
 
 Do not commit real agent logs, API keys, bot tokens, or local config files.

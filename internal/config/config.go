@@ -29,6 +29,7 @@ type Paths struct {
 	Codex    []string `toml:"codex"`
 	Gemini   []string `toml:"gemini"`
 	OpenCode []string `toml:"opencode"`
+	Amp      []string `toml:"amp"`
 }
 
 type ValidationError struct {
@@ -53,6 +54,7 @@ func Default() Config {
 				filepath.Join(home, ".local", "share", "opencode"),
 				filepath.Join(home, ".opencode"),
 			},
+			Amp: []string{filepath.Join(home, ".local", "share", "amp")},
 		},
 		Pricing: map[string]usage.Pricing{},
 	}
@@ -73,6 +75,7 @@ func Load(path string) (Config, error) {
 	cfg.Paths.Codex = expandPaths(cfg.Paths.Codex)
 	cfg.Paths.Gemini = expandPaths(cfg.Paths.Gemini)
 	cfg.Paths.OpenCode = expandPaths(cfg.Paths.OpenCode)
+	cfg.Paths.Amp = expandPaths(cfg.Paths.Amp)
 	if cfg.RefreshInterval == "" {
 		cfg.RefreshInterval = "3s"
 	}
@@ -142,7 +145,7 @@ func Validate(cfg Config) []ValidationError {
 	if cfg.Limits.Claude7DTokens < 0 {
 		errs = append(errs, ValidationError{Field: "limits.claude_7d_tokens", Message: "must be non-negative"})
 	}
-	for source, paths := range map[string][]string{"paths.claude": cfg.Paths.Claude, "paths.codex": cfg.Paths.Codex, "paths.gemini": cfg.Paths.Gemini, "paths.opencode": cfg.Paths.OpenCode} {
+	for source, paths := range map[string][]string{"paths.claude": cfg.Paths.Claude, "paths.codex": cfg.Paths.Codex, "paths.gemini": cfg.Paths.Gemini, "paths.opencode": cfg.Paths.OpenCode, "paths.amp": cfg.Paths.Amp} {
 		for i, path := range paths {
 			if strings.TrimSpace(path) == "" {
 				errs = append(errs, ValidationError{Field: fmt.Sprintf("%s[%d]", source, i), Message: "path must not be empty"})
@@ -240,6 +243,7 @@ func configSchema() map[string]any {
 					"codex":    stringArraySchema("Codex session log roots."),
 					"gemini":   stringArraySchema("Gemini temporary session roots."),
 					"opencode": stringArraySchema("OpenCode data roots containing opencode.db, opencode-*.db, or storage/message JSON files."),
+					"amp":      stringArraySchema("Amp data roots containing threads JSON files."),
 				},
 			},
 			"pricing": map[string]any{

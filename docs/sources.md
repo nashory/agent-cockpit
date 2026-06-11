@@ -125,3 +125,52 @@ Token mapping:
 
 Legacy OpenCode SQLite databases with aggregate `sessions` rows are read as
 session-level events when message JSON is unavailable.
+
+## Amp
+
+Default path:
+
+```text
+~/.local/share/amp/threads/**/*.json
+```
+
+`AMP_DATA_DIR` can override the root with one path or a comma-separated list of
+paths. The source reads local thread JSON files only; it does not call Amp or
+provider APIs.
+
+Amp thread files include an `id`, `messages`, and sometimes `usageLedger`:
+
+```json
+{
+  "id": "T-...",
+  "usageLedger": {
+    "events": [
+      {
+        "timestamp": "2026-01-02T00:00:00.000Z",
+        "model": "gpt-5",
+        "toMessageId": 123,
+        "tokens": {"input": 0, "output": 0, "total": 0}
+      }
+    ]
+  },
+  "messages": [
+    {
+      "role": "assistant",
+      "messageId": 123,
+      "usage": {
+        "model": "...",
+        "timestamp": "...",
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "cacheReadInputTokens": 0,
+        "totalTokens": 0
+      }
+    }
+  ]
+}
+```
+
+`usageLedger.events[]` is preferred when present. `messages[].usage` is used as
+the current-schema fallback. Ledger events use `messages[].usage` to recover
+cache creation/read counts for the matching `toMessageId`.

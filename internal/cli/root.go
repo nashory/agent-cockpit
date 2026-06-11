@@ -1542,6 +1542,7 @@ claude = ["~/.claude/projects"]
 codex = ["~/.codex/sessions", "~/.codex/archived_sessions"]
 gemini = ["~/.gemini/tmp"]
 opencode = ["~/.local/share/opencode", "~/.opencode"]
+amp = ["~/.local/share/amp"]
 
 # Prices are USD per million tokens. Keys match model substrings.
 [pricing."claude-sonnet"]
