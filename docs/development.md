@@ -108,11 +108,14 @@ with golden tests. Current usage JSON includes:
 - `range`
 - `filters`
 - `totals`
+- `rows`
 - `events`
 
 Do not remove or rename JSON fields without an explicit schema-version bump.
 When a command filter or time window affects output, represent it in `range` or
 `filters` so downstream tools can explain the result without parsing CLI flags.
+Command-specific aggregate output should go into `rows`; keep raw `events`
+available for compatibility until a future explicit schema decision removes it.
 
 ## Release Flow
 

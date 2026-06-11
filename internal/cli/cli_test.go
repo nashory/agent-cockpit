@@ -131,6 +131,52 @@ func TestBuildUsageJSONContext(t *testing.T) {
 	}
 }
 
+func TestUsageJSONRowsByReport(t *testing.T) {
+	cfg := goldenConfig()
+	events := csvGoldenEvents()
+	now := goldenNow()
+
+	summary, ok := usageJSONRows(events, cfg, now, usageJSONContext{Report: "today"}).([]summaryJSONSection)
+	if !ok {
+		t.Fatalf("summary rows type = %T", summary)
+	}
+	if len(summary) != 2 || summary[0].Name != "agents" || summary[1].Name != "models" {
+		t.Fatalf("summary rows = %+v", summary)
+	}
+
+	agents, ok := usageJSONRows(events, cfg, now, usageJSONContext{Report: "agents"}).([]usage.Bucket)
+	if !ok {
+		t.Fatalf("agents rows type = %T", agents)
+	}
+	if len(agents) != 2 || agents[0].Key == "" {
+		t.Fatalf("agents rows = %+v", agents)
+	}
+
+	sessions, ok := usageJSONRows(events, cfg, now, usageJSONContext{Report: "sessions"}).([]usage.Bucket)
+	if !ok {
+		t.Fatalf("sessions rows type = %T", sessions)
+	}
+	if sessions[0].Key != "proj / s1" && sessions[0].Key != "proj-b / s2" {
+		t.Fatalf("sessions rows = %+v", sessions)
+	}
+
+	trends, ok := usageJSONRows(events, cfg, now, usageJSONContext{Report: "trends", Range: usageJSONRange{Days: 2}}).([]trendJSONRow)
+	if !ok {
+		t.Fatalf("trend rows type = %T", trends)
+	}
+	if len(trends) != 2 || trends[0].Date != "2026-06-10" || trends[1].Date != "2026-06-11" {
+		t.Fatalf("trend rows = %+v", trends)
+	}
+
+	speed, ok := usageJSONRows(events, cfg, now, usageJSONContext{Report: "speed"}).([]speedJSONRow)
+	if !ok {
+		t.Fatalf("speed rows type = %T", speed)
+	}
+	if len(speed) != 2 || speed[0].OutputTokens == 0 {
+		t.Fatalf("speed rows = %+v", speed)
+	}
+}
+
 func TestStatuslineJSONGolden(t *testing.T) {
 	var out bytes.Buffer
 	totals := usage.SummarizeWith(goldenEvents(), nil)

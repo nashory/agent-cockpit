@@ -47,11 +47,13 @@ type usageJSONDocument struct {
 	SchemaVersion string                  `json:"schema_version"`
 	GeneratedAt   time.Time               `json:"generated_at"`
 	CostMode      string                  `json:"cost_mode"`
+	Report        string                  `json:"report,omitempty"`
 	Range         usageJSONRange          `json:"range"`
 	Filters       usageJSONFilters        `json:"filters"`
 	Totals        usage.Totals            `json:"totals"`
 	Budgets       []usage.ThresholdStatus `json:"budgets,omitempty"`
 	Limits        []usage.ThresholdStatus `json:"limits,omitempty"`
+	Rows          any                     `json:"rows,omitempty"`
 	Events        []usage.Event           `json:"events"`
 }
 
@@ -68,8 +70,31 @@ type usageJSONFilters struct {
 }
 
 type usageJSONContext struct {
+	Report  string
 	Range   usageJSONRange
 	Filters usageJSONFilters
+}
+
+type summaryJSONSection struct {
+	Name string         `json:"name"`
+	Rows []usage.Bucket `json:"rows"`
+}
+
+type trendJSONRow struct {
+	Date   string       `json:"date"`
+	Totals usage.Totals `json:"totals"`
+}
+
+type speedJSONRow struct {
+	Name            string  `json:"name"`
+	Source          string  `json:"source"`
+	Model           string  `json:"model,omitempty"`
+	OutputTokens    int64   `json:"output_tokens"`
+	Events          int     `json:"events"`
+	WindowSeconds   int64   `json:"window_seconds"`
+	OutputPerSecond float64 `json:"output_tokens_per_second"`
+	FirstActivity   string  `json:"first_activity,omitempty"`
+	LastActivity    string  `json:"last_activity,omitempty"`
 }
 
 type statuslineJSONDocument struct {
@@ -103,7 +128,7 @@ func Execute() error {
 				if err != nil {
 					return err
 				}
-				return writeJSON(events, cfg, opts)
+				return writeJSON(events, cfg, opts, "events")
 			}
 			cfg, err := config.Load(opts.configPath)
 			if err != nil {
@@ -162,7 +187,7 @@ func Execute() error {
 				return nil
 			}
 			if opts.json {
-				return writeJSON(events, cfg, opts)
+				return writeJSON(events, cfg, opts, "summary")
 			}
 			report.Overview(os.Stdout, "Usage summary", events, ro)
 			return nil
@@ -299,7 +324,7 @@ func reportCommand(use, short string, opts *options, render func(*os.File, []usa
 				return err
 			}
 			if opts.json {
-				return writeJSON(events, cfg, opts)
+				return writeJSON(events, cfg, opts, use)
 			}
 			render(os.Stdout, events, reportOptions(cfg))
 			return nil
@@ -350,8 +375,10 @@ func window(opts *options) (time.Time, time.Time, error) {
 	return since, until, nil
 }
 
-func writeJSON(events []usage.Event, cfg config.Config, opts *options) error {
-	return writeUsageJSON(os.Stdout, events, cfg, time.Now(), buildUsageJSONContext(opts))
+func writeJSON(events []usage.Event, cfg config.Config, opts *options, reportName string) error {
+	ctx := buildUsageJSONContext(opts)
+	ctx.Report = reportName
+	return writeUsageJSON(os.Stdout, events, cfg, time.Now(), ctx)
 }
 
 func buildUsageJSONContext(opts *options) usageJSONContext {
@@ -384,13 +411,158 @@ func writeUsageJSON(w io.Writer, events []usage.Event, cfg config.Config, now ti
 		SchemaVersion: jsonSchemaVersion,
 		GeneratedAt:   now,
 		CostMode:      "estimated",
+		Report:        ctx.Report,
 		Range:         ctx.Range,
 		Filters:       ctx.Filters,
 		Totals:        usage.SummarizeWith(events, cfg.Pricing),
 		Budgets:       usage.BudgetStatuses(events, cfg.Pricing, cfg.Budget, now),
 		Limits:        usage.ClaudeLimitStatuses(events, cfg.Pricing, cfg.Limits, now),
+		Rows:          usageJSONRows(events, cfg, now, ctx),
 		Events:        events,
 	})
+}
+
+func usageJSONRows(events []usage.Event, cfg config.Config, now time.Time, ctx usageJSONContext) any {
+	switch ctx.Report {
+	case "today", "weekly", "monthly", "summary", "report":
+		return []summaryJSONSection{
+			{Name: "agents", Rows: limitBuckets(usage.GroupByWith(events, cfg.Pricing, func(e usage.Event) string { return e.Source }), 8)},
+			{Name: "models", Rows: limitBuckets(usage.GroupByWith(events, cfg.Pricing, func(e usage.Event) string { return e.Model }), 8)},
+		}
+	case "agents":
+		return usage.GroupByWith(events, cfg.Pricing, func(e usage.Event) string { return e.Source })
+	case "sessions":
+		return sessionBuckets(events, cfg.Pricing, 20)
+	case "trends":
+		days := ctx.Range.Days
+		if days <= 0 {
+			days = 30
+		}
+		return trendRows(events, cfg.Pricing, days, now)
+	case "speed":
+		return speedRows(events, 20)
+	default:
+		return nil
+	}
+}
+
+func limitBuckets(buckets []usage.Bucket, limit int) []usage.Bucket {
+	if limit <= 0 || len(buckets) <= limit {
+		return buckets
+	}
+	return buckets[:limit]
+}
+
+func sessionBuckets(events []usage.Event, prices usage.PriceBook, limit int) []usage.Bucket {
+	return limitBuckets(usage.GroupByWith(events, prices, func(e usage.Event) string {
+		if e.Project != "" && e.SessionID != "" {
+			return e.Project + " / " + shortID(e.SessionID)
+		}
+		return e.SessionID
+	}), limit)
+}
+
+func shortID(s string) string {
+	if len(s) <= 8 {
+		return s
+	}
+	return s[:8]
+}
+
+func trendRows(events []usage.Event, prices usage.PriceBook, days int, now time.Time) []trendJSONRow {
+	if now.IsZero() {
+		now = time.Now()
+	}
+	if days <= 0 {
+		days = 30
+	}
+	start := now.AddDate(0, 0, -days+1).Truncate(24 * time.Hour)
+	byDay := make([][]usage.Event, days)
+	for _, e := range events {
+		idx := int(e.Timestamp.Truncate(24*time.Hour).Sub(start) / (24 * time.Hour))
+		if idx >= 0 && idx < days {
+			byDay[idx] = append(byDay[idx], e)
+		}
+	}
+	rows := make([]trendJSONRow, 0, days)
+	for i := range byDay {
+		rows = append(rows, trendJSONRow{
+			Date:   start.AddDate(0, 0, i).Format("2006-01-02"),
+			Totals: usage.SummarizeWith(byDay[i], prices),
+		})
+	}
+	return rows
+}
+
+func speedRows(events []usage.Event, limit int) []speedJSONRow {
+	type stats struct {
+		source string
+		model  string
+		first  time.Time
+		last   time.Time
+		tokens int64
+		events int
+	}
+	byKey := map[string]*stats{}
+	tokensPerSecond := func(s *stats) float64 {
+		seconds := s.last.Sub(s.first).Seconds()
+		if seconds <= 0 {
+			return 0
+		}
+		return float64(s.tokens) / seconds
+	}
+	for _, e := range events {
+		key := e.Source + "\x00" + e.Model
+		s := byKey[key]
+		if s == nil {
+			s = &stats{source: e.Source, model: e.Model, first: e.Timestamp, last: e.Timestamp}
+			byKey[key] = s
+		}
+		if !e.Timestamp.IsZero() {
+			if s.first.IsZero() || e.Timestamp.Before(s.first) {
+				s.first = e.Timestamp
+			}
+			if e.Timestamp.After(s.last) {
+				s.last = e.Timestamp
+			}
+		}
+		s.tokens += e.Output
+		s.events++
+	}
+	statsRows := make([]*stats, 0, len(byKey))
+	for _, s := range byKey {
+		statsRows = append(statsRows, s)
+	}
+	sort.Slice(statsRows, func(i, j int) bool {
+		return tokensPerSecond(statsRows[i]) > tokensPerSecond(statsRows[j])
+	})
+	if limit > 0 && len(statsRows) > limit {
+		statsRows = statsRows[:limit]
+	}
+	rows := make([]speedJSONRow, 0, len(statsRows))
+	for _, s := range statsRows {
+		name := s.source
+		if s.model != "" {
+			name += " / " + s.model
+		}
+		row := speedJSONRow{
+			Name:            name,
+			Source:          s.source,
+			Model:           s.model,
+			OutputTokens:    s.tokens,
+			Events:          s.events,
+			WindowSeconds:   int64(s.last.Sub(s.first).Seconds()),
+			OutputPerSecond: tokensPerSecond(s),
+		}
+		if !s.first.IsZero() {
+			row.FirstActivity = s.first.Format(time.RFC3339)
+		}
+		if !s.last.IsZero() {
+			row.LastActivity = s.last.Format(time.RFC3339)
+		}
+		rows = append(rows, row)
+	}
+	return rows
 }
 
 func writeStatusline(w io.Writer, events []usage.Event, ro report.Options, opts *options) {
