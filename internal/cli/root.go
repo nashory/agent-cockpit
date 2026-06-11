@@ -40,6 +40,28 @@ type options struct {
 
 var version = "dev"
 
+const jsonSchemaVersion = "1"
+
+type usageJSONDocument struct {
+	SchemaVersion string                  `json:"schema_version"`
+	GeneratedAt   time.Time               `json:"generated_at"`
+	CostMode      string                  `json:"cost_mode"`
+	Totals        usage.Totals            `json:"totals"`
+	Budgets       []usage.ThresholdStatus `json:"budgets,omitempty"`
+	Limits        []usage.ThresholdStatus `json:"limits,omitempty"`
+	Events        []usage.Event           `json:"events"`
+}
+
+type statuslineJSONDocument struct {
+	SchemaVersion string                  `json:"schema_version"`
+	GeneratedAt   time.Time               `json:"generated_at"`
+	CostMode      string                  `json:"cost_mode"`
+	Totals        usage.Totals            `json:"totals"`
+	Currency      string                  `json:"currency"`
+	Budgets       []usage.ThresholdStatus `json:"budgets,omitempty"`
+	Limits        []usage.ThresholdStatus `json:"limits,omitempty"`
+}
+
 func Execute() error {
 	opts := &options{days: 30}
 	root := &cobra.Command{
@@ -303,18 +325,20 @@ func window(opts *options) (time.Time, time.Time, error) {
 }
 
 func writeJSON(events []usage.Event, cfg config.Config) error {
-	enc := json.NewEncoder(os.Stdout)
+	return writeUsageJSON(os.Stdout, events, cfg, time.Now())
+}
+
+func writeUsageJSON(w io.Writer, events []usage.Event, cfg config.Config, now time.Time) error {
+	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	return enc.Encode(struct {
-		Totals  usage.Totals            `json:"totals"`
-		Budgets []usage.ThresholdStatus `json:"budgets,omitempty"`
-		Limits  []usage.ThresholdStatus `json:"limits,omitempty"`
-		Events  []usage.Event           `json:"events"`
-	}{
-		Totals:  usage.SummarizeWith(events, cfg.Pricing),
-		Budgets: usage.BudgetStatuses(events, cfg.Pricing, cfg.Budget, time.Now()),
-		Limits:  usage.ClaudeLimitStatuses(events, cfg.Pricing, cfg.Limits, time.Now()),
-		Events:  events,
+	return enc.Encode(usageJSONDocument{
+		SchemaVersion: jsonSchemaVersion,
+		GeneratedAt:   now,
+		CostMode:      "estimated",
+		Totals:        usage.SummarizeWith(events, cfg.Pricing),
+		Budgets:       usage.BudgetStatuses(events, cfg.Pricing, cfg.Budget, now),
+		Limits:        usage.ClaudeLimitStatuses(events, cfg.Pricing, cfg.Limits, now),
+		Events:        events,
 	})
 }
 
@@ -328,14 +352,7 @@ func writeStatusline(w io.Writer, events []usage.Event, ro report.Options, opts 
 	budgets := usage.BudgetStatuses(events, ro.Pricing, cfg.Budget, time.Now())
 	limits := usage.ClaudeLimitStatuses(events, ro.Pricing, cfg.Limits, time.Now())
 	if opts.json {
-		enc := json.NewEncoder(w)
-		enc.SetIndent("", "  ")
-		_ = enc.Encode(struct {
-			Totals   usage.Totals            `json:"totals"`
-			Currency string                  `json:"currency"`
-			Budgets  []usage.ThresholdStatus `json:"budgets,omitempty"`
-			Limits   []usage.ThresholdStatus `json:"limits,omitempty"`
-		}{Totals: t, Currency: currency, Budgets: budgets, Limits: limits})
+		_ = writeStatuslineJSON(w, t, currency, budgets, limits, time.Now())
 		return
 	}
 	if opts.compact {
@@ -351,6 +368,20 @@ func writeStatusline(w io.Writer, events []usage.Event, ro report.Options, opts 
 		fmt.Fprintf(w, " | %s %.0f%% %s", s.Name, s.Ratio*100, s.Level)
 	}
 	fmt.Fprintln(w)
+}
+
+func writeStatuslineJSON(w io.Writer, totals usage.Totals, currency string, budgets, limits []usage.ThresholdStatus, now time.Time) error {
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	return enc.Encode(statuslineJSONDocument{
+		SchemaVersion: jsonSchemaVersion,
+		GeneratedAt:   now,
+		CostMode:      "estimated",
+		Totals:        totals,
+		Currency:      currency,
+		Budgets:       budgets,
+		Limits:        limits,
+	})
 }
 
 func writeCSV(w io.Writer, events []usage.Event, ro report.Options, group string) error {

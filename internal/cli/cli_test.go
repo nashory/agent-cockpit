@@ -1,11 +1,15 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/nashory/agent-cockpit/internal/config"
+	"github.com/nashory/agent-cockpit/internal/usage"
 )
 
 func TestWindowDaysDefault(t *testing.T) {
@@ -92,6 +96,61 @@ func TestLoadFiltersConfiguredSources(t *testing.T) {
 	}
 	if len(events) != 0 {
 		t.Fatalf("model filter should exclude claude event, got %d", len(events))
+	}
+}
+
+func TestUsageJSONGolden(t *testing.T) {
+	var out bytes.Buffer
+	if err := writeUsageJSON(&out, goldenEvents(), goldenConfig(), goldenNow()); err != nil {
+		t.Fatal(err)
+	}
+	assertGolden(t, "usage_json.golden", out.String())
+}
+
+func TestStatuslineJSONGolden(t *testing.T) {
+	var out bytes.Buffer
+	totals := usage.SummarizeWith(goldenEvents(), nil)
+	if err := writeStatuslineJSON(&out, totals, "USD", nil, nil, goldenNow()); err != nil {
+		t.Fatal(err)
+	}
+	assertGolden(t, "statusline_json.golden", out.String())
+}
+
+func goldenConfig() config.Config {
+	return config.Config{
+		Currency: "USD",
+		Pricing:  map[string]usage.Pricing{},
+	}
+}
+
+func goldenEvents() []usage.Event {
+	return []usage.Event{{
+		Source:      "claude",
+		SessionID:   "s1",
+		Project:     "proj",
+		CWD:         "/repo",
+		Model:       "unknown-model",
+		Input:       100,
+		Output:      50,
+		CacheRead:   20,
+		CacheCreate: 10,
+		Reasoning:   5,
+		Timestamp:   time.Date(2026, 6, 11, 8, 0, 0, 0, time.UTC),
+	}}
+}
+
+func goldenNow() time.Time {
+	return time.Date(2026, 6, 11, 10, 0, 0, 0, time.UTC)
+}
+
+func assertGolden(t *testing.T, name, got string) {
+	t.Helper()
+	want, err := os.ReadFile(filepath.Join("testdata", "golden", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != string(want) {
+		t.Fatalf("%s mismatch\nwant:\n%s\ngot:\n%s", name, want, got)
 	}
 }
 

@@ -1,0 +1,16 @@
+{
+  "schema_version": "1",
+  "generated_at": "2026-06-11T10:00:00Z",
+  "cost_mode": "estimated",
+  "totals": {
+    "events": 1,
+    "input_tokens": 100,
+    "output_tokens": 50,
+    "cache_read_tokens": 20,
+    "cache_create_tokens": 10,
+    "reasoning_tokens": 5,
+    "total_tokens": 180,
+    "estimated_cost_usd": 0
+  },
+  "currency": "USD"
+}
