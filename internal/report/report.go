@@ -12,13 +12,14 @@ import (
 )
 
 type Options struct {
-	Pricing  usage.PriceBook
-	Currency string
-	Budget   usage.Budget
-	Limits   usage.Limits
-	NoCost   bool
-	Location *time.Location
-	Order    string
+	Pricing   usage.PriceBook
+	Currency  string
+	Budget    usage.Budget
+	Limits    usage.Limits
+	NoCost    bool
+	Location  *time.Location
+	Order     string
+	Breakdown string
 }
 
 type speedStats struct {
@@ -53,6 +54,11 @@ func Overview(w io.Writer, title string, events []usage.Event, opts Options) {
 		fmt.Fprintf(w, "Estimated cost: %.2f %s\n", t.CostUSD, opts.currency())
 	}
 	fmt.Fprintln(w)
+	if opts.Breakdown != "" {
+		title, key := breakdownSpec(opts.Breakdown)
+		Buckets(w, title, groupBy(events, opts, key), 8, opts)
+		return
+	}
 	Buckets(w, "Agents", groupBy(events, opts, func(e usage.Event) string { return e.Source }), 8, opts)
 	fmt.Fprintln(w)
 	Buckets(w, "Models", groupBy(events, opts, func(e usage.Event) string { return e.Model }), 8, opts)
@@ -198,6 +204,17 @@ func groupBy(events []usage.Event, opts Options, key func(usage.Event) string) [
 		reverseBuckets(buckets)
 	}
 	return buckets
+}
+
+func breakdownSpec(name string) (string, func(usage.Event) string) {
+	switch name {
+	case "project":
+		return "Projects", func(e usage.Event) string { return e.Project }
+	case "model":
+		return "Models", func(e usage.Event) string { return e.Model }
+	default:
+		return "Sources", func(e usage.Event) string { return e.Source }
+	}
 }
 
 func reverseBuckets(buckets []usage.Bucket) {

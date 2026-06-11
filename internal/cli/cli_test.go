@@ -128,11 +128,12 @@ func TestUsageJSONGolden(t *testing.T) {
 
 func TestBuildUsageJSONContext(t *testing.T) {
 	ctx := buildUsageJSONContext(&options{
-		days:    7,
-		sources: "claude,codex",
-		project: "agent-cockpit",
-		model:   "opus",
-		order:   "asc",
+		days:      7,
+		sources:   "claude,codex",
+		project:   "agent-cockpit",
+		model:     "opus",
+		order:     "asc",
+		breakdown: "project",
 	}, "Europe/Zurich")
 	if ctx.Range.Days != 7 {
 		t.Fatalf("days = %d, want 7", ctx.Range.Days)
@@ -142,6 +143,9 @@ func TestBuildUsageJSONContext(t *testing.T) {
 	}
 	if ctx.Order != "asc" {
 		t.Fatalf("order = %q", ctx.Order)
+	}
+	if ctx.Breakdown != "project" {
+		t.Fatalf("breakdown = %q", ctx.Breakdown)
 	}
 	if got := strings.Join(ctx.Filters.Sources, ","); got != "claude,codex" {
 		t.Fatalf("sources = %q", got)
@@ -235,6 +239,37 @@ func TestOrderOutputs(t *testing.T) {
 
 	if err := validateOrder("sideways"); err == nil {
 		t.Fatal("expected invalid order error")
+	}
+}
+
+func TestBreakdownOutputs(t *testing.T) {
+	cfg := goldenConfig()
+	opts := &options{breakdown: "project"}
+
+	var out bytes.Buffer
+	ctx := buildUsageJSONContext(opts, "")
+	ctx.Report = "report"
+	if err := writeUsageJSON(&out, csvGoldenEvents(), cfg, goldenNow(), ctx); err != nil {
+		t.Fatal(err)
+	}
+	got := out.String()
+	if !strings.Contains(got, `"breakdown": "project"`) || !strings.Contains(got, `"name": "projects"`) {
+		t.Fatalf("JSON missing project breakdown:\n%s", got)
+	}
+	if strings.Contains(got, `"name": "agents"`) || strings.Contains(got, `"name": "models"`) {
+		t.Fatalf("JSON should narrow summary rows to requested breakdown:\n%s", got)
+	}
+
+	out.Reset()
+	if err := writeCSV(&out, csvGoldenEvents(), reportOptions(cfg, opts), "daily"); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(out.String(), "project,events,") {
+		t.Fatalf("CSV breakdown should override daily aggregate:\n%s", out.String())
+	}
+
+	if err := validateBreakdown("team"); err == nil {
+		t.Fatal("expected invalid breakdown error")
 	}
 }
 

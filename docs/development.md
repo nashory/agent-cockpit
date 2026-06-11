@@ -124,6 +124,8 @@ If `--timezone` or a non-local configured timezone affects date windows or
 calendar bucketing, include that timezone in `range.timezone`.
 If `--order asc|desc` changes aggregate row ordering, include the selected
 value in the top-level `order` field.
+If `--breakdown source|model|project` narrows aggregate rows, include the
+selected value in the top-level `breakdown` field.
 
 ## Release Flow
 

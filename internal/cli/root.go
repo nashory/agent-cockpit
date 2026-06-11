@@ -34,6 +34,7 @@ type options struct {
 	refresh     string
 	timezone    string
 	order       string
+	breakdown   string
 	json        bool
 	noCost      bool
 	svgPath     string
@@ -51,6 +52,7 @@ type usageJSONDocument struct {
 	GeneratedAt   time.Time               `json:"generated_at"`
 	CostMode      string                  `json:"cost_mode"`
 	Order         string                  `json:"order,omitempty"`
+	Breakdown     string                  `json:"breakdown,omitempty"`
 	Report        string                  `json:"report,omitempty"`
 	Range         usageJSONRange          `json:"range"`
 	Filters       usageJSONFilters        `json:"filters"`
@@ -75,12 +77,13 @@ type usageJSONFilters struct {
 }
 
 type usageJSONContext struct {
-	Report  string
-	NoCost  bool
-	Loc     *time.Location
-	Order   string
-	Range   usageJSONRange
-	Filters usageJSONFilters
+	Report    string
+	NoCost    bool
+	Loc       *time.Location
+	Order     string
+	Breakdown string
+	Range     usageJSONRange
+	Filters   usageJSONFilters
 }
 
 type usageJSONTotals struct {
@@ -165,6 +168,9 @@ func Execute() error {
 			if err := validateOrder(opts.order); err != nil {
 				return err
 			}
+			if err := validateBreakdown(opts.breakdown); err != nil {
+				return err
+			}
 			reload := func() ([]usage.Event, error) {
 				events, _, err := load(cmd.Context(), opts)
 				return events, err
@@ -238,6 +244,9 @@ func Execute() error {
 				return err
 			}
 			if err := validateOrder(opts.order); err != nil {
+				return err
+			}
+			if err := validateBreakdown(opts.breakdown); err != nil {
 				return err
 			}
 			interval := cfg.RefreshDuration()
@@ -346,6 +355,7 @@ func addFlags(cmd *cobra.Command, opts *options) {
 	cmd.PersistentFlags().StringVar(&opts.refresh, "refresh", "", "live refresh interval, for example 2s")
 	cmd.PersistentFlags().StringVar(&opts.timezone, "timezone", "", "IANA timezone for date windows, for example Europe/Zurich")
 	cmd.PersistentFlags().StringVar(&opts.order, "order", "", "row order override: asc or desc")
+	cmd.PersistentFlags().StringVar(&opts.breakdown, "breakdown", "", "aggregate breakdown override: source, model, or project")
 	cmd.PersistentFlags().BoolVar(&opts.json, "json", false, "print JSON instead of a table")
 	cmd.PersistentFlags().BoolVar(&opts.noCost, "no-cost", false, "omit estimated cost output where supported")
 	cmd.PersistentFlags().BoolVar(&opts.compact, "compact", false, "print compact one-line output where supported")
@@ -383,6 +393,9 @@ func load(ctx context.Context, opts *options) ([]usage.Event, config.Config, err
 		return nil, config.Config{}, err
 	}
 	if err := validateOrder(opts.order); err != nil {
+		return nil, config.Config{}, err
+	}
+	if err := validateBreakdown(opts.breakdown); err != nil {
 		return nil, config.Config{}, err
 	}
 	events, err := source.Collect(ctx, cfg)
@@ -444,8 +457,9 @@ func buildUsageJSONContext(opts *options, timezone string) usageJSONContext {
 		return usageJSONContext{}
 	}
 	ctx := usageJSONContext{
-		NoCost: opts.noCost,
-		Order:  opts.order,
+		NoCost:    opts.noCost,
+		Order:     opts.order,
+		Breakdown: opts.breakdown,
 		Range: usageJSONRange{
 			Since:    opts.since,
 			Until:    opts.until,
@@ -479,6 +493,7 @@ func writeUsageJSON(w io.Writer, events []usage.Event, cfg config.Config, now ti
 		GeneratedAt:   now,
 		CostMode:      costMode(ctx.NoCost),
 		Order:         ctx.Order,
+		Breakdown:     ctx.Breakdown,
 		Report:        ctx.Report,
 		Range:         ctx.Range,
 		Filters:       ctx.Filters,
@@ -517,6 +532,12 @@ func usageTotalsJSON(t usage.Totals, noCost bool) usageJSONTotals {
 func usageJSONRows(events []usage.Event, cfg config.Config, now time.Time, ctx usageJSONContext) any {
 	switch ctx.Report {
 	case "today", "weekly", "monthly", "summary", "report":
+		if ctx.Breakdown != "" {
+			name, key := breakdownSpec(ctx.Breakdown)
+			return []summaryJSONSection{
+				{Name: name, Rows: bucketRows(events, cfg.Pricing, ctx.NoCost, ctx.Order, 8, key)},
+			}
+		}
 		return []summaryJSONSection{
 			{Name: "agents", Rows: bucketRows(events, cfg.Pricing, ctx.NoCost, ctx.Order, 8, func(e usage.Event) string { return e.Source })},
 			{Name: "models", Rows: bucketRows(events, cfg.Pricing, ctx.NoCost, ctx.Order, 8, func(e usage.Event) string { return e.Model })},
@@ -766,6 +787,9 @@ func writeCSV(w io.Writer, events []usage.Event, ro report.Options, group string
 		}
 		return fields
 	}
+	if ro.Breakdown != "" && (group == "" || group == "daily") {
+		group = ro.Breakdown
+	}
 	switch group {
 	case "", "daily":
 		if err := cw.Write(header("date")); err != nil {
@@ -790,6 +814,15 @@ func writeCSV(w io.Writer, events []usage.Event, ro report.Options, group string
 			return err
 		}
 		for _, b := range groupUsage(events, ro.Pricing, ro.NoCost, ro.Order, func(e usage.Event) string { return e.Model }) {
+			if err := cw.Write(writeTotals(b.Key, b.Totals)); err != nil {
+				return err
+			}
+		}
+	case "source":
+		if err := cw.Write(header("source")); err != nil {
+			return err
+		}
+		for _, b := range groupUsage(events, ro.Pricing, ro.NoCost, ro.Order, func(e usage.Event) string { return e.Source }) {
 			if err := cw.Write(writeTotals(b.Key, b.Totals)); err != nil {
 				return err
 			}
@@ -872,6 +905,17 @@ func groupUsage(events []usage.Event, prices usage.PriceBook, noCost bool, order
 	return rows
 }
 
+func breakdownSpec(name string) (string, func(usage.Event) string) {
+	switch name {
+	case "project":
+		return "projects", func(e usage.Event) string { return e.Project }
+	case "model":
+		return "models", func(e usage.Event) string { return e.Model }
+	default:
+		return "sources", func(e usage.Event) string { return e.Source }
+	}
+}
+
 func reverseBuckets(rows []usage.Bucket) {
 	for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 {
 		rows[i], rows[j] = rows[j], rows[i]
@@ -908,6 +952,15 @@ func validateOrder(order string) error {
 		return nil
 	default:
 		return fmt.Errorf("invalid --order %q: expected asc or desc", order)
+	}
+}
+
+func validateBreakdown(breakdown string) error {
+	switch breakdown {
+	case "", "source", "model", "project":
+		return nil
+	default:
+		return fmt.Errorf("invalid --breakdown %q: expected source, model, or project", breakdown)
 	}
 }
 
@@ -1041,12 +1094,13 @@ func configPath(opts *options) string {
 
 func reportOptions(cfg config.Config, opts *options) report.Options {
 	noCost := opts != nil && opts.noCost
-	var order string
+	var order, breakdown string
 	if opts != nil {
 		order = opts.order
+		breakdown = opts.breakdown
 	}
 	loc, _, _ := locationFor(opts, cfg)
-	return report.Options{Pricing: cfg.Pricing, Currency: cfg.Currency, Budget: cfg.Budget, Limits: cfg.Limits, NoCost: noCost, Location: loc, Order: order}
+	return report.Options{Pricing: cfg.Pricing, Currency: cfg.Currency, Budget: cfg.Budget, Limits: cfg.Limits, NoCost: noCost, Location: loc, Order: order, Breakdown: breakdown}
 }
 
 func locationFor(opts *options, cfg config.Config) (*time.Location, string, error) {
