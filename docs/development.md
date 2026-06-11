@@ -57,6 +57,12 @@ Codex:
 
 Gemini:
   ~/.gemini/tmp/**/chats/session-*.json
+
+OpenCode:
+  ~/.local/share/opencode/opencode.db
+  ~/.local/share/opencode/opencode-*.db
+  ~/.local/share/opencode/storage/message/*.json
+  ~/.opencode/opencode.db
 ```
 
 Do not commit real agent logs, API keys, bot tokens, or local config files.

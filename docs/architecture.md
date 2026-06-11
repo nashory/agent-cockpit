@@ -20,6 +20,7 @@ internal/source/            adapter registry
 internal/source/claude/     Claude Code JSONL parser
 internal/source/codex/      Codex JSONL parser
 internal/source/gemini/     Gemini session parser
+internal/source/opencode/   OpenCode SQLite and message JSON parser
 internal/scan/              parallel directory walk + file parsing
 internal/watch/             fsnotify log-dir watcher with debounced refresh
 internal/usage/             normalized event model, pricing, grouping, insights
@@ -63,12 +64,13 @@ billing data.
 
 ## Loading Pipeline
 
-`source.Collect` runs the three adapters concurrently. Each adapter delegates to
-`scan.Parallel`, which first walks its roots to gather matching file paths, then
-parses them across a worker pool sized to the CPU count. Per-file parse errors
-are skipped so one corrupt log cannot abort a scan. Event order is therefore
-non-deterministic; all downstream consumers aggregate into maps and sort their
-own output, so they do not depend on order.
+`source.Collect` runs the built-in adapters concurrently. File-backed adapters
+delegate to `scan.Parallel`, which first walks roots to gather matching file
+paths, then parses them across a worker pool sized to the CPU count. Per-file
+parse errors are skipped so one corrupt log cannot abort a scan. Event order is
+therefore non-deterministic; all downstream consumers aggregate into maps and
+sort their own output, so they do not depend on order. Non-file adapters, such
+as OpenCode's SQLite reader, keep the same normalized `usage.Event` boundary.
 
 The TUI launches immediately and performs the first load in a background
 `tea.Cmd`, showing a loading state and then the dashboard. Derived insights are
@@ -96,4 +98,3 @@ cockpit-vX.Y.Z-linux-arm64.tar.gz
 cockpit-vX.Y.Z-windows-amd64.zip
 cockpit-vX.Y.Z-windows-arm64.zip
 ```
-

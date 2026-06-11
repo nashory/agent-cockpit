@@ -80,3 +80,48 @@ Gemini session files include a message array. Assistant messages can include:
 ```
 
 `tool` tokens are counted as output. `thoughts` tokens are counted as reasoning.
+
+## OpenCode
+
+Default paths:
+
+```text
+~/.local/share/opencode/opencode.db
+~/.local/share/opencode/opencode-*.db
+~/.local/share/opencode/storage/message/*.json
+~/.opencode/opencode.db
+~/.opencode/opencode-*.db
+```
+
+`OPENCODE_DATA_DIR` can override these roots with one path or a comma-separated
+list of paths. The source reads local files only; it does not use provider APIs
+or OpenCode credentials.
+
+OpenCode database rows store message JSON in `message.data`:
+
+```json
+{
+  "id": "...",
+  "sessionID": "...",
+  "providerID": "...",
+  "modelID": "...",
+  "time": {"created": 1767312000000},
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "cache": {"read": 0, "write": 0}
+  }
+}
+```
+
+Token mapping:
+
+- `input` -> input tokens
+- `output` -> output tokens
+- `cache.read` -> cache-read input tokens
+- `cache.write` -> cache-creation input tokens
+- `total` fills missing output tokens when provider-specific parts are absent
+
+Legacy OpenCode SQLite databases with aggregate `sessions` rows are read as
+session-level events when message JSON is unavailable.
