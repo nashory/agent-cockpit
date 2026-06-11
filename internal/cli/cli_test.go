@@ -102,10 +102,33 @@ func TestLoadFiltersConfiguredSources(t *testing.T) {
 
 func TestUsageJSONGolden(t *testing.T) {
 	var out bytes.Buffer
-	if err := writeUsageJSON(&out, goldenEvents(), goldenConfig(), goldenNow()); err != nil {
+	if err := writeUsageJSON(&out, goldenEvents(), goldenConfig(), goldenNow(), usageJSONContext{}); err != nil {
 		t.Fatal(err)
 	}
 	assertGolden(t, "usage_json.golden", out.String())
+}
+
+func TestBuildUsageJSONContext(t *testing.T) {
+	ctx := buildUsageJSONContext(&options{
+		days:    7,
+		sources: "claude,codex",
+		project: "agent-cockpit",
+		model:   "opus",
+	})
+	if ctx.Range.Days != 7 {
+		t.Fatalf("days = %d, want 7", ctx.Range.Days)
+	}
+	if got := strings.Join(ctx.Filters.Sources, ","); got != "claude,codex" {
+		t.Fatalf("sources = %q", got)
+	}
+	if ctx.Filters.Project != "agent-cockpit" || ctx.Filters.Model != "opus" {
+		t.Fatalf("filters = %+v", ctx.Filters)
+	}
+
+	ctx = buildUsageJSONContext(&options{days: 30, since: "2026-06-01", until: "2026-06-11"})
+	if ctx.Range.Days != 0 || ctx.Range.Since != "2026-06-01" || ctx.Range.Until != "2026-06-11" {
+		t.Fatalf("explicit range should suppress days, got %+v", ctx.Range)
+	}
 }
 
 func TestStatuslineJSONGolden(t *testing.T) {

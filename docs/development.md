@@ -97,6 +97,23 @@ Adapter rules:
 - Preserve timestamps and normalize into `usage.Event`; do not add report-level
   source branches unless the shared event model is insufficient.
 
+## JSON Contracts
+
+JSON output is a script-facing contract. Add fields additively and cover changes
+with golden tests. Current usage JSON includes:
+
+- `schema_version`
+- `generated_at`
+- `cost_mode`
+- `range`
+- `filters`
+- `totals`
+- `events`
+
+Do not remove or rename JSON fields without an explicit schema-version bump.
+When a command filter or time window affects output, represent it in `range` or
+`filters` so downstream tools can explain the result without parsing CLI flags.
+
 ## Release Flow
 
 1. Make sure CI passes on macOS, Linux, and Windows.

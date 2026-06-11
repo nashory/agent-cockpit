@@ -47,10 +47,29 @@ type usageJSONDocument struct {
 	SchemaVersion string                  `json:"schema_version"`
 	GeneratedAt   time.Time               `json:"generated_at"`
 	CostMode      string                  `json:"cost_mode"`
+	Range         usageJSONRange          `json:"range"`
+	Filters       usageJSONFilters        `json:"filters"`
 	Totals        usage.Totals            `json:"totals"`
 	Budgets       []usage.ThresholdStatus `json:"budgets,omitempty"`
 	Limits        []usage.ThresholdStatus `json:"limits,omitempty"`
 	Events        []usage.Event           `json:"events"`
+}
+
+type usageJSONRange struct {
+	Days  int    `json:"days,omitempty"`
+	Since string `json:"since,omitempty"`
+	Until string `json:"until,omitempty"`
+}
+
+type usageJSONFilters struct {
+	Sources []string `json:"sources,omitempty"`
+	Project string   `json:"project,omitempty"`
+	Model   string   `json:"model,omitempty"`
+}
+
+type usageJSONContext struct {
+	Range   usageJSONRange
+	Filters usageJSONFilters
 }
 
 type statuslineJSONDocument struct {
@@ -84,7 +103,7 @@ func Execute() error {
 				if err != nil {
 					return err
 				}
-				return writeJSON(events, cfg)
+				return writeJSON(events, cfg, opts)
 			}
 			cfg, err := config.Load(opts.configPath)
 			if err != nil {
@@ -143,7 +162,7 @@ func Execute() error {
 				return nil
 			}
 			if opts.json {
-				return writeJSON(events, cfg)
+				return writeJSON(events, cfg, opts)
 			}
 			report.Overview(os.Stdout, "Usage summary", events, ro)
 			return nil
@@ -280,7 +299,7 @@ func reportCommand(use, short string, opts *options, render func(*os.File, []usa
 				return err
 			}
 			if opts.json {
-				return writeJSON(events, cfg)
+				return writeJSON(events, cfg, opts)
 			}
 			render(os.Stdout, events, reportOptions(cfg))
 			return nil
@@ -331,17 +350,42 @@ func window(opts *options) (time.Time, time.Time, error) {
 	return since, until, nil
 }
 
-func writeJSON(events []usage.Event, cfg config.Config) error {
-	return writeUsageJSON(os.Stdout, events, cfg, time.Now())
+func writeJSON(events []usage.Event, cfg config.Config, opts *options) error {
+	return writeUsageJSON(os.Stdout, events, cfg, time.Now(), buildUsageJSONContext(opts))
 }
 
-func writeUsageJSON(w io.Writer, events []usage.Event, cfg config.Config, now time.Time) error {
+func buildUsageJSONContext(opts *options) usageJSONContext {
+	if opts == nil {
+		return usageJSONContext{}
+	}
+	ctx := usageJSONContext{
+		Range: usageJSONRange{
+			Since: opts.since,
+			Until: opts.until,
+		},
+		Filters: usageJSONFilters{
+			Project: opts.project,
+			Model:   opts.model,
+		},
+	}
+	if opts.since == "" && opts.days > 0 {
+		ctx.Range.Days = opts.days
+	}
+	if opts.sources != "" {
+		ctx.Filters.Sources = strings.Split(opts.sources, ",")
+	}
+	return ctx
+}
+
+func writeUsageJSON(w io.Writer, events []usage.Event, cfg config.Config, now time.Time, ctx usageJSONContext) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	return enc.Encode(usageJSONDocument{
 		SchemaVersion: jsonSchemaVersion,
 		GeneratedAt:   now,
 		CostMode:      "estimated",
+		Range:         ctx.Range,
+		Filters:       ctx.Filters,
 		Totals:        usage.SummarizeWith(events, cfg.Pricing),
 		Budgets:       usage.BudgetStatuses(events, cfg.Pricing, cfg.Budget, now),
 		Limits:        usage.ClaudeLimitStatuses(events, cfg.Pricing, cfg.Limits, now),

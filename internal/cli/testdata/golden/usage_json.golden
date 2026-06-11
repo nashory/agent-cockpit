@@ -2,6 +2,8 @@
   "schema_version": "1",
   "generated_at": "2026-06-11T10:00:00Z",
   "cost_mode": "estimated",
+  "range": {},
+  "filters": {},
   "totals": {
     "events": 1,
     "input_tokens": 100,
