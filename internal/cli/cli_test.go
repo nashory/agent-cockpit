@@ -70,9 +70,39 @@ func TestWindowSinceOverridesDays(t *testing.T) {
 	}
 }
 
+func TestWindowRelativeSince(t *testing.T) {
+	now := time.Date(2026, 6, 11, 12, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name string
+		raw  string
+		want time.Time
+	}{
+		{name: "days", raw: "7d", want: now.AddDate(0, 0, -7)},
+		{name: "weeks", raw: "2w", want: now.AddDate(0, 0, -14)},
+		{name: "duration", raw: "168h", want: now.Add(-168 * time.Hour)},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			since, until, err := window(&options{since: tc.raw}, time.UTC, now)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !until.IsZero() {
+				t.Errorf("until should be zero when not set, got %v", until)
+			}
+			if !since.Equal(tc.want) {
+				t.Errorf("since = %v, want %v", since, tc.want)
+			}
+		})
+	}
+}
+
 func TestWindowBadDates(t *testing.T) {
 	if _, _, err := window(&options{since: "nope"}, time.UTC, time.Time{}); err == nil {
 		t.Error("expected error for invalid --since")
+	}
+	if _, _, err := window(&options{since: "0d"}, time.UTC, time.Time{}); err == nil {
+		t.Error("expected error for invalid relative --since")
 	}
 	if _, _, err := window(&options{until: "2026-13-99"}, time.UTC, time.Time{}); err == nil {
 		t.Error("expected error for invalid --until")

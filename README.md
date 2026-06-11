@@ -103,6 +103,7 @@ cockpit pricing status        # show vendored pricing coverage
 # filter by source, project, or model
 cockpit monthly --source claude
 cockpit trends  --source claude,codex --project myrepo --days 30
+cockpit trends  --since 7d --until 2026-06-11
 cockpit agents  --model sonnet
 cockpit today --timezone Europe/Zurich
 cockpit export --group daily --order asc

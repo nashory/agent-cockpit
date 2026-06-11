@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -346,7 +347,7 @@ func Execute() error {
 
 func addFlags(cmd *cobra.Command, opts *options) {
 	cmd.PersistentFlags().IntVar(&opts.days, "days", opts.days, "number of days to include")
-	cmd.PersistentFlags().StringVar(&opts.since, "since", "", "start date, YYYY-MM-DD")
+	cmd.PersistentFlags().StringVar(&opts.since, "since", "", "start date or relative duration, for example YYYY-MM-DD, 7d, 2w, or 168h")
 	cmd.PersistentFlags().StringVar(&opts.until, "until", "", "end date, YYYY-MM-DD")
 	cmd.PersistentFlags().StringVar(&opts.sources, "source", "", "comma-separated source filter: claude,codex,gemini")
 	cmd.PersistentFlags().StringVar(&opts.project, "project", "", "project/cwd substring filter")
@@ -423,7 +424,7 @@ func window(opts *options, loc *time.Location, now time.Time) (time.Time, time.T
 	var since, until time.Time
 	var err error
 	if opts.since != "" {
-		since, err = time.ParseInLocation("2006-01-02", opts.since, loc)
+		since, err = parseSince(opts.since, loc, now)
 		if err != nil {
 			return time.Time{}, time.Time{}, fmt.Errorf("parse --since: %w", err)
 		}
@@ -439,6 +440,50 @@ func window(opts *options, loc *time.Location, now time.Time) (time.Time, time.T
 		since = now.AddDate(0, 0, -opts.days)
 	}
 	return since, until, nil
+}
+
+func parseSince(raw string, loc *time.Location, now time.Time) (time.Time, error) {
+	if t, err := time.ParseInLocation("2006-01-02", raw, loc); err == nil {
+		return t, nil
+	}
+	if d, ok, err := parseRelativeDateDuration(raw); ok || err != nil {
+		if err != nil {
+			return time.Time{}, err
+		}
+		return now.AddDate(0, 0, -d), nil
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if d <= 0 {
+		return time.Time{}, fmt.Errorf("relative duration must be positive")
+	}
+	return now.Add(-d), nil
+}
+
+func parseRelativeDateDuration(raw string) (int, bool, error) {
+	if len(raw) < 2 {
+		return 0, false, nil
+	}
+	unit := raw[len(raw)-1]
+	var multiplier int
+	switch unit {
+	case 'd':
+		multiplier = 1
+	case 'w':
+		multiplier = 7
+	default:
+		return 0, false, nil
+	}
+	n, err := strconv.Atoi(raw[:len(raw)-1])
+	if err != nil {
+		return 0, true, err
+	}
+	if n <= 0 {
+		return 0, true, fmt.Errorf("relative duration must be positive")
+	}
+	return n * multiplier, true, nil
 }
 
 func writeJSON(events []usage.Event, cfg config.Config, opts *options, reportName string) error {
