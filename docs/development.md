@@ -74,6 +74,13 @@ Do not commit real agent logs, API keys, bot tokens, or local config files.
 3. The release workflow uploads native archives and `checksums.txt`.
 4. The Homebrew tap should point its formula at the release tarball.
 
+Pre-1.0 versioning is numeric, not feature-gated:
+
+- Patch releases advance as `0.x.1`, `0.x.2`, through `0.x.10`.
+- After `0.x.10`, the next release is `0.(x+1).0`.
+- Example: after `v0.1.10`, the next release is `v0.2.0`; after `v0.2.10`,
+  the next release is `v0.3.0`.
+
 ## Homebrew Formula Shape
 
 The tap formula should install the shipped binary as `cockpit`:

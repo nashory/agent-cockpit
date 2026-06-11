@@ -110,6 +110,8 @@ cockpit today --json
 
 # config helpers
 cockpit config init
+cockpit config schema            # print config JSON schema
+cockpit config validate          # validate config.toml
 cockpit doctor                # show detected log locations
 ```
 
@@ -236,6 +238,10 @@ cache_write_per_million = 3.75
 ```
 
 Run `cockpit config init` to drop a starter file in place.
+
+Use `cockpit config schema` for editor integration or automation that needs the
+JSON Schema for `config.toml`. Use `cockpit config validate` before committing
+to a local setup change; add `--json` for machine-readable validation output.
 
 ## 🏗️ How It Works
 
