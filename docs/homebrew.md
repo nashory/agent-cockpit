@@ -88,3 +88,6 @@ end
    brew install --build-from-source Formula/agent-cockpit.rb
    cockpit --version
    ```
+
+See [Release Checklist](release-checklist.md) for the full tap audit: asset
+names, checksum checks, formula fields, `brew audit`, and local install smoke.

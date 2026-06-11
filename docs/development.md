@@ -192,6 +192,9 @@ blocking regression gate.
 3. The release workflow uploads native archives and `checksums.txt`.
 4. The Homebrew tap should point its formula at the release tarball.
 
+Use [Release Checklist](release-checklist.md) for the screenshot refresh,
+release-note review, pricing snapshot check, and Homebrew tap audit.
+
 ## Homebrew Formula Shape
 
 The tap formula should install the shipped binary as `cockpit`:
