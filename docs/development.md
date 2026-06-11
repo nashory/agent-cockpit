@@ -122,6 +122,8 @@ Command-specific aggregate output should go into `rows`; keep raw `events`
 available for compatibility until a future explicit schema decision removes it.
 If `--timezone` or a non-local configured timezone affects date windows or
 calendar bucketing, include that timezone in `range.timezone`.
+If `--order asc|desc` changes aggregate row ordering, include the selected
+value in the top-level `order` field.
 
 ## Release Flow
 

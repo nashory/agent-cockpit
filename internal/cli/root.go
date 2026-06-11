@@ -33,6 +33,7 @@ type options struct {
 	configPath  string
 	refresh     string
 	timezone    string
+	order       string
 	json        bool
 	noCost      bool
 	svgPath     string
@@ -49,6 +50,7 @@ type usageJSONDocument struct {
 	SchemaVersion string                  `json:"schema_version"`
 	GeneratedAt   time.Time               `json:"generated_at"`
 	CostMode      string                  `json:"cost_mode"`
+	Order         string                  `json:"order,omitempty"`
 	Report        string                  `json:"report,omitempty"`
 	Range         usageJSONRange          `json:"range"`
 	Filters       usageJSONFilters        `json:"filters"`
@@ -76,6 +78,7 @@ type usageJSONContext struct {
 	Report  string
 	NoCost  bool
 	Loc     *time.Location
+	Order   string
 	Range   usageJSONRange
 	Filters usageJSONFilters
 }
@@ -159,6 +162,9 @@ func Execute() error {
 			if _, _, err := locationFor(opts, cfg); err != nil {
 				return err
 			}
+			if err := validateOrder(opts.order); err != nil {
+				return err
+			}
 			reload := func() ([]usage.Event, error) {
 				events, _, err := load(cmd.Context(), opts)
 				return events, err
@@ -181,7 +187,7 @@ func Execute() error {
 		report.Overview(w, "Last 30 days", events, ro)
 	}, func() { opts.days = 30 }))
 	root.AddCommand(reportCommand("agents", "Group usage by agent", opts, func(w *os.File, events []usage.Event, ro report.Options) {
-		report.Buckets(w, "Agents", groupUsage(events, ro.Pricing, ro.NoCost, func(e usage.Event) string { return e.Source }), 0, ro)
+		report.Buckets(w, "Agents", groupUsage(events, ro.Pricing, ro.NoCost, ro.Order, func(e usage.Event) string { return e.Source }), 0, ro)
 	}, nil))
 	root.AddCommand(reportCommand("sessions", "Show highest-usage sessions", opts, func(w *os.File, events []usage.Event, ro report.Options) {
 		report.Sessions(w, events, 20, ro)
@@ -190,7 +196,7 @@ func Execute() error {
 		report.Trend(w, events, opts.days, ro)
 	}, nil))
 	root.AddCommand(reportCommand("speed", "Show observed output token speed by agent/model", opts, func(w *os.File, events []usage.Event, ro report.Options) {
-		report.Speed(w, events, 20)
+		report.Speed(w, events, 20, ro)
 	}, nil))
 	reportCmd := &cobra.Command{
 		Use:   "report",
@@ -229,6 +235,9 @@ func Execute() error {
 				return err
 			}
 			if _, _, err := locationFor(opts, cfg); err != nil {
+				return err
+			}
+			if err := validateOrder(opts.order); err != nil {
 				return err
 			}
 			interval := cfg.RefreshDuration()
@@ -336,6 +345,7 @@ func addFlags(cmd *cobra.Command, opts *options) {
 	cmd.PersistentFlags().StringVar(&opts.configPath, "config", "", "config file path")
 	cmd.PersistentFlags().StringVar(&opts.refresh, "refresh", "", "live refresh interval, for example 2s")
 	cmd.PersistentFlags().StringVar(&opts.timezone, "timezone", "", "IANA timezone for date windows, for example Europe/Zurich")
+	cmd.PersistentFlags().StringVar(&opts.order, "order", "", "row order override: asc or desc")
 	cmd.PersistentFlags().BoolVar(&opts.json, "json", false, "print JSON instead of a table")
 	cmd.PersistentFlags().BoolVar(&opts.noCost, "no-cost", false, "omit estimated cost output where supported")
 	cmd.PersistentFlags().BoolVar(&opts.compact, "compact", false, "print compact one-line output where supported")
@@ -370,6 +380,9 @@ func load(ctx context.Context, opts *options) ([]usage.Event, config.Config, err
 	}
 	loc, _, err := locationFor(opts, cfg)
 	if err != nil {
+		return nil, config.Config{}, err
+	}
+	if err := validateOrder(opts.order); err != nil {
 		return nil, config.Config{}, err
 	}
 	events, err := source.Collect(ctx, cfg)
@@ -432,6 +445,7 @@ func buildUsageJSONContext(opts *options, timezone string) usageJSONContext {
 	}
 	ctx := usageJSONContext{
 		NoCost: opts.noCost,
+		Order:  opts.order,
 		Range: usageJSONRange{
 			Since:    opts.since,
 			Until:    opts.until,
@@ -464,6 +478,7 @@ func writeUsageJSON(w io.Writer, events []usage.Event, cfg config.Config, now ti
 		SchemaVersion: jsonSchemaVersion,
 		GeneratedAt:   now,
 		CostMode:      costMode(ctx.NoCost),
+		Order:         ctx.Order,
 		Report:        ctx.Report,
 		Range:         ctx.Range,
 		Filters:       ctx.Filters,
@@ -503,28 +518,28 @@ func usageJSONRows(events []usage.Event, cfg config.Config, now time.Time, ctx u
 	switch ctx.Report {
 	case "today", "weekly", "monthly", "summary", "report":
 		return []summaryJSONSection{
-			{Name: "agents", Rows: bucketRows(events, cfg.Pricing, ctx.NoCost, 8, func(e usage.Event) string { return e.Source })},
-			{Name: "models", Rows: bucketRows(events, cfg.Pricing, ctx.NoCost, 8, func(e usage.Event) string { return e.Model })},
+			{Name: "agents", Rows: bucketRows(events, cfg.Pricing, ctx.NoCost, ctx.Order, 8, func(e usage.Event) string { return e.Source })},
+			{Name: "models", Rows: bucketRows(events, cfg.Pricing, ctx.NoCost, ctx.Order, 8, func(e usage.Event) string { return e.Model })},
 		}
 	case "agents":
-		return bucketRows(events, cfg.Pricing, ctx.NoCost, 0, func(e usage.Event) string { return e.Source })
+		return bucketRows(events, cfg.Pricing, ctx.NoCost, ctx.Order, 0, func(e usage.Event) string { return e.Source })
 	case "sessions":
-		return sessionBuckets(events, cfg.Pricing, ctx.NoCost, 20)
+		return sessionBuckets(events, cfg.Pricing, ctx.NoCost, ctx.Order, 20)
 	case "trends":
 		days := ctx.Range.Days
 		if days <= 0 {
 			days = 30
 		}
-		return trendRows(events, cfg.Pricing, ctx.NoCost, days, now, ctx.Loc)
+		return trendRows(events, cfg.Pricing, ctx.NoCost, ctx.Order, days, now, ctx.Loc)
 	case "speed":
-		return speedRows(events, 20)
+		return speedRows(events, ctx.Order, 20)
 	default:
 		return nil
 	}
 }
 
-func bucketRows(events []usage.Event, prices usage.PriceBook, noCost bool, limit int, key func(usage.Event) string) []bucketJSONRow {
-	buckets := groupUsage(events, prices, noCost, key)
+func bucketRows(events []usage.Event, prices usage.PriceBook, noCost bool, order string, limit int, key func(usage.Event) string) []bucketJSONRow {
+	buckets := groupUsage(events, prices, noCost, order, key)
 	buckets = limitBuckets(buckets, limit)
 	rows := make([]bucketJSONRow, 0, len(buckets))
 	for _, b := range buckets {
@@ -544,8 +559,8 @@ func limitBuckets(buckets []usage.Bucket, limit int) []usage.Bucket {
 	return buckets[:limit]
 }
 
-func sessionBuckets(events []usage.Event, prices usage.PriceBook, noCost bool, limit int) []bucketJSONRow {
-	return bucketRows(events, prices, noCost, limit, func(e usage.Event) string {
+func sessionBuckets(events []usage.Event, prices usage.PriceBook, noCost bool, order string, limit int) []bucketJSONRow {
+	return bucketRows(events, prices, noCost, order, limit, func(e usage.Event) string {
 		if e.Project != "" && e.SessionID != "" {
 			return e.Project + " / " + shortID(e.SessionID)
 		}
@@ -560,7 +575,7 @@ func shortID(s string) string {
 	return s[:8]
 }
 
-func trendRows(events []usage.Event, prices usage.PriceBook, noCost bool, days int, now time.Time, loc *time.Location) []trendJSONRow {
+func trendRows(events []usage.Event, prices usage.PriceBook, noCost bool, order string, days int, now time.Time, loc *time.Location) []trendJSONRow {
 	if loc == nil {
 		loc = time.Local
 	}
@@ -592,10 +607,13 @@ func trendRows(events []usage.Event, prices usage.PriceBook, noCost bool, days i
 			Totals: usageTotalsJSON(totals, noCost),
 		})
 	}
+	if order == "desc" {
+		reverseTrendRows(rows)
+	}
 	return rows
 }
 
-func speedRows(events []usage.Event, limit int) []speedJSONRow {
+func speedRows(events []usage.Event, order string, limit int) []speedJSONRow {
 	type stats struct {
 		source string
 		model  string
@@ -637,6 +655,9 @@ func speedRows(events []usage.Event, limit int) []speedJSONRow {
 	sort.Slice(statsRows, func(i, j int) bool {
 		return tokensPerSecond(statsRows[i]) > tokensPerSecond(statsRows[j])
 	})
+	if order == "asc" {
+		reverseStatsRows(statsRows)
+	}
 	if limit > 0 && len(statsRows) > limit {
 		statsRows = statsRows[:limit]
 	}
@@ -750,7 +771,7 @@ func writeCSV(w io.Writer, events []usage.Event, ro report.Options, group string
 		if err := cw.Write(header("date")); err != nil {
 			return err
 		}
-		for _, b := range timeBuckets(events, ro.Pricing, ro.NoCost, ro.Location, "day") {
+		for _, b := range timeBuckets(events, ro.Pricing, ro.NoCost, ro.Order, ro.Location, "day") {
 			if err := cw.Write(writeTotals(b.Key, b.Totals)); err != nil {
 				return err
 			}
@@ -759,7 +780,7 @@ func writeCSV(w io.Writer, events []usage.Event, ro report.Options, group string
 		if err := cw.Write(header("session")); err != nil {
 			return err
 		}
-		for _, b := range groupUsage(events, ro.Pricing, ro.NoCost, func(e usage.Event) string { return e.SessionID }) {
+		for _, b := range groupUsage(events, ro.Pricing, ro.NoCost, ro.Order, func(e usage.Event) string { return e.SessionID }) {
 			if err := cw.Write(writeTotals(b.Key, b.Totals)); err != nil {
 				return err
 			}
@@ -768,7 +789,7 @@ func writeCSV(w io.Writer, events []usage.Event, ro report.Options, group string
 		if err := cw.Write(header("model")); err != nil {
 			return err
 		}
-		for _, b := range groupUsage(events, ro.Pricing, ro.NoCost, func(e usage.Event) string { return e.Model }) {
+		for _, b := range groupUsage(events, ro.Pricing, ro.NoCost, ro.Order, func(e usage.Event) string { return e.Model }) {
 			if err := cw.Write(writeTotals(b.Key, b.Totals)); err != nil {
 				return err
 			}
@@ -777,7 +798,7 @@ func writeCSV(w io.Writer, events []usage.Event, ro report.Options, group string
 		if err := cw.Write(header("project")); err != nil {
 			return err
 		}
-		for _, b := range groupUsage(events, ro.Pricing, ro.NoCost, func(e usage.Event) string { return e.Project }) {
+		for _, b := range groupUsage(events, ro.Pricing, ro.NoCost, ro.Order, func(e usage.Event) string { return e.Project }) {
 			if err := cw.Write(writeTotals(b.Key, b.Totals)); err != nil {
 				return err
 			}
@@ -790,7 +811,9 @@ func writeCSV(w io.Writer, events []usage.Event, ro report.Options, group string
 		if err := cw.Write(eventHeader); err != nil {
 			return err
 		}
-		for _, e := range events {
+		eventRows := append([]usage.Event(nil), events...)
+		sortEventRows(eventRows, ro.Order)
+		for _, e := range eventRows {
 			row := []string{
 				e.Timestamp.Format(time.RFC3339), e.Source, e.Project, e.SessionID, e.Model,
 				fmt.Sprint(e.Input), fmt.Sprint(e.Output), fmt.Sprint(e.CacheRead + e.CacheCreate), fmt.Sprint(e.Reasoning),
@@ -809,7 +832,7 @@ func writeCSV(w io.Writer, events []usage.Event, ro report.Options, group string
 	return cw.Error()
 }
 
-func timeBuckets(events []usage.Event, prices usage.PriceBook, noCost bool, loc *time.Location, period string) []usage.Bucket {
+func timeBuckets(events []usage.Event, prices usage.PriceBook, noCost bool, order string, loc *time.Location, period string) []usage.Bucket {
 	if loc == nil {
 		loc = time.Local
 	}
@@ -828,16 +851,64 @@ func timeBuckets(events []usage.Event, prices usage.PriceBook, noCost bool, loc 
 			return ts.Format("2006-01-02")
 		}
 	}
-	rows := groupUsage(events, prices, noCost, key)
+	rows := groupUsage(events, prices, noCost, "", key)
 	sort.Slice(rows, func(i, j int) bool { return rows[i].Key > rows[j].Key })
+	if order == "asc" {
+		reverseBuckets(rows)
+	}
 	return rows
 }
 
-func groupUsage(events []usage.Event, prices usage.PriceBook, noCost bool, key func(usage.Event) string) []usage.Bucket {
+func groupUsage(events []usage.Event, prices usage.PriceBook, noCost bool, order string, key func(usage.Event) string) []usage.Bucket {
+	var rows []usage.Bucket
 	if noCost {
-		return usage.GroupByTokens(events, key)
+		rows = usage.GroupByTokens(events, key)
+	} else {
+		rows = usage.GroupByWith(events, prices, key)
 	}
-	return usage.GroupByWith(events, prices, key)
+	if order == "asc" {
+		reverseBuckets(rows)
+	}
+	return rows
+}
+
+func reverseBuckets(rows []usage.Bucket) {
+	for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 {
+		rows[i], rows[j] = rows[j], rows[i]
+	}
+}
+
+func reverseTrendRows(rows []trendJSONRow) {
+	for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 {
+		rows[i], rows[j] = rows[j], rows[i]
+	}
+}
+
+func reverseStatsRows[T any](rows []*T) {
+	for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 {
+		rows[i], rows[j] = rows[j], rows[i]
+	}
+}
+
+func sortEventRows(rows []usage.Event, order string) {
+	if order == "" {
+		return
+	}
+	sort.SliceStable(rows, func(i, j int) bool {
+		if order == "asc" {
+			return rows[i].Timestamp.Before(rows[j].Timestamp)
+		}
+		return rows[i].Timestamp.After(rows[j].Timestamp)
+	})
+}
+
+func validateOrder(order string) error {
+	switch order {
+	case "", "asc", "desc":
+		return nil
+	default:
+		return fmt.Errorf("invalid --order %q: expected asc or desc", order)
+	}
 }
 
 func writePricingStatus(w io.Writer, events []usage.Event, cfg config.Config, asJSON bool) error {
@@ -970,8 +1041,12 @@ func configPath(opts *options) string {
 
 func reportOptions(cfg config.Config, opts *options) report.Options {
 	noCost := opts != nil && opts.noCost
+	var order string
+	if opts != nil {
+		order = opts.order
+	}
 	loc, _, _ := locationFor(opts, cfg)
-	return report.Options{Pricing: cfg.Pricing, Currency: cfg.Currency, Budget: cfg.Budget, Limits: cfg.Limits, NoCost: noCost, Location: loc}
+	return report.Options{Pricing: cfg.Pricing, Currency: cfg.Currency, Budget: cfg.Budget, Limits: cfg.Limits, NoCost: noCost, Location: loc, Order: order}
 }
 
 func locationFor(opts *options, cfg config.Config) (*time.Location, string, error) {

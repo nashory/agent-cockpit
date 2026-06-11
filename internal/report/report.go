@@ -18,6 +18,7 @@ type Options struct {
 	Limits   usage.Limits
 	NoCost   bool
 	Location *time.Location
+	Order    string
 }
 
 type speedStats struct {
@@ -88,7 +89,11 @@ func Sessions(w io.Writer, events []usage.Event, limit int, opts Options) {
 	Buckets(w, "Sessions", buckets, limit, opts)
 }
 
-func Speed(w io.Writer, events []usage.Event, limit int) {
+func Speed(w io.Writer, events []usage.Event, limit int, opts ...Options) {
+	var order string
+	if len(opts) > 0 {
+		order = opts[0].Order
+	}
 	byKey := map[string]*speedStats{}
 	for _, e := range events {
 		key := e.Source
@@ -117,6 +122,9 @@ func Speed(w io.Writer, events []usage.Event, limit int) {
 	sort.Slice(rows, func(i, j int) bool {
 		return tokensPerSecond(rows[i]) > tokensPerSecond(rows[j])
 	})
+	if order == "asc" {
+		reverseSpeedRows(rows)
+	}
 
 	fmt.Fprintln(w, "Observed Speed")
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
@@ -154,7 +162,15 @@ func Trend(w io.Writer, events []usage.Event, days int, opts Options) {
 			max = totals[i].Total
 		}
 	}
-	for i, t := range totals {
+	indexes := make([]int, 0, len(totals))
+	for i := range totals {
+		indexes = append(indexes, i)
+	}
+	if opts.Order == "desc" {
+		reverseInts(indexes)
+	}
+	for _, i := range indexes {
+		t := totals[i]
 		day := start.AddDate(0, 0, i).Format("Jan 02")
 		if opts.NoCost {
 			fmt.Fprintf(w, "%s  %-24s %s\n", day, bar(t.Total, max, 24), formatInt(t.Total))
@@ -172,11 +188,34 @@ func summarize(events []usage.Event, opts Options) usage.Totals {
 }
 
 func groupBy(events []usage.Event, opts Options, key func(usage.Event) string) []usage.Bucket {
+	var buckets []usage.Bucket
 	if opts.NoCost {
-		return usage.GroupByTokens(events, key)
+		buckets = usage.GroupByTokens(events, key)
+	} else {
+		buckets = usage.GroupByWith(events, opts.Pricing, key)
 	}
-	buckets := usage.GroupByWith(events, opts.Pricing, key)
+	if opts.Order == "asc" {
+		reverseBuckets(buckets)
+	}
 	return buckets
+}
+
+func reverseBuckets(buckets []usage.Bucket) {
+	for i, j := 0, len(buckets)-1; i < j; i, j = i+1, j-1 {
+		buckets[i], buckets[j] = buckets[j], buckets[i]
+	}
+}
+
+func reverseInts(values []int) {
+	for i, j := 0, len(values)-1; i < j; i, j = i+1, j-1 {
+		values[i], values[j] = values[j], values[i]
+	}
+}
+
+func reverseSpeedRows(rows []*speedStats) {
+	for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 {
+		rows[i], rows[j] = rows[j], rows[i]
+	}
 }
 
 func tokensPerSecond(row *speedStats) float64 {

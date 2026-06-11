@@ -132,12 +132,16 @@ func TestBuildUsageJSONContext(t *testing.T) {
 		sources: "claude,codex",
 		project: "agent-cockpit",
 		model:   "opus",
+		order:   "asc",
 	}, "Europe/Zurich")
 	if ctx.Range.Days != 7 {
 		t.Fatalf("days = %d, want 7", ctx.Range.Days)
 	}
 	if ctx.Range.Timezone != "Europe/Zurich" {
 		t.Fatalf("timezone = %q", ctx.Range.Timezone)
+	}
+	if ctx.Order != "asc" {
+		t.Fatalf("order = %q", ctx.Order)
 	}
 	if got := strings.Join(ctx.Filters.Sources, ","); got != "claude,codex" {
 		t.Fatalf("sources = %q", got)
@@ -189,12 +193,48 @@ func TestUsageJSONRowsByReport(t *testing.T) {
 		t.Fatalf("trend rows = %+v", trends)
 	}
 
+	trends, ok = usageJSONRows(events, cfg, now, usageJSONContext{Report: "trends", Order: "desc", Range: usageJSONRange{Days: 2}}).([]trendJSONRow)
+	if !ok {
+		t.Fatalf("trend rows type = %T", trends)
+	}
+	if len(trends) != 2 || trends[0].Date != "2026-06-11" || trends[1].Date != "2026-06-10" {
+		t.Fatalf("desc trend rows = %+v", trends)
+	}
+
 	speed, ok := usageJSONRows(events, cfg, now, usageJSONContext{Report: "speed"}).([]speedJSONRow)
 	if !ok {
 		t.Fatalf("speed rows type = %T", speed)
 	}
 	if len(speed) != 2 || speed[0].OutputTokens == 0 {
 		t.Fatalf("speed rows = %+v", speed)
+	}
+}
+
+func TestOrderOutputs(t *testing.T) {
+	cfg := goldenConfig()
+	opts := &options{order: "asc"}
+
+	var out bytes.Buffer
+	if err := writeCSV(&out, csvGoldenEvents(), reportOptions(cfg, opts), "daily"); err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
+	if len(lines) < 3 || !strings.HasPrefix(lines[1], "2026-06-10,") || !strings.HasPrefix(lines[2], "2026-06-11,") {
+		t.Fatalf("asc daily CSV order:\n%s", out.String())
+	}
+
+	out.Reset()
+	ctx := buildUsageJSONContext(opts, "")
+	ctx.Report = "agents"
+	if err := writeUsageJSON(&out, csvGoldenEvents(), cfg, goldenNow(), ctx); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), `"order": "asc"`) {
+		t.Fatalf("JSON missing order:\n%s", out.String())
+	}
+
+	if err := validateOrder("sideways"); err == nil {
+		t.Fatal("expected invalid order error")
 	}
 }
 
