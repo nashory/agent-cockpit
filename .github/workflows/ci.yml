@@ -57,9 +57,55 @@ jobs:
           name: coverage
           path: coverage.out
 
+  cli-smoke:
+    name: CLI Smoke
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go build -o cockpit ./cmd/cockpit
+      - name: Smoke script-facing commands
+        run: |
+          tmp="$(mktemp -d)"
+          mkdir -p "$tmp/empty"
+          cat > "$tmp/config.toml" <<EOF
+          timezone = "UTC"
+          refresh_interval = "3s"
+          currency = "USD"
+
+          [paths]
+          claude = ["$tmp/empty"]
+          codex = ["$tmp/empty"]
+          gemini = ["$tmp/empty"]
+          opencode = ["$tmp/empty"]
+          amp = ["$tmp/empty"]
+          copilot = ["$tmp/empty"]
+          kimi = ["$tmp/empty"]
+          EOF
+
+          ./cockpit config schema > "$tmp/schema.json"
+          python3 -m json.tool "$tmp/schema.json" >/dev/null
+
+          ./cockpit --config "$tmp/config.toml" config validate
+          ./cockpit --config "$tmp/config.toml" --json config validate > "$tmp/config-validate.json"
+          python3 -m json.tool "$tmp/config-validate.json" >/dev/null
+
+          ./cockpit --config "$tmp/config.toml" --json pricing status > "$tmp/pricing-status.json"
+          python3 -m json.tool "$tmp/pricing-status.json" >/dev/null
+
+          ./cockpit --config "$tmp/config.toml" --json statusline > "$tmp/statusline.json"
+          python3 -m json.tool "$tmp/statusline.json" >/dev/null
+
+          ./cockpit --config "$tmp/config.toml" export --group daily > "$tmp/daily.csv"
+          test -s "$tmp/daily.csv"
+
   cross-compile:
     name: Cross Compile
-    needs: [lint, test]
+    needs: [lint, test, cli-smoke]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
