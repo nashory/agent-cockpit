@@ -174,3 +174,51 @@ Amp thread files include an `id`, `messages`, and sometimes `usageLedger`:
 `usageLedger.events[]` is preferred when present. `messages[].usage` is used as
 the current-schema fallback. Ledger events use `messages[].usage` to recover
 cache creation/read counts for the matching `toMessageId`.
+
+## GitHub Copilot CLI
+
+Default path:
+
+```text
+~/.copilot/otel/**/*.jsonl
+```
+
+`COPILOT_OTEL_FILE_EXPORTER_PATH` can add one explicit OpenTelemetry JSONL
+export file. Copilot CLI does not provide a stable session-log directory like
+Claude Code or Codex; reliable local usage requires OpenTelemetry file export to
+be enabled before starting or resuming Copilot sessions. The source reads local
+JSONL files only; it does not call GitHub APIs or read credentials.
+
+Copilot OpenTelemetry records include spans and logs with `attributes`:
+
+```json
+{
+  "type": "span",
+  "traceId": "...",
+  "spanId": "...",
+  "name": "chat ...",
+  "endTime": [1775934264, 967317833],
+  "attributes": {
+    "gen_ai.operation.name": "chat",
+    "gen_ai.response.model": "...",
+    "gen_ai.conversation.id": "...",
+    "gen_ai.usage.input_tokens": 0,
+    "gen_ai.usage.output_tokens": 0,
+    "gen_ai.usage.cache_read.input_tokens": 0,
+    "gen_ai.usage.cache_creation.input_tokens": 0,
+    "gen_ai.usage.reasoning.output_tokens": 0
+  }
+}
+```
+
+Token mapping:
+
+- `input_tokens` minus cache-read tokens -> input tokens
+- `output_tokens` plus reasoning tokens -> output tokens
+- `cache_read.input_tokens` -> cache-read input tokens
+- `cache_creation.input_tokens` or `cache_write.input_tokens` -> cache-creation input tokens
+- `reasoning.output_tokens` -> reasoning tokens, surfaced as a subset of output
+
+When multiple Copilot OpenTelemetry records describe the same response,
+agent-cockpit keeps the highest-priority record in this order: chat span,
+inference log, agent turn log, agent summary span.

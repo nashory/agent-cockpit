@@ -322,7 +322,7 @@ func Execute() error {
 			tuiOpts := tuiOptions(cfg, opts, reload, interval)
 			// Refresh on file-system events when possible; the interval tick
 			// above stays as a backstop if the watcher can't start.
-			roots := append(append(append([]string{}, cfg.Paths.Claude...), cfg.Paths.Codex...), cfg.Paths.Gemini...)
+			roots := logRoots(cfg)
 			if w, werr := watch.New(roots, watch.IsLogFile, watch.DefaultDebounce); werr == nil {
 				defer w.Close()
 				tuiOpts.FSEvents = w.Events()
@@ -392,6 +392,18 @@ func Execute() error {
 			for _, p := range cfg.Paths.Gemini {
 				printPath(p)
 			}
+			fmt.Println("OpenCode paths:")
+			for _, p := range cfg.Paths.OpenCode {
+				printPath(p)
+			}
+			fmt.Println("Amp paths:")
+			for _, p := range cfg.Paths.Amp {
+				printPath(p)
+			}
+			fmt.Println("Copilot paths:")
+			for _, p := range cfg.Paths.Copilot {
+				printPath(p)
+			}
 			return nil
 		},
 	})
@@ -405,7 +417,7 @@ func addFlags(cmd *cobra.Command, opts *options) {
 	cmd.PersistentFlags().IntVar(&opts.days, "days", opts.days, "number of days to include")
 	cmd.PersistentFlags().StringVar(&opts.since, "since", "", "start date or relative duration, for example YYYY-MM-DD, 7d, 2w, or 168h")
 	cmd.PersistentFlags().StringVar(&opts.until, "until", "", "end date, YYYY-MM-DD")
-	cmd.PersistentFlags().StringVar(&opts.sources, "source", "", "comma-separated source filter: claude,codex,gemini")
+	cmd.PersistentFlags().StringVar(&opts.sources, "source", "", "comma-separated source filter: claude,codex,gemini,opencode,amp,copilot")
 	cmd.PersistentFlags().StringVar(&opts.project, "project", "", "project/cwd substring filter")
 	cmd.PersistentFlags().StringVar(&opts.model, "model", "", "model substring filter")
 	cmd.PersistentFlags().StringVar(&opts.configPath, "config", "", "config file path")
@@ -1469,9 +1481,19 @@ func tuiOptions(cfg config.Config, opts *options, reload func() ([]usage.Event, 
 		RefreshInterval: interval,
 		Reload:          reload,
 		Filter:          filterLabel(opts),
-		LogDirs:         append(append(append([]string{}, cfg.Paths.Claude...), cfg.Paths.Codex...), cfg.Paths.Gemini...),
+		LogDirs:         logRoots(cfg),
 		RestorePrefs:    true,
 	}
+}
+
+func logRoots(cfg config.Config) []string {
+	roots := append([]string{}, cfg.Paths.Claude...)
+	roots = append(roots, cfg.Paths.Codex...)
+	roots = append(roots, cfg.Paths.Gemini...)
+	roots = append(roots, cfg.Paths.OpenCode...)
+	roots = append(roots, cfg.Paths.Amp...)
+	roots = append(roots, cfg.Paths.Copilot...)
+	return roots
 }
 
 // filterLabel summarizes any active --since/--days/--source/--project/--model
@@ -1543,6 +1565,7 @@ codex = ["~/.codex/sessions", "~/.codex/archived_sessions"]
 gemini = ["~/.gemini/tmp"]
 opencode = ["~/.local/share/opencode", "~/.opencode"]
 amp = ["~/.local/share/amp"]
+copilot = ["~/.copilot/otel"]
 
 # Prices are USD per million tokens. Keys match model substrings.
 [pricing."claude-sonnet"]

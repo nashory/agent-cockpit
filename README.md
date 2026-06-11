@@ -10,7 +10,7 @@
 
 **A live terminal cockpit for token usage, cost, and speed across your coding agents.**
 
-Claude Code, Codex, Gemini, OpenCode, and Amp burn tokens all day. `agent-cockpit` reads their
+Claude Code, Codex, Gemini, OpenCode, Amp, and Copilot burn tokens all day. `agent-cockpit` reads their
 **local** logs and turns them into a glass-cockpit dashboard: token burn, USD
 estimates, observed throughput, trends, and a GitHub-style year of activity.
 No cloud upload. No API keys. No background daemon.
@@ -27,7 +27,7 @@ No cloud upload. No API keys. No background daemon.
 
 - **🔒 Private by design.** It only reads log files already on your disk. Nothing
   is uploaded, no service runs in the background, no keys are required.
-- **🛩️ One cockpit for every agent.** Claude Code, Codex, Gemini, OpenCode, and Amp in a single
+- **🛩️ One cockpit for every agent.** Claude Code, Codex, Gemini, OpenCode, Amp, and Copilot in a single
   normalized view, so you can compare engines, models, and projects side by side.
 - **💸 Know the cost.** Per-model pricing (derived from the
   [LiteLLM](https://github.com/BerriAI/litellm) dataset and vendored into the
@@ -131,7 +131,7 @@ localhost API examples.
 - 🛩️ **Live TUI:** a glass-cockpit dashboard that refreshes the instant an agent writes a log.
 - 📊 **Daily / Trends:** token usage and cost over time, as tables and braille charts.
 - ⏱️ **Blocks:** Claude's 5-hour billing windows with a live burn-rate projection.
-- 🤖 **Unified view:** Claude Code, Codex, Gemini, OpenCode, and Amp usage in one normalized cockpit.
+- 🤖 **Unified view:** Claude Code, Codex, Gemini, OpenCode, Amp, and Copilot usage in one normalized cockpit.
 - 💸 **Accurate cost:** per-model pricing from the LiteLLM dataset, vendored for offline use.
 - 🧮 **Insights:** cache hit rate, throughput, velocity, engaged hours, and caution lamps.
 - 🚦 **Budgets & limits:** optional daily / weekly / monthly USD budgets and Claude 5h / 7d token limits, surfaced in the TUI and statusline.
@@ -206,6 +206,7 @@ CLI reports, statusline output, or CSV exports when you only want token counts.
 | Gemini | `~/.gemini/tmp/**/chats/session-*.json` |
 | OpenCode | `~/.local/share/opencode/opencode*.db`, `~/.local/share/opencode/storage/message/*.json`, `~/.opencode/opencode*.db` |
 | Amp | `~/.local/share/amp/threads/**/*.json` |
+| GitHub Copilot CLI | `~/.copilot/otel/**/*.jsonl`, plus `COPILOT_OTEL_FILE_EXPORTER_PATH` |
 
 ## ⚙️ Configuration
 
@@ -243,6 +244,7 @@ codex  = ["~/.codex/sessions", "~/.codex/archived_sessions"]
 gemini = ["~/.gemini/tmp"]
 opencode = ["~/.local/share/opencode", "~/.opencode"]
 amp = ["~/.local/share/amp"]
+copilot = ["~/.copilot/otel"]
 
 # Defaults come from the vendored LiteLLM table; override here only if you want
 # to. Prices are USD per million tokens; keys match a model-name substring.
@@ -268,7 +270,7 @@ mode is driven by an fsnotify watcher, and the TUI is built with
 
 ```text
 cmd/cockpit/                 entry point (the `cockpit` binary)
-internal/source/        Claude / Codex / Gemini / OpenCode / Amp log adapters
+internal/source/        Claude / Codex / Gemini / OpenCode / Amp / Copilot log adapters
 internal/scan/          parallel directory walk + file parsing
 internal/watch/         fsnotify watcher for live refresh
 internal/usage/         normalized events, pricing, aggregation, insights

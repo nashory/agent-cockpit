@@ -66,6 +66,10 @@ OpenCode:
 
 Amp:
   ~/.local/share/amp/threads/**/*.json
+
+GitHub Copilot CLI:
+  ~/.copilot/otel/**/*.jsonl
+  COPILOT_OTEL_FILE_EXPORTER_PATH
 ```
 
 Do not commit real agent logs, API keys, bot tokens, or local config files.

@@ -47,12 +47,12 @@ func TestCollectAcrossSources(t *testing.T) {
 	}
 }
 
-func TestAllRegistersThreeSources(t *testing.T) {
+func TestAllRegistersBuiltInSources(t *testing.T) {
 	names := map[string]bool{}
 	for _, s := range source.All() {
 		names[s.Name()] = true
 	}
-	for _, want := range []string{"claude", "codex", "gemini"} {
+	for _, want := range []string{"claude", "codex", "gemini", "opencode", "amp", "copilot"} {
 		if !names[want] {
 			t.Errorf("source registry missing %q", want)
 		}

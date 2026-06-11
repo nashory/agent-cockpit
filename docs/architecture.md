@@ -22,6 +22,7 @@ internal/source/codex/      Codex JSONL parser
 internal/source/gemini/     Gemini session parser
 internal/source/opencode/   OpenCode SQLite and message JSON parser
 internal/source/amp/        Amp thread JSON parser
+internal/source/copilot/    Copilot OpenTelemetry JSONL parser
 internal/scan/              parallel directory walk + file parsing
 internal/watch/             fsnotify log-dir watcher with debounced refresh
 internal/usage/             normalized event model, pricing, grouping, insights
