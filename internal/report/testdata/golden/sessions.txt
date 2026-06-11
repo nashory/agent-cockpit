@@ -1,0 +1,4 @@
+Sessions
+Name               Share  Tokens  Cost
+proj-b / session-  65.1%  280     0.00 USD
+proj-a / session-  34.9%  150     0.00 USD

@@ -1,0 +1,3 @@
+Observed Speed
+Agent / model      Output t/s  Output tokens  Window  Events
+codex / unknown-b  6.00        60             10s     2

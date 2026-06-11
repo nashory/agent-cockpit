@@ -1,0 +1,15 @@
+Snapshot
+
+Events: 2
+Tokens: 430 total  300 input  130 output  0 cache  0 reasoning
+Estimated cost: 0.00 USD
+
+Agents
+Name    Share  Tokens  Cost
+codex   65.1%  280     0.00 USD
+claude  34.9%  150     0.00 USD
+
+Models
+Name       Share  Tokens  Cost
+unknown-b  65.1%  280     0.00 USD
+unknown-a  34.9%  150     0.00 USD

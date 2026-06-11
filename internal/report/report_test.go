@@ -2,6 +2,8 @@ package report
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -10,10 +12,17 @@ import (
 )
 
 func sample() []usage.Event {
-	t0 := time.Now()
+	t0 := time.Date(2026, 6, 11, 9, 0, 0, 0, time.UTC)
 	return []usage.Event{
-		{Source: "claude", Model: "claude-opus-4-8", Input: 100, Output: 50, Timestamp: t0},
-		{Source: "codex", Model: "gpt-5-codex", Input: 200, Output: 80, Timestamp: t0.Add(-2 * time.Second)},
+		{Source: "claude", SessionID: "session-alpha", Project: "proj-a", Model: "unknown-a", Input: 100, Output: 50, Timestamp: t0},
+		{Source: "codex", SessionID: "session-beta", Project: "proj-b", Model: "unknown-b", Input: 200, Output: 80, Timestamp: t0.Add(-2 * time.Second)},
+	}
+}
+
+func speedSample() []usage.Event {
+	return []usage.Event{
+		{Source: "codex", Model: "unknown-b", Output: 20, Timestamp: time.Date(2026, 6, 11, 9, 0, 0, 0, time.UTC)},
+		{Source: "codex", Model: "unknown-b", Output: 40, Timestamp: time.Date(2026, 6, 11, 9, 0, 10, 0, time.UTC)},
 	}
 }
 
@@ -28,6 +37,12 @@ func TestOverviewWritesTotals(t *testing.T) {
 	}
 }
 
+func TestOverviewGolden(t *testing.T) {
+	var b bytes.Buffer
+	Overview(&b, "Snapshot", sample(), Options{Currency: "USD"})
+	assertGolden(t, "overview.txt", b.String())
+}
+
 func TestBucketsRespectsLimit(t *testing.T) {
 	var b bytes.Buffer
 	buckets := usage.GroupBy(sample(), func(e usage.Event) string { return e.Source })
@@ -40,6 +55,25 @@ func TestBucketsRespectsLimit(t *testing.T) {
 	if strings.Contains(s, "claude") {
 		t.Errorf("limit 1 should omit the second bucket:\n%s", s)
 	}
+}
+
+func TestBucketsGolden(t *testing.T) {
+	var b bytes.Buffer
+	buckets := usage.GroupBy(sample(), func(e usage.Event) string { return e.Source })
+	Buckets(&b, "Agents", buckets, 0, Options{Currency: "USD"})
+	assertGolden(t, "buckets.txt", b.String())
+}
+
+func TestSessionsGolden(t *testing.T) {
+	var b bytes.Buffer
+	Sessions(&b, sample(), 10, Options{Currency: "USD"})
+	assertGolden(t, "sessions.txt", b.String())
+}
+
+func TestSpeedGolden(t *testing.T) {
+	var b bytes.Buffer
+	Speed(&b, speedSample(), 10)
+	assertGolden(t, "speed.txt", b.String())
 }
 
 func TestSpeedAndTrendSmoke(t *testing.T) {
@@ -80,5 +114,17 @@ func TestSVGReport(t *testing.T) {
 	// XML-escapes model/text safely (no raw unescaped ampersand in a way that breaks).
 	if strings.Count(out, "<svg") != 1 {
 		t.Errorf("expected exactly one <svg root")
+	}
+}
+
+func assertGolden(t *testing.T, name, got string) {
+	t.Helper()
+	want, err := os.ReadFile(filepath.Join("testdata", "golden", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	normalizedWant := strings.ReplaceAll(string(want), "\r\n", "\n")
+	if got != normalizedWant {
+		t.Fatalf("%s mismatch\nwant:\n%s\ngot:\n%s", name, want, got)
 	}
 }
