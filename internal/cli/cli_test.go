@@ -128,6 +128,32 @@ func TestCSVGoldens(t *testing.T) {
 	}
 }
 
+func TestStatuslineTextGoldens(t *testing.T) {
+	cfgPath := emptyConfigPath(t)
+	for _, tc := range []struct {
+		name string
+		opts options
+	}{
+		{name: "default", opts: options{configPath: cfgPath}},
+		{name: "compact", opts: options{configPath: cfgPath, compact: true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var out bytes.Buffer
+			writeStatusline(&out, goldenEvents(), reportOptions(goldenConfig()), &tc.opts)
+			assertGolden(t, "statusline_"+tc.name+".txt", out.String())
+		})
+	}
+}
+
+func emptyConfigPath(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "config.toml")
+	if err := os.WriteFile(path, []byte(""), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
 func goldenConfig() config.Config {
 	return config.Config{
 		Currency: "USD",
