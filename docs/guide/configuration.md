@@ -57,6 +57,7 @@ amp = ["~/.local/share/amp"]
 copilot = ["~/.copilot/otel"]
 kimi = ["~/.kimi"]
 qwen = ["~/.qwen"]
+codebuff = ["~/.config/manicode", "~/.config/manicode-dev", "~/.config/manicode-staging"]
 
 [pricing."claude-sonnet"]
 input_per_million = 3

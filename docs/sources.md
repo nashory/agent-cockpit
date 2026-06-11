@@ -309,3 +309,59 @@ Token mapping:
 The project name is derived from the path segment after `projects/`. Missing
 session IDs fall back to `<project>-<file_stem>`, and missing model names fall
 back to `unknown`.
+
+## Codebuff
+
+Default paths:
+
+```text
+~/.config/manicode/projects/*/chats/*/chat-messages.json
+~/.config/manicode-dev/projects/*/chats/*/chat-messages.json
+~/.config/manicode-staging/projects/*/chats/*/chat-messages.json
+```
+
+`CODEBUFF_DATA_DIR` can override the roots with one path or a comma-separated
+list. Roots may point at either a channel directory or directly at its
+`projects` directory. The source reads local chat JSON files only; it does not
+call Codebuff APIs or read credentials.
+
+Codebuff chat files are JSON arrays. Assistant messages can expose usage under
+`metadata.usage`, `metadata.codebuff.usage`, or the latest assistant entry in
+`metadata.runState.sessionState.mainAgentState.messageHistory`:
+
+```json
+{
+  "id": "msg-1",
+  "variant": "assistant",
+  "timestamp": "2026-02-23T14:24:56.857Z",
+  "metadata": {
+    "model": "claude-sonnet-4-5",
+    "usage": {
+      "inputTokens": 100,
+      "outputTokens": 50,
+      "cacheReadInputTokens": 5,
+      "cacheCreationInputTokens": 7,
+      "totalTokens": 162
+    }
+  }
+}
+```
+
+Token mapping:
+
+- `inputTokens`, `input_tokens`, `promptTokens`, or `prompt_tokens` -> input
+  tokens
+- `outputTokens`, `output_tokens`, `completionTokens`, or `completion_tokens`
+  -> output tokens
+- `cacheReadInputTokens`, `cache_read_input_tokens`, or cached token details
+  -> cache-read input tokens
+- `cacheCreationInputTokens`, `cache_creation_input_tokens`,
+  `cacheCreationTokens`, `cache_creation_tokens`, `cachedTokensCreated`, or
+  `cached_tokens_created` -> cache-creation input tokens
+- `totalTokens`, `total_tokens`, or `total` fills missing output tokens when
+  provider-specific parts are absent
+
+The project name is derived from the path segment after `projects/`. Session
+IDs use `<channel>/<project>/<chat_id>/<message_id>` when the message has an
+ID, or the message ordinal otherwise. Missing model names fall back to
+`codebuff-unknown`.

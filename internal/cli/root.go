@@ -432,6 +432,10 @@ func Execute() error {
 			for _, p := range cfg.Paths.Qwen {
 				printPath(p)
 			}
+			fmt.Println("Codebuff paths:")
+			for _, p := range cfg.Paths.Codebuff {
+				printPath(p)
+			}
 			return nil
 		},
 	})
@@ -445,7 +449,7 @@ func addFlags(cmd *cobra.Command, opts *options) {
 	cmd.PersistentFlags().IntVar(&opts.days, "days", opts.days, "number of days to include")
 	cmd.PersistentFlags().StringVar(&opts.since, "since", "", "start date or relative duration, for example YYYY-MM-DD, 7d, 2w, or 168h")
 	cmd.PersistentFlags().StringVar(&opts.until, "until", "", "end date, YYYY-MM-DD")
-	cmd.PersistentFlags().StringVar(&opts.sources, "source", "", "comma-separated source filter: claude,codex,gemini,opencode,amp,copilot,kimi,qwen")
+	cmd.PersistentFlags().StringVar(&opts.sources, "source", "", "comma-separated source filter: claude,codex,gemini,opencode,amp,copilot,kimi,qwen,codebuff")
 	cmd.PersistentFlags().StringVar(&opts.project, "project", "", "project/cwd substring filter")
 	cmd.PersistentFlags().StringVar(&opts.model, "model", "", "model substring filter")
 	cmd.PersistentFlags().StringVar(&opts.configPath, "config", "", "config file path")
@@ -1550,6 +1554,7 @@ func logRoots(cfg config.Config) []string {
 	roots = append(roots, cfg.Paths.Copilot...)
 	roots = append(roots, cfg.Paths.Kimi...)
 	roots = append(roots, cfg.Paths.Qwen...)
+	roots = append(roots, cfg.Paths.Codebuff...)
 	return roots
 }
 
@@ -1625,6 +1630,7 @@ amp = ["~/.local/share/amp"]
 copilot = ["~/.copilot/otel"]
 kimi = ["~/.kimi"]
 qwen = ["~/.qwen"]
+codebuff = ["~/.config/manicode", "~/.config/manicode-dev", "~/.config/manicode-staging"]
 
 # Prices are USD per million tokens. Keys match model substrings.
 [pricing."claude-sonnet"]

@@ -76,6 +76,9 @@ Kimi:
 
 Qwen Code:
   ~/.qwen/projects/*/chats/*.jsonl
+
+Codebuff:
+  ~/.config/manicode*/projects/*/chats/*/chat-messages.json
 ```
 
 Do not commit real agent logs, API keys, bot tokens, or local config files.

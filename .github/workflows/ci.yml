@@ -106,6 +106,7 @@ jobs:
           copilot = ["$tmp/empty"]
           kimi = ["$tmp/empty"]
           qwen = ["$tmp/empty"]
+          codebuff = ["$tmp/empty"]
           EOF
 
           ./cockpit config schema > "$tmp/schema.json"

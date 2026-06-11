@@ -972,7 +972,8 @@ Tasks:
 - Validate Copilot CLI local data availability.
 - Add Kimi adapter.
 - Add Qwen adapter.
-- Pick additional Cursor, Kilo, Goose, or Codebuff adapters based on available
+- Add Codebuff adapter.
+- Pick additional Cursor, Kilo, or Goose adapters based on available
   local fixture quality.
 - Add docs and fixtures for each new source.
 
