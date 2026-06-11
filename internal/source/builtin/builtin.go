@@ -8,6 +8,7 @@ import (
 	"github.com/nashory/agent-cockpit/internal/source/codex"
 	"github.com/nashory/agent-cockpit/internal/source/copilot"
 	"github.com/nashory/agent-cockpit/internal/source/gemini"
+	"github.com/nashory/agent-cockpit/internal/source/kilo"
 	"github.com/nashory/agent-cockpit/internal/source/kimi"
 	"github.com/nashory/agent-cockpit/internal/source/opencode"
 	"github.com/nashory/agent-cockpit/internal/source/qwen"
@@ -23,4 +24,5 @@ func init() {
 	source.Register(kimi.Source{})
 	source.Register(qwen.Source{})
 	source.Register(codebuff.Source{})
+	source.Register(kilo.Source{})
 }

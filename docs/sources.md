@@ -365,3 +365,48 @@ The project name is derived from the path segment after `projects/`. Session
 IDs use `<channel>/<project>/<chat_id>/<message_id>` when the message has an
 ID, or the message ordinal otherwise. Missing model names fall back to
 `codebuff-unknown`.
+
+## Kilo Code
+
+Default path:
+
+```text
+~/.local/share/kilo/kilo.db
+```
+
+`KILO_DATA_DIR` can override the root with one path or a comma-separated list of
+paths. The source reads local SQLite databases only; it does not call Kilo APIs
+or read credentials.
+
+Kilo stores assistant messages in the `message` table as JSON in the `data`
+column:
+
+```json
+{
+  "id": "msg-1",
+  "role": "assistant",
+  "providerID": "anthropic",
+  "modelID": "claude-sonnet-4-20250514",
+  "time": {"created": 1767312000000},
+  "tokens": {
+    "input": 100,
+    "output": 50,
+    "reasoning": 5,
+    "cache": {"read": 10, "write": 20}
+  }
+}
+```
+
+Token mapping:
+
+- `tokens.input` -> input tokens
+- `tokens.output` plus `tokens.reasoning` -> output tokens
+- `tokens.cache.read` -> cache-read input tokens
+- `tokens.cache.write` -> cache-creation input tokens
+- `tokens.reasoning` -> reasoning tokens, surfaced as a subset of output
+- `tokens.total` fills missing output tokens when provider-specific parts are
+  absent
+
+Session IDs use `<row_session_id>/<message_id>` when the embedded message has
+an ID, or `<row_session_id>/<row_id>` otherwise. Missing timestamps or models
+are skipped because Kilo rows need both to be useful in time-series reports.

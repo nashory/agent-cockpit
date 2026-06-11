@@ -14,6 +14,7 @@ usage events. It does not call provider APIs for reports.
 | Kimi | `~/.kimi/sessions/*/*/wire.jsonl` | Not read | No |
 | Qwen Code | `~/.qwen/projects/*/chats/*.jsonl` | Not read | No |
 | Codebuff | `~/.config/manicode*/projects/*/chats/*/chat-messages.json` | Not read | No |
+| Kilo Code | `~/.local/share/kilo/kilo.db` | Not read | No |
 
 Check what exists on your machine:
 
@@ -34,6 +35,7 @@ copilot = []
 kimi = []
 qwen = []
 codebuff = []
+kilo = []
 ```
 
 Extracted fields are usage metadata only: source, session id, project or working

@@ -79,6 +79,9 @@ Qwen Code:
 
 Codebuff:
   ~/.config/manicode*/projects/*/chats/*/chat-messages.json
+
+Kilo Code:
+  ~/.local/share/kilo/kilo.db
 ```
 
 Do not commit real agent logs, API keys, bot tokens, or local config files.

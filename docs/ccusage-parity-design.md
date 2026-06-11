@@ -973,7 +973,8 @@ Tasks:
 - Add Kimi adapter.
 - Add Qwen adapter.
 - Add Codebuff adapter.
-- Pick additional Cursor, Kilo, or Goose adapters based on available
+- Add Kilo adapter.
+- Pick additional Cursor or Goose adapters based on available
   local fixture quality.
 - Add docs and fixtures for each new source.
 

@@ -47,6 +47,7 @@ Default source paths:
 | Kimi | `~/.kimi/sessions/*/*/wire.jsonl` |
 | Qwen Code | `~/.qwen/projects/*/chats/*.jsonl` |
 | Codebuff | `~/.config/manicode*/projects/*/chats/*/chat-messages.json` |
+| Kilo Code | `~/.local/share/kilo/kilo.db` |
 
 Use config paths to narrow scanning to specific directories:
 
@@ -61,6 +62,7 @@ copilot = []
 kimi = []
 qwen = []
 codebuff = []
+kilo = []
 ```
 
 ## Data Extracted
