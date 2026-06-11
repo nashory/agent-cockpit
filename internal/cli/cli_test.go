@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -204,7 +205,8 @@ func assertGolden(t *testing.T, name, got string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != string(want) {
+	normalizedWant := strings.ReplaceAll(string(want), "\r\n", "\n")
+	if got != normalizedWant {
 		t.Fatalf("%s mismatch\nwant:\n%s\ngot:\n%s", name, want, got)
 	}
 }
