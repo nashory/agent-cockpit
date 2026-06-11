@@ -119,6 +119,20 @@ func Summarize(events []Event) Totals {
 	return SummarizeWith(events, nil)
 }
 
+func SummarizeTokens(events []Event) Totals {
+	var t Totals
+	for _, e := range events {
+		t.Events++
+		t.Input += e.Input
+		t.Output += e.Output
+		t.CacheRead += e.CacheRead
+		t.CacheCreate += e.CacheCreate
+		t.Reasoning += e.Reasoning
+		t.Total += e.TotalTokens()
+	}
+	return t
+}
+
 func SummarizeWith(events []Event, prices PriceBook) Totals {
 	var t Totals
 	for _, e := range events {
@@ -144,7 +158,15 @@ func GroupBy(events []Event, key func(Event) string) []Bucket {
 	return GroupByWith(events, nil, key)
 }
 
+func GroupByTokens(events []Event, key func(Event) string) []Bucket {
+	return groupBy(events, nil, key, false)
+}
+
 func GroupByWith(events []Event, prices PriceBook, key func(Event) string) []Bucket {
+	return groupBy(events, prices, key, true)
+}
+
+func groupBy(events []Event, prices PriceBook, key func(Event) string, estimateCost bool) []Bucket {
 	totals := map[string]*Totals{}
 	order := make([]string, 0)
 	var grand int64
@@ -166,7 +188,9 @@ func GroupByWith(events []Event, prices PriceBook, key func(Event) string) []Buc
 		t.CacheCreate += e.CacheCreate
 		t.Reasoning += e.Reasoning
 		t.Total += e.TotalTokens()
-		t.CostUSD += EstimateCostWith(e, prices)
+		if estimateCost {
+			t.CostUSD += EstimateCostWith(e, prices)
+		}
 		grand += e.TotalTokens()
 	}
 	buckets := make([]Bucket, 0, len(totals))

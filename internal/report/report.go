@@ -16,6 +16,7 @@ type Options struct {
 	Currency string
 	Budget   usage.Budget
 	Limits   usage.Limits
+	NoCost   bool
 }
 
 type speedStats struct {
@@ -34,32 +35,43 @@ func (o Options) currency() string {
 }
 
 func Overview(w io.Writer, title string, events []usage.Event, opts Options) {
-	t := usage.SummarizeWith(events, opts.Pricing)
+	t := summarize(events, opts)
 	fmt.Fprintf(w, "%s\n\n", title)
 	fmt.Fprintf(w, "Events: %d\n", t.Events)
 	fmt.Fprintf(w, "Tokens: %s total  %s input  %s output  %s cache  %s reasoning\n",
 		formatInt(t.Total), formatInt(t.Input), formatInt(t.Output), formatInt(t.CacheRead+t.CacheCreate), formatInt(t.Reasoning))
-	fmt.Fprintf(w, "Estimated cost: %.2f %s\n\n", t.CostUSD, opts.currency())
-	Buckets(w, "Agents", usage.GroupByWith(events, opts.Pricing, func(e usage.Event) string { return e.Source }), 8, opts)
+	if !opts.NoCost {
+		fmt.Fprintf(w, "Estimated cost: %.2f %s\n", t.CostUSD, opts.currency())
+	}
 	fmt.Fprintln(w)
-	Buckets(w, "Models", usage.GroupByWith(events, opts.Pricing, func(e usage.Event) string { return e.Model }), 8, opts)
+	Buckets(w, "Agents", groupBy(events, opts, func(e usage.Event) string { return e.Source }), 8, opts)
+	fmt.Fprintln(w)
+	Buckets(w, "Models", groupBy(events, opts, func(e usage.Event) string { return e.Model }), 8, opts)
 }
 
 func Buckets(w io.Writer, title string, buckets []usage.Bucket, limit int, opts Options) {
 	fmt.Fprintln(w, title)
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "Name\tShare\tTokens\tCost")
+	if opts.NoCost {
+		fmt.Fprintln(tw, "Name\tShare\tTokens")
+	} else {
+		fmt.Fprintln(tw, "Name\tShare\tTokens\tCost")
+	}
 	for i, b := range buckets {
 		if limit > 0 && i >= limit {
 			break
 		}
-		fmt.Fprintf(tw, "%s\t%.1f%%\t%s\t%.2f %s\n", b.Key, b.Share*100, formatInt(b.Totals.Total), b.Totals.CostUSD, opts.currency())
+		if opts.NoCost {
+			fmt.Fprintf(tw, "%s\t%.1f%%\t%s\n", b.Key, b.Share*100, formatInt(b.Totals.Total))
+		} else {
+			fmt.Fprintf(tw, "%s\t%.1f%%\t%s\t%.2f %s\n", b.Key, b.Share*100, formatInt(b.Totals.Total), b.Totals.CostUSD, opts.currency())
+		}
 	}
 	_ = tw.Flush()
 }
 
 func Sessions(w io.Writer, events []usage.Event, limit int, opts Options) {
-	buckets := usage.GroupByWith(events, opts.Pricing, func(e usage.Event) string {
+	buckets := groupBy(events, opts, func(e usage.Event) string {
 		if e.Project != "" && e.SessionID != "" {
 			return e.Project + " / " + short(e.SessionID)
 		}
@@ -125,15 +137,34 @@ func Trend(w io.Writer, events []usage.Event, days int, opts Options) {
 	max := int64(1)
 	totals := make([]usage.Totals, days)
 	for i := range byDay {
-		totals[i] = usage.SummarizeWith(byDay[i], opts.Pricing)
+		totals[i] = summarize(byDay[i], opts)
 		if totals[i].Total > max {
 			max = totals[i].Total
 		}
 	}
 	for i, t := range totals {
 		day := start.AddDate(0, 0, i).Format("Jan 02")
-		fmt.Fprintf(w, "%s  %-24s %s  %.2f %s\n", day, bar(t.Total, max, 24), formatInt(t.Total), t.CostUSD, opts.currency())
+		if opts.NoCost {
+			fmt.Fprintf(w, "%s  %-24s %s\n", day, bar(t.Total, max, 24), formatInt(t.Total))
+		} else {
+			fmt.Fprintf(w, "%s  %-24s %s  %.2f %s\n", day, bar(t.Total, max, 24), formatInt(t.Total), t.CostUSD, opts.currency())
+		}
 	}
+}
+
+func summarize(events []usage.Event, opts Options) usage.Totals {
+	if opts.NoCost {
+		return usage.SummarizeTokens(events)
+	}
+	return usage.SummarizeWith(events, opts.Pricing)
+}
+
+func groupBy(events []usage.Event, opts Options, key func(usage.Event) string) []usage.Bucket {
+	if opts.NoCost {
+		return usage.GroupByTokens(events, key)
+	}
+	buckets := usage.GroupByWith(events, opts.Pricing, key)
+	return buckets
 }
 
 func tokensPerSecond(row *speedStats) float64 {

@@ -111,6 +111,10 @@ with golden tests. Current usage JSON includes:
 - `rows`
 - `events`
 
+`cost_mode` is `estimated` by default. With `--no-cost`, it is `disabled` and
+`estimated_cost_usd` is omitted from totals and aggregate rows instead of being
+reported as a misleading zero.
+
 Do not remove or rename JSON fields without an explicit schema-version bump.
 When a command filter or time window affects output, represent it in `range` or
 `filters` so downstream tools can explain the result without parsing CLI flags.
@@ -129,13 +133,6 @@ available for compatibility until a future explicit schema decision removes it.
 
 3. The release workflow uploads native archives and `checksums.txt`.
 4. The Homebrew tap should point its formula at the release tarball.
-
-Pre-1.0 versioning is numeric, not feature-gated:
-
-- Patch releases advance as `0.x.1`, `0.x.2`, through `0.x.10`.
-- After `0.x.10`, the next release is `0.(x+1).0`.
-- Example: after `v0.1.10`, the next release is `v0.2.0`; after `v0.2.10`,
-  the next release is `v0.3.0`.
 
 ## Homebrew Formula Shape
 

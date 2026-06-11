@@ -107,6 +107,7 @@ cockpit agents  --model sonnet
 
 # JSON for scripts
 cockpit today --json
+cockpit today --json --no-cost  # omit estimated cost fields
 
 # config helpers
 cockpit config init
@@ -181,7 +182,8 @@ On
 follows it) and `enter` opens that row's per-model breakdown (`esc` closes it).
 
 Costs are estimates derived from token counts (no per-call cost is recorded in
-the logs), so every USD figure is shown with a leading `~`.
+the logs), so every USD figure is shown with a leading `~`. Add `--no-cost` to
+CLI reports, statusline output, or CSV exports when you only want token counts.
 
 ## 🔒 What It Reads
 

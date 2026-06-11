@@ -144,7 +144,7 @@ func TestUsageJSONRowsByReport(t *testing.T) {
 		t.Fatalf("summary rows = %+v", summary)
 	}
 
-	agents, ok := usageJSONRows(events, cfg, now, usageJSONContext{Report: "agents"}).([]usage.Bucket)
+	agents, ok := usageJSONRows(events, cfg, now, usageJSONContext{Report: "agents"}).([]bucketJSONRow)
 	if !ok {
 		t.Fatalf("agents rows type = %T", agents)
 	}
@@ -152,7 +152,7 @@ func TestUsageJSONRowsByReport(t *testing.T) {
 		t.Fatalf("agents rows = %+v", agents)
 	}
 
-	sessions, ok := usageJSONRows(events, cfg, now, usageJSONContext{Report: "sessions"}).([]usage.Bucket)
+	sessions, ok := usageJSONRows(events, cfg, now, usageJSONContext{Report: "sessions"}).([]bucketJSONRow)
 	if !ok {
 		t.Fatalf("sessions rows type = %T", sessions)
 	}
@@ -180,7 +180,7 @@ func TestUsageJSONRowsByReport(t *testing.T) {
 func TestStatuslineJSONGolden(t *testing.T) {
 	var out bytes.Buffer
 	totals := usage.SummarizeWith(goldenEvents(), nil)
-	if err := writeStatuslineJSON(&out, totals, "USD", nil, nil, goldenNow()); err != nil {
+	if err := writeStatuslineJSON(&out, totals, "USD", nil, nil, goldenNow(), false); err != nil {
 		t.Fatal(err)
 	}
 	assertGolden(t, "statusline_json.golden", out.String())
@@ -190,7 +190,7 @@ func TestCSVGoldens(t *testing.T) {
 	for _, group := range []string{"daily", "session", "model", "project", "event"} {
 		t.Run(group, func(t *testing.T) {
 			var out bytes.Buffer
-			if err := writeCSV(&out, csvGoldenEvents(), reportOptions(goldenConfig()), group); err != nil {
+			if err := writeCSV(&out, csvGoldenEvents(), reportOptions(goldenConfig(), nil), group); err != nil {
 				t.Fatal(err)
 			}
 			assertGolden(t, "export_"+group+".csv", out.String())
@@ -209,9 +209,42 @@ func TestStatuslineTextGoldens(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var out bytes.Buffer
-			writeStatusline(&out, goldenEvents(), reportOptions(goldenConfig()), &tc.opts)
+			writeStatusline(&out, goldenEvents(), reportOptions(goldenConfig(), &tc.opts), &tc.opts)
 			assertGolden(t, "statusline_"+tc.name+".txt", out.String())
 		})
+	}
+}
+
+func TestNoCostOutputs(t *testing.T) {
+	cfg := goldenConfig()
+	opts := &options{noCost: true, days: 30}
+
+	var out bytes.Buffer
+	ctx := buildUsageJSONContext(opts)
+	ctx.Report = "today"
+	if err := writeUsageJSON(&out, goldenEvents(), cfg, goldenNow(), ctx); err != nil {
+		t.Fatal(err)
+	}
+	got := out.String()
+	if !strings.Contains(got, `"cost_mode": "disabled"`) {
+		t.Fatalf("no-cost JSON missing disabled cost mode:\n%s", got)
+	}
+	if strings.Contains(got, "estimated_cost_usd") {
+		t.Fatalf("no-cost JSON should omit estimated_cost_usd:\n%s", got)
+	}
+
+	out.Reset()
+	writeStatusline(&out, goldenEvents(), reportOptions(cfg, opts), opts)
+	if strings.Contains(out.String(), "cost") || strings.Contains(out.String(), "~") {
+		t.Fatalf("no-cost statusline leaked cost: %s", out.String())
+	}
+
+	out.Reset()
+	if err := writeCSV(&out, csvGoldenEvents(), reportOptions(cfg, opts), "daily"); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out.String(), "estimated_cost") || strings.Contains(out.String(), "currency") {
+		t.Fatalf("no-cost CSV leaked cost columns:\n%s", out.String())
 	}
 }
 

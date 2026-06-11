@@ -117,6 +117,17 @@ func TestSVGReport(t *testing.T) {
 	}
 }
 
+func TestSVGReportNoCost(t *testing.T) {
+	var b strings.Builder
+	SVG(&b, "Usage summary", sample(), Options{Currency: "USD", NoCost: true})
+	out := b.String()
+	for _, leaked := range []string{"COST", "~", "LiteLLM pricing"} {
+		if strings.Contains(out, leaked) {
+			t.Fatalf("no-cost SVG leaked %q:\n%s", leaked, out)
+		}
+	}
+}
+
 func assertGolden(t *testing.T, name, got string) {
 	t.Helper()
 	want, err := os.ReadFile(filepath.Join("testdata", "golden", name))
