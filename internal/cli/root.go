@@ -128,6 +128,15 @@ type speedJSONRow struct {
 	LastActivity    string  `json:"last_activity,omitempty"`
 }
 
+type blockJSONRow struct {
+	Start        string          `json:"start"`
+	End          string          `json:"end"`
+	LastActivity string          `json:"last_activity,omitempty"`
+	Active       bool            `json:"active"`
+	Models       []string        `json:"models,omitempty"`
+	Totals       usageJSONTotals `json:"totals"`
+}
+
 type statuslineJSONDocument struct {
 	SchemaVersion string                   `json:"schema_version"`
 	GeneratedAt   time.Time                `json:"generated_at"`
@@ -387,6 +396,7 @@ func Execute() error {
 		},
 	})
 	root.AddCommand(configCommand(opts))
+	root.AddCommand(serveCommand(opts))
 
 	return root.Execute()
 }
@@ -659,7 +669,9 @@ func usageJSONRows(events []usage.Event, cfg config.Config, now time.Time, ctx u
 		return bucketRows(events, cfg.Pricing, ctx.NoCost, ctx.Order, 0, func(e usage.Event) string { return e.Source })
 	case "sessions":
 		return sessionBuckets(events, cfg.Pricing, ctx.NoCost, ctx.Order, 20)
-	case "trends":
+	case "blocks":
+		return blockRows(events, cfg.Pricing, ctx.NoCost, ctx.Order, now)
+	case "daily", "trends":
 		days := ctx.Range.Days
 		if days <= 0 {
 			days = 30
@@ -700,6 +712,42 @@ func sessionBuckets(events []usage.Event, prices usage.PriceBook, noCost bool, o
 		}
 		return e.SessionID
 	})
+}
+
+func blockRows(events []usage.Event, prices usage.PriceBook, noCost bool, order string, now time.Time) []blockJSONRow {
+	blocks := usage.SessionBlocks(events, prices, usage.DefaultBlockWindow)
+	for i := range blocks {
+		blocks[i].Active = !now.Before(blocks[i].Start) && now.Before(blocks[i].End)
+	}
+	if order == "desc" {
+		for i, j := 0, len(blocks)-1; i < j; i, j = i+1, j-1 {
+			blocks[i], blocks[j] = blocks[j], blocks[i]
+		}
+	}
+	rows := make([]blockJSONRow, 0, len(blocks))
+	for _, b := range blocks {
+		totals := b.Totals
+		if noCost {
+			totals.CostUSD = 0
+		}
+		models := make([]string, 0, len(b.Models))
+		for m := range b.Models {
+			models = append(models, m)
+		}
+		sort.Strings(models)
+		row := blockJSONRow{
+			Start:  b.Start.Format(time.RFC3339),
+			End:    b.End.Format(time.RFC3339),
+			Active: b.Active,
+			Models: models,
+			Totals: usageTotalsJSON(totals, noCost),
+		}
+		if !b.LastActivity.IsZero() {
+			row.LastActivity = b.LastActivity.Format(time.RFC3339)
+		}
+		rows = append(rows, row)
+	}
+	return rows
 }
 
 func shortID(s string) string {
