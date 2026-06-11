@@ -120,6 +120,9 @@ cockpit config validate          # validate config.toml
 cockpit doctor                # show detected log locations
 ```
 
+See [ccusage Workflow Mapping](docs/ccusage-workflows.md) for common command
+translations and flag combinations.
+
 ## 🎛️ Features
 
 - 🛩️ **Live TUI:** a glass-cockpit dashboard that refreshes the instant an agent writes a log.
