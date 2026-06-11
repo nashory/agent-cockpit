@@ -116,6 +116,18 @@ func TestStatuslineJSONGolden(t *testing.T) {
 	assertGolden(t, "statusline_json.golden", out.String())
 }
 
+func TestCSVGoldens(t *testing.T) {
+	for _, group := range []string{"daily", "session", "model", "project", "event"} {
+		t.Run(group, func(t *testing.T) {
+			var out bytes.Buffer
+			if err := writeCSV(&out, csvGoldenEvents(), reportOptions(goldenConfig()), group); err != nil {
+				t.Fatal(err)
+			}
+			assertGolden(t, "export_"+group+".csv", out.String())
+		})
+	}
+}
+
 func goldenConfig() config.Config {
 	return config.Config{
 		Currency: "USD",
@@ -137,6 +149,23 @@ func goldenEvents() []usage.Event {
 		Reasoning:   5,
 		Timestamp:   time.Date(2026, 6, 11, 8, 0, 0, 0, time.UTC),
 	}}
+}
+
+func csvGoldenEvents() []usage.Event {
+	return []usage.Event{
+		goldenEvents()[0],
+		{
+			Source:    "codex",
+			SessionID: "s2",
+			Project:   "proj-b",
+			CWD:       "/repo-b",
+			Model:     "unknown-model-b",
+			Input:     7,
+			Output:    3,
+			Reasoning: 2,
+			Timestamp: time.Date(2026, 6, 10, 9, 30, 0, 0, time.UTC),
+		},
+	}
 }
 
 func goldenNow() time.Time {

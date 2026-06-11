@@ -1,0 +1,3 @@
+date,events,input_tokens,output_tokens,cache_tokens,reasoning_tokens,total_tokens,estimated_cost,currency
+2026-06-11,1,100,50,30,5,180,0.000000,USD
+2026-06-10,1,7,3,0,2,10,0.000000,USD
