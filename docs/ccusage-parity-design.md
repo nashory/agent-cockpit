@@ -970,7 +970,9 @@ Tasks:
 - Add OpenCode adapter.
 - Add Amp adapter.
 - Validate Copilot CLI local data availability.
-- Pick one of Cursor, Kimi, Qwen, Kilo, Goose, or Codebuff based on available
+- Add Kimi adapter.
+- Add Qwen adapter.
+- Pick additional Cursor, Kilo, Goose, or Codebuff adapters based on available
   local fixture quality.
 - Add docs and fixtures for each new source.
 

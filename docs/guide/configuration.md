@@ -56,6 +56,7 @@ opencode = ["~/.local/share/opencode", "~/.opencode"]
 amp = ["~/.local/share/amp"]
 copilot = ["~/.copilot/otel"]
 kimi = ["~/.kimi"]
+qwen = ["~/.qwen"]
 
 [pricing."claude-sonnet"]
 input_per_million = 3

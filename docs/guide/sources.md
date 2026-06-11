@@ -12,6 +12,7 @@ usage events. It does not call provider APIs for reports.
 | Amp | `~/.local/share/amp/threads/**/*.json` | Not read | No |
 | GitHub Copilot CLI | `~/.copilot/otel/**/*.jsonl`, `COPILOT_OTEL_FILE_EXPORTER_PATH` | Not read | No |
 | Kimi | `~/.kimi/sessions/*/*/wire.jsonl` | Not read | No |
+| Qwen Code | `~/.qwen/projects/*/chats/*.jsonl` | Not read | No |
 
 Check what exists on your machine:
 
@@ -30,6 +31,7 @@ opencode = []
 amp = []
 copilot = []
 kimi = []
+qwen = []
 ```
 
 Extracted fields are usage metadata only: source, session id, project or working

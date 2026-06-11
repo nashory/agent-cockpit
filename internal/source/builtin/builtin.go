@@ -9,6 +9,7 @@ import (
 	"github.com/nashory/agent-cockpit/internal/source/gemini"
 	"github.com/nashory/agent-cockpit/internal/source/kimi"
 	"github.com/nashory/agent-cockpit/internal/source/opencode"
+	"github.com/nashory/agent-cockpit/internal/source/qwen"
 )
 
 func init() {
@@ -19,4 +20,5 @@ func init() {
 	source.Register(amp.Source{})
 	source.Register(copilot.Source{})
 	source.Register(kimi.Source{})
+	source.Register(qwen.Source{})
 }

@@ -73,6 +73,9 @@ GitHub Copilot CLI:
 
 Kimi:
   ~/.kimi/sessions/*/*/wire.jsonl
+
+Qwen Code:
+  ~/.qwen/projects/*/chats/*.jsonl
 ```
 
 Do not commit real agent logs, API keys, bot tokens, or local config files.

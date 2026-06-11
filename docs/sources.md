@@ -266,3 +266,46 @@ Token mapping:
 
 The model name is read from `~/.kimi/config.json` when present, otherwise it
 falls back to `kimi-for-coding`.
+
+## Qwen Code
+
+Default path:
+
+```text
+~/.qwen/projects/*/chats/*.jsonl
+```
+
+`QWEN_DATA_DIR` can override the root with one path or a comma-separated list of
+paths. The source reads local chat JSONL files only; it does not call Qwen APIs
+or read credentials.
+
+Qwen chat files include assistant records with `usageMetadata`:
+
+```json
+{
+  "type": "assistant",
+  "model": "qwen3-coder-plus",
+  "timestamp": "2026-02-23T14:24:56.857Z",
+  "sessionId": "session-json",
+  "usageMetadata": {
+    "promptTokenCount": 100,
+    "candidatesTokenCount": 50,
+    "cachedContentTokenCount": 5,
+    "thoughtsTokenCount": 10,
+    "totalTokenCount": 165
+  }
+}
+```
+
+Token mapping:
+
+- `promptTokenCount` -> input tokens
+- `candidatesTokenCount` plus `thoughtsTokenCount` -> output tokens
+- `cachedContentTokenCount` -> cache-read input tokens
+- `thoughtsTokenCount` -> reasoning tokens, surfaced as a subset of output
+- `totalTokenCount` fills missing output tokens when provider-specific parts
+  are absent
+
+The project name is derived from the path segment after `projects/`. Missing
+session IDs fall back to `<project>-<file_stem>`, and missing model names fall
+back to `unknown`.

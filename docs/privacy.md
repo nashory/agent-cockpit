@@ -45,6 +45,7 @@ Default source paths:
 | Amp | `~/.local/share/amp/threads/**/*.json` |
 | GitHub Copilot CLI | `~/.copilot/otel/**/*.jsonl`, plus `COPILOT_OTEL_FILE_EXPORTER_PATH` |
 | Kimi | `~/.kimi/sessions/*/*/wire.jsonl` |
+| Qwen Code | `~/.qwen/projects/*/chats/*.jsonl` |
 
 Use config paths to narrow scanning to specific directories:
 
@@ -57,6 +58,7 @@ opencode = []
 amp = []
 copilot = []
 kimi = []
+qwen = []
 ```
 
 ## Data Extracted
