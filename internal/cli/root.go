@@ -369,6 +369,26 @@ func Execute() error {
 			return writePricingStatus(os.Stdout, events, cfg, opts.json)
 		},
 	})
+	var pricingUpdateCheck bool
+	pricingUpdateCmd := &cobra.Command{
+		Use:   "update",
+		Short: "Pricing snapshot update helpers",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if pricingUpdateCheck {
+				return writePricingUpdateCheck(cmd.Context(), os.Stdout, opts.json)
+			}
+			return cmd.Help()
+		},
+	}
+	pricingUpdateCmd.Flags().BoolVar(&pricingUpdateCheck, "check", false, "check whether the vendored LiteLLM pricing snapshot is current")
+	pricingUpdateCmd.AddCommand(&cobra.Command{
+		Use:   "check",
+		Short: "Check whether the vendored LiteLLM pricing snapshot is current",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return writePricingUpdateCheck(cmd.Context(), os.Stdout, opts.json)
+		},
+	})
+	pricingCmd.AddCommand(pricingUpdateCmd)
 	root.AddCommand(pricingCmd)
 	root.AddCommand(&cobra.Command{
 		Use:   "doctor",
@@ -1352,21 +1372,48 @@ func writePricingStatus(w io.Writer, events []usage.Event, cfg config.Config, as
 		rows = append(rows, *r)
 	}
 	sort.Slice(rows, func(i, j int) bool { return rows[i].Tokens > rows[j].Tokens })
+	meta := usage.PricingMetadata()
 	if asJSON {
 		enc := json.NewEncoder(w)
 		enc.SetIndent("", "  ")
 		return enc.Encode(struct {
-			VendoredModels  int   `json:"vendored_models"`
-			ConfigOverrides int   `json:"config_overrides"`
-			Models          []row `json:"models"`
-		}{VendoredModels: usage.VendoredPricingCount(), ConfigOverrides: len(cfg.Pricing), Models: rows})
+			VendoredModels  int                           `json:"vendored_models"`
+			ConfigOverrides int                           `json:"config_overrides"`
+			Snapshot        usage.PricingSnapshotMetadata `json:"snapshot"`
+			Models          []row                         `json:"models"`
+		}{VendoredModels: usage.VendoredPricingCount(), ConfigOverrides: len(cfg.Pricing), Snapshot: meta, Models: rows})
 	}
 	fmt.Fprintf(w, "Vendored pricing models: %d\n", usage.VendoredPricingCount())
+	fmt.Fprintf(w, "Snapshot generated: %s\n", meta.GeneratedAt)
+	fmt.Fprintf(w, "Snapshot source: %s\n", meta.Source)
 	fmt.Fprintf(w, "Config overrides: %d\n\n", len(cfg.Pricing))
 	fmt.Fprintln(w, "Model pricing coverage")
 	for _, r := range rows {
 		fmt.Fprintf(w, "  %-28s %-18s %8s tokens  %d events\n", truncateASCII(r.Model, 28), r.Source, formatCompact(r.Tokens), r.Events)
 	}
+	return nil
+}
+
+func writePricingUpdateCheck(ctx context.Context, w io.Writer, asJSON bool) error {
+	check, err := usage.CheckPricingUpdate(ctx)
+	if err != nil {
+		return err
+	}
+	if asJSON {
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		return enc.Encode(check)
+	}
+	fmt.Fprintf(w, "Pricing source: %s\n", check.SourceURL)
+	fmt.Fprintf(w, "Vendored snapshot: %s (%d models)\n", check.Current.GeneratedAt, check.Current.ModelCount)
+	fmt.Fprintf(w, "Latest snapshot: %d models\n", check.LatestModels)
+	if check.UpToDate {
+		fmt.Fprintln(w, "Status: up to date")
+		return nil
+	}
+	fmt.Fprintln(w, "Status: update available")
+	fmt.Fprintf(w, "Diff: +%d / -%d / ~%d models\n", check.AddedModels, check.RemovedModels, check.ChangedModels)
+	fmt.Fprintln(w, "Run `make pricing` to refresh the vendored snapshot.")
 	return nil
 }
 

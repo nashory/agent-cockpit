@@ -94,6 +94,54 @@ func TestDefaultPricingFromLiteLLM(t *testing.T) {
 	}
 }
 
+func TestPricingMetadataMatchesVendoredTable(t *testing.T) {
+	meta := PricingMetadata()
+	if meta.SourceURL != LiteLLMPricingSourceURL {
+		t.Fatalf("metadata source URL = %q, want %q", meta.SourceURL, LiteLLMPricingSourceURL)
+	}
+	if meta.ModelCount != VendoredPricingCount() {
+		t.Fatalf("metadata model count = %d, want %d", meta.ModelCount, VendoredPricingCount())
+	}
+	if got := pricingTableSHA256(litellmTable()); meta.DataSHA256 != got {
+		t.Fatalf("metadata hash = %s, want %s", meta.DataSHA256, got)
+	}
+}
+
+func TestDistillLiteLLMPricing(t *testing.T) {
+	raw := map[string]map[string]any{
+		"anthropic/claude-sonnet-4-5-20250930": {
+			"litellm_provider":                "anthropic",
+			"mode":                            "chat",
+			"input_cost_per_token":            0.000003,
+			"output_cost_per_token":           0.000015,
+			"cache_read_input_token_cost":     0.0000003,
+			"cache_creation_input_token_cost": 0.00000375,
+		},
+		"vertex_ai/gemini/gemini-2.5-flash": {
+			"litellm_provider":      "vertex_ai-language-models",
+			"input_cost_per_token":  0.0000003,
+			"output_cost_per_token": 0.0000025,
+		},
+		"embedding-model": {
+			"litellm_provider":      "openai",
+			"mode":                  "embedding",
+			"input_cost_per_token":  1.0,
+			"output_cost_per_token": 1.0,
+		},
+	}
+	got := distillLiteLLMPricing(raw)
+	sonnet := got["claude-sonnet-4-5-20250930"]
+	if sonnet.InputPerMillion != 3 || sonnet.OutputPerMillion != 15 || sonnet.CacheReadPerMillion != 0.3 || sonnet.CacheWritePerMillion != 3.75 {
+		t.Fatalf("sonnet pricing = %+v", sonnet)
+	}
+	if flash := got["gemini-2.5-flash"]; flash.InputPerMillion != 0.3 || flash.OutputPerMillion != 2.5 {
+		t.Fatalf("gemini pricing = %+v", flash)
+	}
+	if _, ok := got["embedding-model"]; ok {
+		t.Fatalf("embedding model should be ignored: %+v", got)
+	}
+}
+
 func TestEstimateCostWith(t *testing.T) {
 	e := Event{Model: "x", Input: 1_000_000, Output: 1_000_000}
 	prices := PriceBook{"x": {InputPerMillion: 2, OutputPerMillion: 10}}

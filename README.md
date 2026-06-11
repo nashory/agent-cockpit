@@ -31,7 +31,7 @@ No cloud upload. No API keys. No background daemon.
   normalized view, so you can compare engines, models, and projects side by side.
 - **💸 Know the cost.** Per-model pricing (derived from the
   [LiteLLM](https://github.com/BerriAI/litellm) dataset and vendored into the
-  binary, so it stays accurate with zero network calls) turns raw tokens into USD
+  binary, so reports do not need network calls) turns raw tokens into USD
   estimates, cache savings, effective `$/1M output`, and a daily burn rate.
 - **⚡ Live.** `cockpit live` refreshes the instant an agent writes a log, via fsnotify
   (with a polling backstop).
@@ -101,6 +101,7 @@ cockpit report                # text summary (add --json for JSON)
 cockpit report --svg usage.svg  # shareable SVG receipt card
 cockpit export --group daily > usage.csv  # CSV: daily/session/model/project/event
 cockpit pricing status        # show vendored pricing coverage
+cockpit pricing update --check  # check LiteLLM snapshot freshness
 
 # filter by source, project, or model
 cockpit monthly --source claude
@@ -132,7 +133,7 @@ localhost API examples.
 - 📊 **Daily / Trends:** token usage and cost over time, as tables and braille charts.
 - ⏱️ **Blocks:** Claude's 5-hour billing windows with a live burn-rate projection.
 - 🤖 **Unified view:** Claude Code, Codex, Gemini, OpenCode, Amp, Copilot, and Kimi usage in one normalized cockpit.
-- 💸 **Accurate cost:** per-model pricing from the LiteLLM dataset, vendored for offline use.
+- 💸 **Accurate cost:** per-model pricing from the LiteLLM dataset, vendored for offline use with snapshot diagnostics.
 - 🧮 **Insights:** cache hit rate, throughput, velocity, engaged hours, and caution lamps.
 - 🚦 **Budgets & limits:** optional daily / weekly / monthly USD budgets and Claude 5h / 7d token limits, surfaced in the TUI and statusline.
 - 🔒 **100% local:** read-only, no upload, no API keys, no daemon.
@@ -194,10 +195,14 @@ follows it) and `enter` opens that row's per-model breakdown (`esc` closes it).
 Costs are estimates derived from token counts (no per-call cost is recorded in
 the logs), so every USD figure is shown with a leading `~`. Add `--no-cost` to
 CLI reports, statusline output, or CSV exports when you only want token counts.
+Reports never fetch pricing over the network; `cockpit pricing update --check`
+is an explicit maintenance command for checking the vendored LiteLLM snapshot.
 
 ## 🔒 What It Reads
 
-`agent-cockpit` reads **local log files only**. No network calls, ever.
+`agent-cockpit` reads **local log files only** for reports and live views. The
+only networked command is the explicit maintenance check
+`cockpit pricing update --check`.
 
 | Agent | Default path |
 | --- | --- |

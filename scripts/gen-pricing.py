@@ -13,12 +13,15 @@ strips provider and region prefixes so log model names match, converts per-token
 costs to per-million, and prefers the plainest key on collisions.
 """
 import json
+import hashlib
 import re
 import sys
 import urllib.request
+from datetime import datetime, timezone
 
 SRC = "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json"
 OUT = "internal/usage/pricing_data.json"
+META_OUT = "internal/usage/pricing_metadata.json"
 
 # Region / platform prefixes that wrap the same underlying model.
 PREFIX = re.compile(
@@ -49,6 +52,20 @@ def family(key: str, prov: str) -> bool:
     if prov in ("anthropic", "openai", "gemini", "vertex_ai-language-models"):
         return True
     return bool(re.search(r"(claude|gpt-|gpt4|o1|o3|o4|codex|gemini)", k))
+
+
+def canonical_go_json(value) -> str:
+    """Return compact JSON matching Go's encoding/json for this price table."""
+    if isinstance(value, dict):
+        parts = []
+        for key in sorted(value):
+            parts.append(json.dumps(key) + ":" + canonical_go_json(value[key]))
+        return "{" + ",".join(parts) + "}"
+    if isinstance(value, float):
+        if value.is_integer():
+            return str(int(value))
+        return repr(value)
+    return json.dumps(value, separators=(",", ":"))
 
 
 def main() -> int:
@@ -85,7 +102,20 @@ def main() -> int:
     with open(OUT, "w") as f:
         json.dump(out, f, indent=0, sort_keys=True)
         f.write("\n")
+    canonical = canonical_go_json(out).encode()
+    meta = {
+        "schema_version": 1,
+        "source": "LiteLLM model_prices_and_context_window.json",
+        "source_url": SRC,
+        "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+        "model_count": len(out),
+        "data_sha256": hashlib.sha256(canonical).hexdigest(),
+    }
+    with open(META_OUT, "w") as f:
+        json.dump(meta, f, indent=2, sort_keys=False)
+        f.write("\n")
     print(f"wrote {len(out)} models to {OUT}")
+    print(f"wrote metadata to {META_OUT}")
     return 0
 
 

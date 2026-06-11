@@ -143,6 +143,22 @@ value in the top-level `order` field.
 If `--breakdown source|model|project` narrows aggregate rows, include the
 selected value in the top-level `breakdown` field.
 
+## Pricing Snapshot
+
+Pricing is embedded for deterministic offline reports. Refresh the vendored
+LiteLLM table and its provenance metadata before a release when needed:
+
+```bash
+make pricing
+```
+
+To check whether the vendored snapshot is stale without changing files, run:
+
+```bash
+cockpit pricing update --check
+cockpit pricing update --check --json
+```
+
 ## Release Flow
 
 1. Make sure CI passes on macOS, Linux, and Windows.
