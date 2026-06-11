@@ -123,9 +123,12 @@ cockpit config validate          # validate config.toml
 cockpit doctor                # show detected log locations
 ```
 
-See [ccusage Workflow Mapping](docs/ccusage-workflows.md) for common command
-translations, and [Integrations](docs/integrations.md) for tmux, Waybar, and
-localhost API examples.
+See the guides for [installation](docs/guide/installation.md),
+[quick start](docs/guide/quick-start.md), [commands](docs/guide/commands.md),
+[configuration](docs/guide/configuration.md), [sources](docs/guide/sources.md),
+and [privacy](docs/privacy.md). [ccusage Workflow Mapping](docs/ccusage-workflows.md)
+covers command translations, and [Integrations](docs/integrations.md) covers
+tmux, Waybar, and localhost API examples.
 
 ## 🎛️ Features
 
