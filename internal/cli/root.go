@@ -42,6 +42,7 @@ type options struct {
 	compact     bool
 	exportGroup string
 	outputPath  string
+	statusline  *claudeStatuslineContext
 }
 
 var version = "dev"
@@ -127,13 +128,59 @@ type speedJSONRow struct {
 }
 
 type statuslineJSONDocument struct {
-	SchemaVersion string                  `json:"schema_version"`
-	GeneratedAt   time.Time               `json:"generated_at"`
-	CostMode      string                  `json:"cost_mode"`
-	Totals        usageJSONTotals         `json:"totals"`
-	Currency      string                  `json:"currency"`
-	Budgets       []usage.ThresholdStatus `json:"budgets,omitempty"`
-	Limits        []usage.ThresholdStatus `json:"limits,omitempty"`
+	SchemaVersion string                   `json:"schema_version"`
+	GeneratedAt   time.Time                `json:"generated_at"`
+	CostMode      string                   `json:"cost_mode"`
+	Active        *statuslineActiveContext `json:"active,omitempty"`
+	Totals        usageJSONTotals          `json:"totals"`
+	Currency      string                   `json:"currency"`
+	Budgets       []usage.ThresholdStatus  `json:"budgets,omitempty"`
+	Limits        []usage.ThresholdStatus  `json:"limits,omitempty"`
+}
+
+type claudeStatuslineContext struct {
+	CWD            string `json:"cwd"`
+	SessionID      string `json:"session_id"`
+	SessionName    string `json:"session_name"`
+	TranscriptPath string `json:"transcript_path"`
+	Version        string `json:"version"`
+	Model          struct {
+		ID          string `json:"id"`
+		DisplayName string `json:"display_name"`
+	} `json:"model"`
+	Workspace struct {
+		CurrentDir string `json:"current_dir"`
+		ProjectDir string `json:"project_dir"`
+	} `json:"workspace"`
+	Cost struct {
+		TotalCostUSD *float64 `json:"total_cost_usd"`
+	} `json:"cost"`
+	ContextWindow struct {
+		ContextWindowSize int64    `json:"context_window_size"`
+		UsedPercentage    *float64 `json:"used_percentage"`
+		RemainingPercent  *float64 `json:"remaining_percentage"`
+		TotalInputTokens  int64    `json:"total_input_tokens"`
+		TotalOutputTokens int64    `json:"total_output_tokens"`
+	} `json:"context_window"`
+}
+
+type statuslineActiveContext struct {
+	Source                  string   `json:"source"`
+	SessionID               string   `json:"session_id,omitempty"`
+	SessionName             string   `json:"session_name,omitempty"`
+	ModelID                 string   `json:"model_id,omitempty"`
+	ModelName               string   `json:"model_name,omitempty"`
+	CWD                     string   `json:"cwd,omitempty"`
+	CurrentDir              string   `json:"current_dir,omitempty"`
+	ProjectDir              string   `json:"project_dir,omitempty"`
+	TranscriptPath          string   `json:"transcript_path,omitempty"`
+	Version                 string   `json:"version,omitempty"`
+	ContextWindowSize       int64    `json:"context_window_size,omitempty"`
+	ContextUsedPercent      *float64 `json:"context_used_percentage,omitempty"`
+	ContextRemainingPercent *float64 `json:"context_remaining_percentage,omitempty"`
+	ContextInputTokens      int64    `json:"context_input_tokens,omitempty"`
+	ContextOutputTokens     int64    `json:"context_output_tokens,omitempty"`
+	SessionCostUSD          *float64 `json:"session_cost_usd,omitempty"`
 }
 
 type configValidationDocument struct {
@@ -275,9 +322,7 @@ func Execute() error {
 			return err
 		},
 	})
-	root.AddCommand(reportCommand("statusline", "Print one-line usage for tmux/statusline integrations", opts, func(w *os.File, events []usage.Event, ro report.Options) {
-		writeStatusline(w, events, ro, opts)
-	}, nil))
+	root.AddCommand(statuslineCommand(opts))
 	exportCmd := &cobra.Command{
 		Use:   "export",
 		Short: "Export usage rows as CSV",
@@ -382,6 +427,26 @@ func reportCommand(use, short string, opts *options, render func(*os.File, []usa
 		},
 	}
 	return cmd
+}
+
+func statuslineCommand(opts *options) *cobra.Command {
+	return &cobra.Command{
+		Use:   "statusline",
+		Short: "Print one-line usage for tmux/statusline integrations",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx, err := readClaudeStatuslineContext(os.Stdin)
+			if err != nil {
+				return err
+			}
+			opts.statusline = ctx
+			events, cfg, err := load(cmd.Context(), opts)
+			if err != nil {
+				return err
+			}
+			writeStatusline(os.Stdout, events, reportOptions(cfg, opts), opts)
+			return nil
+		},
+	}
 }
 
 func load(ctx context.Context, opts *options) ([]usage.Event, config.Config, error) {
@@ -753,7 +818,41 @@ func speedRows(events []usage.Event, order string, limit int) []speedJSONRow {
 	return rows
 }
 
+func readClaudeStatuslineContext(stdin *os.File) (*claudeStatuslineContext, error) {
+	if stdin == nil {
+		return nil, nil
+	}
+	st, err := stdin.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if st.Mode()&os.ModeCharDevice != 0 {
+		return nil, nil
+	}
+	b, err := io.ReadAll(stdin)
+	if err != nil {
+		return nil, err
+	}
+	return parseClaudeStatuslineInput(b)
+}
+
+func parseClaudeStatuslineInput(b []byte) (*claudeStatuslineContext, error) {
+	if len(strings.TrimSpace(string(b))) == 0 {
+		return nil, nil
+	}
+	var ctx claudeStatuslineContext
+	if err := json.Unmarshal(b, &ctx); err != nil {
+		return nil, fmt.Errorf("parse Claude statusline stdin: %w", err)
+	}
+	if ctx.SessionID == "" && ctx.Model.ID == "" && ctx.Model.DisplayName == "" && ctx.CWD == "" && ctx.Workspace.CurrentDir == "" {
+		return nil, nil
+	}
+	return &ctx, nil
+}
+
 func writeStatusline(w io.Writer, events []usage.Event, ro report.Options, opts *options) {
+	active := statuslineActive(opts.statusline)
+	events = statuslineEvents(events, opts.statusline)
 	t := usage.SummarizeWith(events, ro.Pricing)
 	if ro.NoCost {
 		t = usage.SummarizeTokens(events)
@@ -773,11 +872,12 @@ func writeStatusline(w io.Writer, events []usage.Event, ro report.Options, opts 
 	}
 	limits := usage.ClaudeLimitStatuses(events, ro.Pricing, cfg.Limits, now)
 	if opts.json {
-		_ = writeStatuslineJSON(w, t, currency, budgets, limits, now, ro.NoCost)
+		_ = writeStatuslineJSON(w, t, currency, budgets, limits, now, ro.NoCost, active)
 		return
 	}
 	if opts.compact {
-		parts := []string{fmt.Sprintf("tok %s", formatCompact(t.Total))}
+		parts := statuslineActiveParts(active)
+		parts = append(parts, fmt.Sprintf("tok %s", formatCompact(t.Total)))
 		if !ro.NoCost {
 			parts = append(parts, fmt.Sprintf("~%.2f %s", t.CostUSD, currency))
 		}
@@ -786,6 +886,9 @@ func writeStatusline(w io.Writer, events []usage.Event, ro report.Options, opts 
 		}
 		fmt.Fprintln(w, strings.Join(parts, " | "))
 		return
+	}
+	if parts := statuslineActiveParts(active); len(parts) > 0 {
+		fmt.Fprintf(w, "%s | ", strings.Join(parts, " | "))
 	}
 	fmt.Fprintf(w, "tokens %d", t.Total)
 	if !ro.NoCost {
@@ -798,13 +901,75 @@ func writeStatusline(w io.Writer, events []usage.Event, ro report.Options, opts 
 	fmt.Fprintln(w)
 }
 
-func writeStatuslineJSON(w io.Writer, totals usage.Totals, currency string, budgets, limits []usage.ThresholdStatus, now time.Time, noCost bool) error {
+func statuslineEvents(events []usage.Event, ctx *claudeStatuslineContext) []usage.Event {
+	if ctx == nil || ctx.SessionID == "" {
+		return events
+	}
+	var filtered []usage.Event
+	for _, e := range events {
+		if e.Source == "claude" && e.SessionID == ctx.SessionID {
+			filtered = append(filtered, e)
+		}
+	}
+	if len(filtered) == 0 {
+		return events
+	}
+	return filtered
+}
+
+func statuslineActive(ctx *claudeStatuslineContext) *statuslineActiveContext {
+	if ctx == nil {
+		return nil
+	}
+	return &statuslineActiveContext{
+		Source:                  "claude",
+		SessionID:               ctx.SessionID,
+		SessionName:             ctx.SessionName,
+		ModelID:                 ctx.Model.ID,
+		ModelName:               statuslineModelName(ctx),
+		CWD:                     ctx.CWD,
+		CurrentDir:              ctx.Workspace.CurrentDir,
+		ProjectDir:              ctx.Workspace.ProjectDir,
+		TranscriptPath:          ctx.TranscriptPath,
+		Version:                 ctx.Version,
+		ContextWindowSize:       ctx.ContextWindow.ContextWindowSize,
+		ContextUsedPercent:      ctx.ContextWindow.UsedPercentage,
+		ContextRemainingPercent: ctx.ContextWindow.RemainingPercent,
+		ContextInputTokens:      ctx.ContextWindow.TotalInputTokens,
+		ContextOutputTokens:     ctx.ContextWindow.TotalOutputTokens,
+		SessionCostUSD:          ctx.Cost.TotalCostUSD,
+	}
+}
+
+func statuslineActiveParts(active *statuslineActiveContext) []string {
+	if active == nil {
+		return nil
+	}
+	var parts []string
+	if active.ModelName != "" {
+		parts = append(parts, "model "+active.ModelName)
+	}
+	if active.ContextUsedPercent != nil {
+		parts = append(parts, fmt.Sprintf("ctx %.0f%%", *active.ContextUsedPercent))
+	}
+	return parts
+}
+
+func statuslineModelName(ctx *claudeStatuslineContext) string {
+	if ctx.Model.DisplayName != "" {
+		return ctx.Model.DisplayName
+	}
+	return ctx.Model.ID
+}
+
+func writeStatuslineJSON(w io.Writer, totals usage.Totals, currency string, budgets, limits []usage.ThresholdStatus, now time.Time, noCost bool, active *statuslineActiveContext) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	return enc.Encode(statuslineJSONDocument{
 		SchemaVersion: jsonSchemaVersion,
 		GeneratedAt:   now,
 		CostMode:      costMode(noCost),
+		Active:        active,
 		Totals:        usageTotalsJSON(totals, noCost),
 		Currency:      currency,
 		Budgets:       budgets,

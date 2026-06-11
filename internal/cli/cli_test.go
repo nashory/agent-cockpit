@@ -306,7 +306,7 @@ func TestBreakdownOutputs(t *testing.T) {
 func TestStatuslineJSONGolden(t *testing.T) {
 	var out bytes.Buffer
 	totals := usage.SummarizeWith(goldenEvents(), nil)
-	if err := writeStatuslineJSON(&out, totals, "USD", nil, nil, goldenNow(), false); err != nil {
+	if err := writeStatuslineJSON(&out, totals, "USD", nil, nil, goldenNow(), false, nil); err != nil {
 		t.Fatal(err)
 	}
 	assertGolden(t, "statusline_json.golden", out.String())
@@ -338,6 +338,67 @@ func TestStatuslineTextGoldens(t *testing.T) {
 			writeStatusline(&out, goldenEvents(), reportOptions(goldenConfig(), &tc.opts), &tc.opts)
 			assertGolden(t, "statusline_"+tc.name+".txt", out.String())
 		})
+	}
+}
+
+func TestStatuslineClaudeContext(t *testing.T) {
+	used := 8.0
+	cost := 0.01234
+	ctx, err := parseClaudeStatuslineInput([]byte(`{
+		"cwd": "/tmp/project",
+		"session_id": "s1",
+		"session_name": "debug-session",
+		"transcript_path": "/tmp/transcript.jsonl",
+		"version": "2.1.153",
+		"model": {"id": "claude-sonnet-4-5", "display_name": "Sonnet"},
+		"workspace": {"current_dir": "/tmp/project/pkg", "project_dir": "/tmp/project"},
+		"cost": {"total_cost_usd": 0.01234},
+		"context_window": {
+			"context_window_size": 200000,
+			"used_percentage": 8,
+			"remaining_percentage": 92,
+			"total_input_tokens": 15500,
+			"total_output_tokens": 1200
+		}
+	}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ctx.SessionID != "s1" || ctx.Model.DisplayName != "Sonnet" {
+		t.Fatalf("unexpected parsed context: %+v", ctx)
+	}
+	if ctx.ContextWindow.UsedPercentage == nil || *ctx.ContextWindow.UsedPercentage != used {
+		t.Fatalf("used percentage = %v, want %v", ctx.ContextWindow.UsedPercentage, used)
+	}
+	if ctx.Cost.TotalCostUSD == nil || *ctx.Cost.TotalCostUSD != cost {
+		t.Fatalf("cost = %v, want %v", ctx.Cost.TotalCostUSD, cost)
+	}
+
+	events := append(goldenEvents(), usage.Event{
+		Source:    "claude",
+		SessionID: "other",
+		Model:     "claude-opus-4-8",
+		Input:     1000,
+		Timestamp: goldenNow(),
+	})
+	opts := &options{configPath: emptyConfigPath(t), statusline: ctx}
+
+	var out bytes.Buffer
+	writeStatusline(&out, events, reportOptions(goldenConfig(), opts), opts)
+	got := out.String()
+	if !strings.Contains(got, "model Sonnet | ctx 8%") {
+		t.Fatalf("statusline missing active context:\n%s", got)
+	}
+	if !strings.Contains(got, "tokens 180") {
+		t.Fatalf("statusline should use matching active session events:\n%s", got)
+	}
+
+	opts.json = true
+	out.Reset()
+	writeStatusline(&out, events, reportOptions(goldenConfig(), opts), opts)
+	got = out.String()
+	if !strings.Contains(got, `"active"`) || !strings.Contains(got, `"model_name": "Sonnet"`) || !strings.Contains(got, `"context_used_percentage": 8`) {
+		t.Fatalf("statusline JSON missing active context:\n%s", got)
 	}
 }
 
