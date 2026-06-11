@@ -17,6 +17,7 @@ type Options struct {
 	Budget   usage.Budget
 	Limits   usage.Limits
 	NoCost   bool
+	Location *time.Location
 }
 
 type speedStats struct {
@@ -32,6 +33,13 @@ func (o Options) currency() string {
 		return "USD"
 	}
 	return o.Currency
+}
+
+func (o Options) location() *time.Location {
+	if o.Location != nil {
+		return o.Location
+	}
+	return time.Local
 }
 
 func Overview(w io.Writer, title string, events []usage.Event, opts Options) {
@@ -126,10 +134,14 @@ func Trend(w io.Writer, events []usage.Event, days int, opts Options) {
 	if days <= 0 {
 		days = 30
 	}
-	start := time.Now().AddDate(0, 0, -days+1).Truncate(24 * time.Hour)
+	loc := opts.location()
+	now := time.Now().In(loc)
+	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, -days+1)
 	byDay := make([][]usage.Event, days)
 	for _, e := range events {
-		idx := int(e.Timestamp.Truncate(24*time.Hour).Sub(start) / (24 * time.Hour))
+		ts := e.Timestamp.In(loc)
+		day := time.Date(ts.Year(), ts.Month(), ts.Day(), 0, 0, 0, 0, loc)
+		idx := int(day.Sub(start) / (24 * time.Hour))
 		if idx >= 0 && idx < days {
 			byDay[idx] = append(byDay[idx], e)
 		}

@@ -104,6 +104,7 @@ cockpit pricing status        # show vendored pricing coverage
 cockpit monthly --source claude
 cockpit trends  --source claude,codex --project myrepo --days 30
 cockpit agents  --model sonnet
+cockpit today --timezone Europe/Zurich
 
 # JSON for scripts
 cockpit today --json

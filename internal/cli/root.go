@@ -32,6 +32,7 @@ type options struct {
 	model       string
 	configPath  string
 	refresh     string
+	timezone    string
 	json        bool
 	noCost      bool
 	svgPath     string
@@ -59,9 +60,10 @@ type usageJSONDocument struct {
 }
 
 type usageJSONRange struct {
-	Days  int    `json:"days,omitempty"`
-	Since string `json:"since,omitempty"`
-	Until string `json:"until,omitempty"`
+	Days     int    `json:"days,omitempty"`
+	Since    string `json:"since,omitempty"`
+	Until    string `json:"until,omitempty"`
+	Timezone string `json:"timezone,omitempty"`
 }
 
 type usageJSONFilters struct {
@@ -73,6 +75,7 @@ type usageJSONFilters struct {
 type usageJSONContext struct {
 	Report  string
 	NoCost  bool
+	Loc     *time.Location
 	Range   usageJSONRange
 	Filters usageJSONFilters
 }
@@ -153,6 +156,9 @@ func Execute() error {
 			if err != nil {
 				return err
 			}
+			if _, _, err := locationFor(opts, cfg); err != nil {
+				return err
+			}
 			reload := func() ([]usage.Event, error) {
 				events, _, err := load(cmd.Context(), opts)
 				return events, err
@@ -220,6 +226,9 @@ func Execute() error {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load(opts.configPath)
 			if err != nil {
+				return err
+			}
+			if _, _, err := locationFor(opts, cfg); err != nil {
 				return err
 			}
 			interval := cfg.RefreshDuration()
@@ -326,6 +335,7 @@ func addFlags(cmd *cobra.Command, opts *options) {
 	cmd.PersistentFlags().StringVar(&opts.model, "model", "", "model substring filter")
 	cmd.PersistentFlags().StringVar(&opts.configPath, "config", "", "config file path")
 	cmd.PersistentFlags().StringVar(&opts.refresh, "refresh", "", "live refresh interval, for example 2s")
+	cmd.PersistentFlags().StringVar(&opts.timezone, "timezone", "", "IANA timezone for date windows, for example Europe/Zurich")
 	cmd.PersistentFlags().BoolVar(&opts.json, "json", false, "print JSON instead of a table")
 	cmd.PersistentFlags().BoolVar(&opts.noCost, "no-cost", false, "omit estimated cost output where supported")
 	cmd.PersistentFlags().BoolVar(&opts.compact, "compact", false, "print compact one-line output where supported")
@@ -358,11 +368,15 @@ func load(ctx context.Context, opts *options) ([]usage.Event, config.Config, err
 	if err != nil {
 		return nil, config.Config{}, err
 	}
+	loc, _, err := locationFor(opts, cfg)
+	if err != nil {
+		return nil, config.Config{}, err
+	}
 	events, err := source.Collect(ctx, cfg)
 	if err != nil {
 		return nil, config.Config{}, err
 	}
-	since, until, err := window(opts)
+	since, until, err := window(opts, loc, time.Now().In(loc))
 	if err != nil {
 		return nil, config.Config{}, err
 	}
@@ -373,43 +387,55 @@ func load(ctx context.Context, opts *options) ([]usage.Event, config.Config, err
 	return usage.Filter(events, since, until, sources, opts.project, opts.model), cfg, nil
 }
 
-func window(opts *options) (time.Time, time.Time, error) {
+func window(opts *options, loc *time.Location, now time.Time) (time.Time, time.Time, error) {
+	if loc == nil {
+		loc = time.Local
+	}
+	if now.IsZero() {
+		now = time.Now().In(loc)
+	}
 	var since, until time.Time
 	var err error
 	if opts.since != "" {
-		since, err = time.Parse("2006-01-02", opts.since)
+		since, err = time.ParseInLocation("2006-01-02", opts.since, loc)
 		if err != nil {
 			return time.Time{}, time.Time{}, fmt.Errorf("parse --since: %w", err)
 		}
 	}
 	if opts.until != "" {
-		until, err = time.Parse("2006-01-02", opts.until)
+		until, err = time.ParseInLocation("2006-01-02", opts.until, loc)
 		if err != nil {
 			return time.Time{}, time.Time{}, fmt.Errorf("parse --until: %w", err)
 		}
 		until = until.Add(24*time.Hour - time.Nanosecond)
 	}
 	if since.IsZero() && opts.days > 0 {
-		since = time.Now().AddDate(0, 0, -opts.days)
+		since = now.AddDate(0, 0, -opts.days)
 	}
 	return since, until, nil
 }
 
 func writeJSON(events []usage.Event, cfg config.Config, opts *options, reportName string) error {
-	ctx := buildUsageJSONContext(opts)
+	loc, timezone, err := locationFor(opts, cfg)
+	if err != nil {
+		return err
+	}
+	ctx := buildUsageJSONContext(opts, timezone)
+	ctx.Loc = loc
 	ctx.Report = reportName
-	return writeUsageJSON(os.Stdout, events, cfg, time.Now(), ctx)
+	return writeUsageJSON(os.Stdout, events, cfg, time.Now().In(loc), ctx)
 }
 
-func buildUsageJSONContext(opts *options) usageJSONContext {
+func buildUsageJSONContext(opts *options, timezone string) usageJSONContext {
 	if opts == nil {
 		return usageJSONContext{}
 	}
 	ctx := usageJSONContext{
 		NoCost: opts.noCost,
 		Range: usageJSONRange{
-			Since: opts.since,
-			Until: opts.until,
+			Since:    opts.since,
+			Until:    opts.until,
+			Timezone: timezone,
 		},
 		Filters: usageJSONFilters{
 			Project: opts.project,
@@ -489,7 +515,7 @@ func usageJSONRows(events []usage.Event, cfg config.Config, now time.Time, ctx u
 		if days <= 0 {
 			days = 30
 		}
-		return trendRows(events, cfg.Pricing, ctx.NoCost, days, now)
+		return trendRows(events, cfg.Pricing, ctx.NoCost, days, now, ctx.Loc)
 	case "speed":
 		return speedRows(events, 20)
 	default:
@@ -534,17 +560,23 @@ func shortID(s string) string {
 	return s[:8]
 }
 
-func trendRows(events []usage.Event, prices usage.PriceBook, noCost bool, days int, now time.Time) []trendJSONRow {
-	if now.IsZero() {
-		now = time.Now()
+func trendRows(events []usage.Event, prices usage.PriceBook, noCost bool, days int, now time.Time, loc *time.Location) []trendJSONRow {
+	if loc == nil {
+		loc = time.Local
 	}
+	if now.IsZero() {
+		now = time.Now().In(loc)
+	}
+	now = now.In(loc)
 	if days <= 0 {
 		days = 30
 	}
-	start := now.AddDate(0, 0, -days+1).Truncate(24 * time.Hour)
+	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, -days+1)
 	byDay := make([][]usage.Event, days)
 	for _, e := range events {
-		idx := int(e.Timestamp.Truncate(24*time.Hour).Sub(start) / (24 * time.Hour))
+		ts := e.Timestamp.In(loc)
+		day := time.Date(ts.Year(), ts.Month(), ts.Day(), 0, 0, 0, 0, loc)
+		idx := int(day.Sub(start) / (24 * time.Hour))
 		if idx >= 0 && idx < days {
 			byDay[idx] = append(byDay[idx], e)
 		}
@@ -644,13 +676,17 @@ func writeStatusline(w io.Writer, events []usage.Event, ro report.Options, opts 
 		currency = "USD"
 	}
 	cfg, _ := config.Load(opts.configPath)
+	now := time.Now()
+	if ro.Location != nil {
+		now = now.In(ro.Location)
+	}
 	var budgets []usage.ThresholdStatus
 	if !ro.NoCost {
-		budgets = usage.BudgetStatuses(events, ro.Pricing, cfg.Budget, time.Now())
+		budgets = usage.BudgetStatuses(events, ro.Pricing, cfg.Budget, now)
 	}
-	limits := usage.ClaudeLimitStatuses(events, ro.Pricing, cfg.Limits, time.Now())
+	limits := usage.ClaudeLimitStatuses(events, ro.Pricing, cfg.Limits, now)
 	if opts.json {
-		_ = writeStatuslineJSON(w, t, currency, budgets, limits, time.Now(), ro.NoCost)
+		_ = writeStatuslineJSON(w, t, currency, budgets, limits, now, ro.NoCost)
 		return
 	}
 	if opts.compact {
@@ -714,7 +750,7 @@ func writeCSV(w io.Writer, events []usage.Event, ro report.Options, group string
 		if err := cw.Write(header("date")); err != nil {
 			return err
 		}
-		for _, b := range timeBuckets(events, ro.Pricing, ro.NoCost, "day") {
+		for _, b := range timeBuckets(events, ro.Pricing, ro.NoCost, ro.Location, "day") {
 			if err := cw.Write(writeTotals(b.Key, b.Totals)); err != nil {
 				return err
 			}
@@ -773,19 +809,23 @@ func writeCSV(w io.Writer, events []usage.Event, ro report.Options, group string
 	return cw.Error()
 }
 
-func timeBuckets(events []usage.Event, prices usage.PriceBook, noCost bool, period string) []usage.Bucket {
+func timeBuckets(events []usage.Event, prices usage.PriceBook, noCost bool, loc *time.Location, period string) []usage.Bucket {
+	if loc == nil {
+		loc = time.Local
+	}
 	key := func(e usage.Event) string {
 		if e.Timestamp.IsZero() {
 			return "unknown"
 		}
+		ts := e.Timestamp.In(loc)
 		switch period {
 		case "week":
-			y, w := e.Timestamp.ISOWeek()
+			y, w := ts.ISOWeek()
 			return fmt.Sprintf("%04d-W%02d", y, w)
 		case "month":
-			return e.Timestamp.Format("2006-01")
+			return ts.Format("2006-01")
 		default:
-			return e.Timestamp.Format("2006-01-02")
+			return ts.Format("2006-01-02")
 		}
 	}
 	rows := groupUsage(events, prices, noCost, key)
@@ -930,7 +970,23 @@ func configPath(opts *options) string {
 
 func reportOptions(cfg config.Config, opts *options) report.Options {
 	noCost := opts != nil && opts.noCost
-	return report.Options{Pricing: cfg.Pricing, Currency: cfg.Currency, Budget: cfg.Budget, Limits: cfg.Limits, NoCost: noCost}
+	loc, _, _ := locationFor(opts, cfg)
+	return report.Options{Pricing: cfg.Pricing, Currency: cfg.Currency, Budget: cfg.Budget, Limits: cfg.Limits, NoCost: noCost, Location: loc}
+}
+
+func locationFor(opts *options, cfg config.Config) (*time.Location, string, error) {
+	name := cfg.Timezone
+	if opts != nil && opts.timezone != "" {
+		name = opts.timezone
+	}
+	if name == "" || name == "local" {
+		return time.Local, "", nil
+	}
+	loc, err := time.LoadLocation(name)
+	if err != nil {
+		return nil, "", fmt.Errorf("load timezone %q: %w", name, err)
+	}
+	return loc, name, nil
 }
 
 func tuiOptions(cfg config.Config, opts *options, reload func() ([]usage.Event, error), interval time.Duration) tui.Options {

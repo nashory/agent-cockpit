@@ -120,6 +120,8 @@ When a command filter or time window affects output, represent it in `range` or
 `filters` so downstream tools can explain the result without parsing CLI flags.
 Command-specific aggregate output should go into `rows`; keep raw `events`
 available for compatibility until a future explicit schema decision removes it.
+If `--timezone` or a non-local configured timezone affects date windows or
+calendar bucketing, include that timezone in `range.timezone`.
 
 ## Release Flow
 

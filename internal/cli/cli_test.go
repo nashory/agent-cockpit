@@ -14,21 +14,22 @@ import (
 )
 
 func TestWindowDaysDefault(t *testing.T) {
-	since, until, err := window(&options{days: 30})
+	now := time.Date(2026, 6, 11, 12, 0, 0, 0, time.UTC)
+	since, until, err := window(&options{days: 30}, time.UTC, now)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !until.IsZero() {
 		t.Errorf("until should be zero when not set, got %v", until)
 	}
-	want := time.Now().AddDate(0, 0, -30)
-	if d := since.Sub(want); d < -time.Minute || d > time.Minute {
-		t.Errorf("since = %v, want ~%v", since, want)
+	want := now.AddDate(0, 0, -30)
+	if !since.Equal(want) {
+		t.Errorf("since = %v, want %v", since, want)
 	}
 }
 
 func TestWindowExplicitDates(t *testing.T) {
-	since, until, err := window(&options{since: "2026-01-01", until: "2026-01-31"})
+	since, until, err := window(&options{since: "2026-01-01", until: "2026-01-31"}, time.UTC, time.Time{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,8 +43,25 @@ func TestWindowExplicitDates(t *testing.T) {
 	}
 }
 
+func TestWindowUsesTimezone(t *testing.T) {
+	loc, err := time.LoadLocation("Europe/Zurich")
+	if err != nil {
+		t.Fatal(err)
+	}
+	since, until, err := window(&options{since: "2026-06-01", until: "2026-06-01"}, loc, time.Time{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if since.Location() != loc || until.Location() != loc {
+		t.Fatalf("window locations = %v %v, want %v", since.Location(), until.Location(), loc)
+	}
+	if since.Hour() != 0 || until.Hour() != 23 {
+		t.Fatalf("window day bounds = %v %v", since, until)
+	}
+}
+
 func TestWindowSinceOverridesDays(t *testing.T) {
-	since, _, err := window(&options{since: "2026-06-01", days: 30})
+	since, _, err := window(&options{since: "2026-06-01", days: 30}, time.UTC, time.Time{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,10 +71,10 @@ func TestWindowSinceOverridesDays(t *testing.T) {
 }
 
 func TestWindowBadDates(t *testing.T) {
-	if _, _, err := window(&options{since: "nope"}); err == nil {
+	if _, _, err := window(&options{since: "nope"}, time.UTC, time.Time{}); err == nil {
 		t.Error("expected error for invalid --since")
 	}
-	if _, _, err := window(&options{until: "2026-13-99"}); err == nil {
+	if _, _, err := window(&options{until: "2026-13-99"}, time.UTC, time.Time{}); err == nil {
 		t.Error("expected error for invalid --until")
 	}
 }
@@ -114,9 +132,12 @@ func TestBuildUsageJSONContext(t *testing.T) {
 		sources: "claude,codex",
 		project: "agent-cockpit",
 		model:   "opus",
-	})
+	}, "Europe/Zurich")
 	if ctx.Range.Days != 7 {
 		t.Fatalf("days = %d, want 7", ctx.Range.Days)
+	}
+	if ctx.Range.Timezone != "Europe/Zurich" {
+		t.Fatalf("timezone = %q", ctx.Range.Timezone)
 	}
 	if got := strings.Join(ctx.Filters.Sources, ","); got != "claude,codex" {
 		t.Fatalf("sources = %q", got)
@@ -125,7 +146,7 @@ func TestBuildUsageJSONContext(t *testing.T) {
 		t.Fatalf("filters = %+v", ctx.Filters)
 	}
 
-	ctx = buildUsageJSONContext(&options{days: 30, since: "2026-06-01", until: "2026-06-11"})
+	ctx = buildUsageJSONContext(&options{days: 30, since: "2026-06-01", until: "2026-06-11"}, "")
 	if ctx.Range.Days != 0 || ctx.Range.Since != "2026-06-01" || ctx.Range.Until != "2026-06-11" {
 		t.Fatalf("explicit range should suppress days, got %+v", ctx.Range)
 	}
@@ -220,7 +241,7 @@ func TestNoCostOutputs(t *testing.T) {
 	opts := &options{noCost: true, days: 30}
 
 	var out bytes.Buffer
-	ctx := buildUsageJSONContext(opts)
+	ctx := buildUsageJSONContext(opts, "")
 	ctx.Report = "today"
 	if err := writeUsageJSON(&out, goldenEvents(), cfg, goldenNow(), ctx); err != nil {
 		t.Fatal(err)
