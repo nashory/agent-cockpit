@@ -70,6 +70,9 @@ Amp:
 GitHub Copilot CLI:
   ~/.copilot/otel/**/*.jsonl
   COPILOT_OTEL_FILE_EXPORTER_PATH
+
+Kimi:
+  ~/.kimi/sessions/*/*/wire.jsonl
 ```
 
 Do not commit real agent logs, API keys, bot tokens, or local config files.

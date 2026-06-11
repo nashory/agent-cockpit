@@ -31,6 +31,7 @@ type Paths struct {
 	OpenCode []string `toml:"opencode"`
 	Amp      []string `toml:"amp"`
 	Copilot  []string `toml:"copilot"`
+	Kimi     []string `toml:"kimi"`
 }
 
 type ValidationError struct {
@@ -59,6 +60,7 @@ func Default() Config {
 			Copilot: []string{
 				filepath.Join(home, ".copilot", "otel"),
 			},
+			Kimi: []string{filepath.Join(home, ".kimi")},
 		},
 		Pricing: map[string]usage.Pricing{},
 	}
@@ -81,6 +83,7 @@ func Load(path string) (Config, error) {
 	cfg.Paths.OpenCode = expandPaths(cfg.Paths.OpenCode)
 	cfg.Paths.Amp = expandPaths(cfg.Paths.Amp)
 	cfg.Paths.Copilot = expandPaths(cfg.Paths.Copilot)
+	cfg.Paths.Kimi = expandPaths(cfg.Paths.Kimi)
 	if cfg.RefreshInterval == "" {
 		cfg.RefreshInterval = "3s"
 	}
@@ -150,7 +153,7 @@ func Validate(cfg Config) []ValidationError {
 	if cfg.Limits.Claude7DTokens < 0 {
 		errs = append(errs, ValidationError{Field: "limits.claude_7d_tokens", Message: "must be non-negative"})
 	}
-	for source, paths := range map[string][]string{"paths.claude": cfg.Paths.Claude, "paths.codex": cfg.Paths.Codex, "paths.gemini": cfg.Paths.Gemini, "paths.opencode": cfg.Paths.OpenCode, "paths.amp": cfg.Paths.Amp, "paths.copilot": cfg.Paths.Copilot} {
+	for source, paths := range map[string][]string{"paths.claude": cfg.Paths.Claude, "paths.codex": cfg.Paths.Codex, "paths.gemini": cfg.Paths.Gemini, "paths.opencode": cfg.Paths.OpenCode, "paths.amp": cfg.Paths.Amp, "paths.copilot": cfg.Paths.Copilot, "paths.kimi": cfg.Paths.Kimi} {
 		for i, path := range paths {
 			if strings.TrimSpace(path) == "" {
 				errs = append(errs, ValidationError{Field: fmt.Sprintf("%s[%d]", source, i), Message: "path must not be empty"})
@@ -250,6 +253,7 @@ func configSchema() map[string]any {
 					"opencode": stringArraySchema("OpenCode data roots containing opencode.db, opencode-*.db, or storage/message JSON files."),
 					"amp":      stringArraySchema("Amp data roots containing threads JSON files."),
 					"copilot":  stringArraySchema("GitHub Copilot CLI OpenTelemetry JSONL export directories."),
+					"kimi":     stringArraySchema("Kimi data roots containing sessions/*/*/wire.jsonl files."),
 				},
 			},
 			"pricing": map[string]any{

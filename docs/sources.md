@@ -222,3 +222,47 @@ Token mapping:
 When multiple Copilot OpenTelemetry records describe the same response,
 agent-cockpit keeps the highest-priority record in this order: chat span,
 inference log, agent turn log, agent summary span.
+
+## Kimi
+
+Default path:
+
+```text
+~/.kimi/sessions/*/*/wire.jsonl
+```
+
+`KIMI_DATA_DIR` can override the root with one path or a comma-separated list of
+paths. The source reads local wire JSONL files only; it does not call Kimi APIs
+or read credentials.
+
+Kimi wire files include `StatusUpdate` messages with `payload.token_usage`:
+
+```json
+{
+  "timestamp": 1770983427.123,
+  "message": {
+    "type": "StatusUpdate",
+    "payload": {
+      "message_id": "msg-1",
+      "token_usage": {
+        "input_other": 0,
+        "output": 0,
+        "input_cache_read": 0,
+        "input_cache_creation": 0,
+        "total": 0
+      }
+    }
+  }
+}
+```
+
+Token mapping:
+
+- `input_other` -> input tokens
+- `output` -> output tokens
+- `input_cache_read` -> cache-read input tokens
+- `input_cache_creation` -> cache-creation input tokens
+- `total` fills missing output tokens when provider-specific parts are absent
+
+The model name is read from `~/.kimi/config.json` when present, otherwise it
+falls back to `kimi-for-coding`.
