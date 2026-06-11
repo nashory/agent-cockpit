@@ -447,7 +447,7 @@ func TestNoCostOutputs(t *testing.T) {
 	}
 }
 
-func emptyConfigPath(t *testing.T) string {
+func emptyConfigPath(t testing.TB) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "config.toml")
 	if err := os.WriteFile(path, []byte(""), 0o644); err != nil {
