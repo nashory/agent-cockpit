@@ -16,6 +16,7 @@ import (
 	"github.com/nashory/agent-cockpit/internal/config"
 	"github.com/nashory/agent-cockpit/internal/report"
 	"github.com/nashory/agent-cockpit/internal/source"
+	_ "github.com/nashory/agent-cockpit/internal/source/builtin"
 	"github.com/nashory/agent-cockpit/internal/tui"
 	"github.com/nashory/agent-cockpit/internal/usage"
 	"github.com/nashory/agent-cockpit/internal/watch"

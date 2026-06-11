@@ -61,6 +61,42 @@ Gemini:
 
 Do not commit real agent logs, API keys, bot tokens, or local config files.
 
+## Source Adapters
+
+Command-level collection uses `internal/source.Source`:
+
+```go
+type Source interface {
+	Name() string
+	Collect(context.Context, config.Config) ([]usage.Event, error)
+}
+```
+
+Built-in sources are registered from `internal/source/builtin`; CLI packages
+import that package for its registration side effect. Report and TUI code should
+depend only on normalized `usage.Event` values and should not import individual
+source packages.
+
+File-backed local log adapters can use `source.CollectFiles` by implementing:
+
+```go
+type FileAdapter interface {
+	Name() string
+	Roots(config.Config) []string
+	Match(path string) bool
+	Parse(path string, r io.Reader) ([]usage.Event, error)
+}
+```
+
+Adapter rules:
+
+- Keep parser packages focused on one source format.
+- Treat malformed files as file-local errors where possible; one bad file should
+  not abort unrelated source scans.
+- Add realistic fixtures and malformed-input tests for new adapters.
+- Preserve timestamps and normalize into `usage.Event`; do not add report-level
+  source branches unless the shared event model is insufficient.
+
 ## Release Flow
 
 1. Make sure CI passes on macOS, Linux, and Windows.

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/nashory/agent-cockpit/internal/config"
-	"github.com/nashory/agent-cockpit/internal/scan"
+	sourcepkg "github.com/nashory/agent-cockpit/internal/source"
 	"github.com/nashory/agent-cockpit/internal/usage"
 )
 
@@ -20,9 +20,19 @@ type Source struct{}
 func (Source) Name() string { return "codex" }
 
 func (Source) Collect(ctx context.Context, cfg config.Config) ([]usage.Event, error) {
-	return scan.Parallel(ctx, cfg.Paths.Codex,
-		func(path string) bool { return strings.HasSuffix(path, ".jsonl") },
-		ParseFile)
+	return sourcepkg.CollectFiles(ctx, cfg, Source{})
+}
+
+func (Source) Roots(cfg config.Config) []string {
+	return cfg.Paths.Codex
+}
+
+func (Source) Match(path string) bool {
+	return strings.HasSuffix(path, ".jsonl")
+}
+
+func (Source) Parse(path string, r io.Reader) ([]usage.Event, error) {
+	return Parse(r, path)
 }
 
 type envelope struct {

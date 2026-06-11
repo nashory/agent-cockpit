@@ -1,12 +1,16 @@
-package source
+package source_test
 
 import (
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/nashory/agent-cockpit/internal/config"
+	"github.com/nashory/agent-cockpit/internal/source"
+	_ "github.com/nashory/agent-cockpit/internal/source/builtin"
+	"github.com/nashory/agent-cockpit/internal/usage"
 )
 
 func write(t *testing.T, path, body string) {
@@ -29,7 +33,7 @@ func TestCollectAcrossSources(t *testing.T) {
 			`{"type":"event_msg","payload":{"type":"token_count","info":{"last_token_usage":{"output_tokens":80}}}}`)
 
 	cfg := config.Config{Paths: config.Paths{Claude: []string{cdir}, Codex: []string{xdir}}}
-	events, err := Collect(context.Background(), cfg)
+	events, err := source.Collect(context.Background(), cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,12 +49,56 @@ func TestCollectAcrossSources(t *testing.T) {
 
 func TestAllRegistersThreeSources(t *testing.T) {
 	names := map[string]bool{}
-	for _, s := range All() {
+	for _, s := range source.All() {
 		names[s.Name()] = true
 	}
 	for _, want := range []string{"claude", "codex", "gemini"} {
 		if !names[want] {
 			t.Errorf("source registry missing %q", want)
 		}
+	}
+}
+
+type testFileAdapter struct {
+	root string
+}
+
+func (a testFileAdapter) Name() string { return "test-file" }
+
+func (a testFileAdapter) Roots(config.Config) []string { return []string{a.root} }
+
+func (testFileAdapter) Match(path string) bool {
+	return filepath.Ext(path) == ".log"
+}
+
+func (testFileAdapter) Parse(path string, r io.Reader) ([]usage.Event, error) {
+	if filepath.Base(path) == "bad.log" {
+		return nil, os.ErrInvalid
+	}
+	body, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	return []usage.Event{{
+		Source:    "test-file",
+		SessionID: string(body),
+	}}, nil
+}
+
+func TestCollectFilesSkipsFileLocalErrors(t *testing.T) {
+	root := t.TempDir()
+	write(t, filepath.Join(root, "ok.log"), "ok")
+	write(t, filepath.Join(root, "bad.log"), "bad")
+	write(t, filepath.Join(root, "ignored.txt"), "ignored")
+
+	events, err := source.CollectFiles(context.Background(), config.Config{}, testFileAdapter{root: root})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("expected one parsed event, got %d", len(events))
+	}
+	if events[0].SessionID != "ok" {
+		t.Fatalf("expected ok event, got %#v", events[0])
 	}
 }

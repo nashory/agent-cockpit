@@ -3,13 +3,14 @@ package gemini
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/nashory/agent-cockpit/internal/config"
-	"github.com/nashory/agent-cockpit/internal/scan"
+	sourcepkg "github.com/nashory/agent-cockpit/internal/source"
 	"github.com/nashory/agent-cockpit/internal/usage"
 )
 
@@ -18,11 +19,19 @@ type Source struct{}
 func (Source) Name() string { return "gemini" }
 
 func (Source) Collect(ctx context.Context, cfg config.Config) ([]usage.Event, error) {
-	return scan.Parallel(ctx, cfg.Paths.Gemini,
-		func(path string) bool {
-			return strings.HasSuffix(path, ".json") && strings.Contains(filepath.Base(path), "session-")
-		},
-		ParseFile)
+	return sourcepkg.CollectFiles(ctx, cfg, Source{})
+}
+
+func (Source) Roots(cfg config.Config) []string {
+	return cfg.Paths.Gemini
+}
+
+func (Source) Match(path string) bool {
+	return strings.HasSuffix(path, ".json") && strings.Contains(filepath.Base(path), "session-")
+}
+
+func (Source) Parse(path string, r io.Reader) ([]usage.Event, error) {
+	return Parse(r, path)
 }
 
 type sessionFile struct {
@@ -47,7 +56,16 @@ type message struct {
 }
 
 func ParseFile(path string) ([]usage.Event, error) {
-	body, err := os.ReadFile(path)
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return Parse(f, path)
+}
+
+func Parse(r io.Reader, path string) ([]usage.Event, error) {
+	body, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}

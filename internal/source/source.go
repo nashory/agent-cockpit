@@ -2,12 +2,13 @@ package source
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"os"
 	"sync"
 
 	"github.com/nashory/agent-cockpit/internal/config"
-	"github.com/nashory/agent-cockpit/internal/source/claude"
-	"github.com/nashory/agent-cockpit/internal/source/codex"
-	"github.com/nashory/agent-cockpit/internal/source/gemini"
+	"github.com/nashory/agent-cockpit/internal/scan"
 	"github.com/nashory/agent-cockpit/internal/usage"
 )
 
@@ -16,12 +17,57 @@ type Source interface {
 	Collect(context.Context, config.Config) ([]usage.Event, error)
 }
 
-func All() []Source {
-	return []Source{
-		claude.Source{},
-		codex.Source{},
-		gemini.Source{},
+type FileAdapter interface {
+	Name() string
+	Roots(config.Config) []string
+	Match(path string) bool
+	Parse(path string, r io.Reader) ([]usage.Event, error)
+}
+
+var (
+	registryMu sync.RWMutex
+	registry   []Source
+	registered = map[string]bool{}
+)
+
+func Register(src Source) {
+	if src == nil {
+		panic("source: cannot register nil source")
 	}
+	name := src.Name()
+	if name == "" {
+		panic("source: cannot register unnamed source")
+	}
+
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	if registered[name] {
+		panic(fmt.Sprintf("source: source %q already registered", name))
+	}
+	registered[name] = true
+	registry = append(registry, src)
+}
+
+func All() []Source {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+	srcs := make([]Source, len(registry))
+	copy(srcs, registry)
+	return srcs
+}
+
+func CollectFiles(ctx context.Context, cfg config.Config, adapter FileAdapter) ([]usage.Event, error) {
+	if adapter == nil {
+		return nil, fmt.Errorf("source: nil file adapter")
+	}
+	return scan.Parallel(ctx, adapter.Roots(cfg), adapter.Match, func(path string) ([]usage.Event, error) {
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		return adapter.Parse(path, f)
+	})
 }
 
 func Collect(ctx context.Context, cfg config.Config) ([]usage.Event, error) {
