@@ -1,0 +1,110 @@
+name: Pricing Refresh
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: pricing-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Refresh vendored pricing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Check upstream pricing
+        id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          go run ./cmd/cockpit pricing update --check --json > pricing-check.json
+
+          up_to_date="$(python3 - <<'PY'
+          import json
+
+          with open("pricing-check.json") as f:
+              check = json.load(f)
+          print(str(check["up_to_date"]).lower())
+          PY
+          )"
+          echo "up_to_date=${up_to_date}" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "summary<<EOF"
+            python3 - <<'PY'
+          import json
+
+          with open("pricing-check.json") as f:
+              check = json.load(f)
+
+          print(f"Source: {check['source_url']}")
+          print(f"Current models: {check['current']['model_count']}")
+          print(f"Latest models: {check['latest_models']}")
+          print(
+              "Diff: "
+              f"+{check['added_models']} / "
+              f"-{check['removed_models']} / "
+              f"~{check['changed_models']} models"
+          )
+          print(f"Latest SHA256: {check['latest_sha256']}")
+          PY
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Refresh snapshot
+        if: steps.check.outputs.up_to_date == 'false'
+        run: make pricing
+
+      - name: Test refreshed pricing
+        if: steps.check.outputs.up_to_date == 'false'
+        run: go test ./internal/usage ./internal/cli
+
+      - name: Open pull request
+        if: steps.check.outputs.up_to_date == 'false'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_BODY: ${{ steps.check.outputs.summary }}
+        run: |
+          set -euo pipefail
+          branch="automation/pricing-refresh"
+
+          if git diff --quiet -- internal/usage/pricing_data.json internal/usage/pricing_metadata.json; then
+            echo "No pricing file changes after refresh."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add internal/usage/pricing_data.json internal/usage/pricing_metadata.json
+          git commit -m "pricing: refresh vendored snapshot"
+          git push --force-with-lease origin "HEAD:$branch"
+
+          if gh pr view "$branch" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh pr edit "$branch" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "pricing: refresh vendored snapshot" \
+              --body "$PR_BODY"
+          else
+            gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --base "$GITHUB_REF_NAME" \
+              --head "$branch" \
+              --title "pricing: refresh vendored snapshot" \
+              --body "$PR_BODY"
+          fi

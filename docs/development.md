@@ -159,6 +159,13 @@ cockpit pricing update --check
 cockpit pricing update --check --json
 ```
 
+The `Pricing Refresh` GitHub Actions workflow runs the same freshness check
+weekly and on manual dispatch. When LiteLLM pricing has changed, it regenerates
+`internal/usage/pricing_data.json` and `internal/usage/pricing_metadata.json`,
+runs the pricing-focused tests, and opens or updates the
+`automation/pricing-refresh` pull request. The workflow exits without a PR when
+the embedded snapshot already matches upstream.
+
 ## Benchmarks
 
 `make bench` runs the latency-sensitive benchmark set for statusline rendering,

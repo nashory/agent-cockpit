@@ -900,6 +900,7 @@ Tasks:
 - Add pricing snapshot metadata.
 - Add `cockpit pricing status` unmatched-model diagnostics.
 - Add `cockpit pricing update --check`.
+- Add scheduled pricing refresh PR workflow.
 - Add CI smoke for schema and pricing commands.
 
 Suggested commit split:
@@ -907,6 +908,7 @@ Suggested commit split:
 - `config: add schema and validation commands`
 - `pricing: expose snapshot diagnostics`
 - `ci: smoke config and pricing commands`
+- `ci: automate pricing refresh prs`
 
 ### Epic C: Source Registry
 
