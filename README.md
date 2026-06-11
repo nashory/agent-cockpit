@@ -96,6 +96,7 @@ cockpit speed
 cockpit statusline --compact  # one line for tmux / your shell prompt
 cockpit statusline --json     # structured statusline payload
 cockpit statusline --format '{{model}} {{context}} {{today_cost}}'
+cockpit serve --addr 127.0.0.1:8765  # localhost JSON API
 cockpit report                # text summary (add --json for JSON)
 cockpit report --svg usage.svg  # shareable SVG receipt card
 cockpit export --group daily > usage.csv  # CSV: daily/session/model/project/event
@@ -122,7 +123,8 @@ cockpit doctor                # show detected log locations
 ```
 
 See [ccusage Workflow Mapping](docs/ccusage-workflows.md) for common command
-translations and flag combinations.
+translations, and [Integrations](docs/integrations.md) for tmux, Waybar, and
+localhost API examples.
 
 ## 🎛️ Features
 
