@@ -25,24 +25,25 @@ import (
 )
 
 type options struct {
-	days        int
-	since       string
-	until       string
-	sources     string
-	project     string
-	model       string
-	configPath  string
-	refresh     string
-	timezone    string
-	order       string
-	breakdown   string
-	json        bool
-	noCost      bool
-	svgPath     string
-	compact     bool
-	exportGroup string
-	outputPath  string
-	statusline  *claudeStatuslineContext
+	days         int
+	since        string
+	until        string
+	sources      string
+	project      string
+	model        string
+	configPath   string
+	refresh      string
+	timezone     string
+	order        string
+	breakdown    string
+	json         bool
+	noCost       bool
+	svgPath      string
+	compact      bool
+	statusFormat string
+	exportGroup  string
+	outputPath   string
+	statusline   *claudeStatuslineContext
 }
 
 var version = "dev"
@@ -430,7 +431,7 @@ func reportCommand(use, short string, opts *options, render func(*os.File, []usa
 }
 
 func statuslineCommand(opts *options) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "statusline",
 		Short: "Print one-line usage for tmux/statusline integrations",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -447,6 +448,8 @@ func statuslineCommand(opts *options) *cobra.Command {
 			return nil
 		},
 	}
+	cmd.Flags().StringVar(&opts.statusFormat, "format", "", "custom statusline format, for example '{{model}} {{context}} {{today_cost}}'")
+	return cmd
 }
 
 func load(ctx context.Context, opts *options) ([]usage.Event, config.Config, error) {
@@ -875,6 +878,11 @@ func writeStatusline(w io.Writer, events []usage.Event, ro report.Options, opts 
 		_ = writeStatuslineJSON(w, t, currency, budgets, limits, now, ro.NoCost, active)
 		return
 	}
+	if opts.statusFormat != "" {
+		values := statuslineFormatValues(t, events, ro, active, budgets, limits, now, currency)
+		fmt.Fprintln(w, renderStatuslineFormat(opts.statusFormat, values))
+		return
+	}
 	if opts.compact {
 		parts := statuslineActiveParts(active)
 		parts = append(parts, fmt.Sprintf("tok %s", formatCompact(t.Total)))
@@ -953,6 +961,85 @@ func statuslineActiveParts(active *statuslineActiveContext) []string {
 		parts = append(parts, fmt.Sprintf("ctx %.0f%%", *active.ContextUsedPercent))
 	}
 	return parts
+}
+
+func statuslineFormatValues(totals usage.Totals, events []usage.Event, ro report.Options, active *statuslineActiveContext, budgets, limits []usage.ThresholdStatus, now time.Time, currency string) map[string]string {
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	today := usage.SummarizeWith(usage.Filter(events, todayStart, time.Time{}, nil, "", ""), ro.Pricing)
+	if ro.NoCost {
+		today = usage.SummarizeTokens(usage.Filter(events, todayStart, time.Time{}, nil, "", ""))
+	}
+	values := map[string]string{
+		"tokens":         fmt.Sprintf("%d", totals.Total),
+		"tokens_compact": formatCompact(totals.Total),
+		"events":         fmt.Sprintf("%d", totals.Events),
+		"today_tokens":   fmt.Sprintf("%d", today.Total),
+		"today_compact":  formatCompact(today.Total),
+		"cost":           "",
+		"today_cost":     "",
+		"budget":         statuslineWorstLabel(budgets),
+		"limit":          statuslineWorstLabel(limits),
+		"block_left":     statuslineBlockLeft(limits),
+		"model":          "",
+		"model_id":       "",
+		"session":        "",
+		"context":        "",
+		"context_left":   "",
+		"cwd":            "",
+		"project":        "",
+	}
+	if !ro.NoCost {
+		values["cost"] = fmt.Sprintf("~%.2f %s", totals.CostUSD, currency)
+		values["today_cost"] = fmt.Sprintf("~%.2f %s", today.CostUSD, currency)
+	}
+	if active != nil {
+		values["model"] = active.ModelName
+		values["model_id"] = active.ModelID
+		values["session"] = active.SessionID
+		values["cwd"] = active.CWD
+		values["project"] = active.ProjectDir
+		if active.ProjectDir == "" {
+			values["project"] = active.CurrentDir
+		}
+		if active.ContextUsedPercent != nil {
+			values["context"] = fmt.Sprintf("%.0f%%", *active.ContextUsedPercent)
+		}
+		if active.ContextRemainingPercent != nil {
+			values["context_left"] = fmt.Sprintf("%.0f%%", *active.ContextRemainingPercent)
+		}
+	}
+	return values
+}
+
+func renderStatuslineFormat(format string, values map[string]string) string {
+	out := format
+	for key, value := range values {
+		out = strings.ReplaceAll(out, "{{"+key+"}}", value)
+		out = strings.ReplaceAll(out, "{{ "+key+" }}", value)
+	}
+	return out
+}
+
+func statuslineWorstLabel(statuses []usage.ThresholdStatus) string {
+	s := usage.WorstStatus(statuses)
+	if s.Name == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s %.0f%% %s", s.Name, s.Ratio*100, s.Level)
+}
+
+func statuslineBlockLeft(statuses []usage.ThresholdStatus) string {
+	for _, s := range statuses {
+		if s.Name != "claude 5h" || s.Limit <= 0 {
+			continue
+		}
+		left := s.Limit - s.Used
+		if left < 0 {
+			left = 0
+		}
+		return formatCompact(int64(left))
+	}
+	return ""
 }
 
 func statuslineModelName(ctx *claudeStatuslineContext) string {

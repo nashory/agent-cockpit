@@ -85,7 +85,11 @@ cockpit statusline
 cockpit statusline --compact
 cockpit statusline --json
 cockpit statusline --no-cost
+cockpit statusline --format '{{model}} {{context}} {{today_cost}}'
 ```
 
 Use the compact form for shell prompts and tmux-style integrations. Use JSON
-when another tool owns the final rendering.
+when another tool owns the final rendering. Use `--format` for simple prompt
+templates; common placeholders include `{{model}}`, `{{context}}`,
+`{{context_left}}`, `{{tokens_compact}}`, `{{today_cost}}`, and
+`{{block_left}}`.

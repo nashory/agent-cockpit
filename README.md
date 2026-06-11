@@ -95,6 +95,7 @@ cockpit agents
 cockpit speed
 cockpit statusline --compact  # one line for tmux / your shell prompt
 cockpit statusline --json     # structured statusline payload
+cockpit statusline --format '{{model}} {{context}} {{today_cost}}'
 cockpit report                # text summary (add --json for JSON)
 cockpit report --svg usage.svg  # shareable SVG receipt card
 cockpit export --group daily > usage.csv  # CSV: daily/session/model/project/event

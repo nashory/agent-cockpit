@@ -400,6 +400,18 @@ func TestStatuslineClaudeContext(t *testing.T) {
 	if !strings.Contains(got, `"active"`) || !strings.Contains(got, `"model_name": "Sonnet"`) || !strings.Contains(got, `"context_used_percentage": 8`) {
 		t.Fatalf("statusline JSON missing active context:\n%s", got)
 	}
+
+	opts.json = false
+	opts.statusFormat = "{{model}} {{context}} {{tokens_compact}} {{cost}}"
+	out.Reset()
+	writeStatusline(&out, events, reportOptions(goldenConfig(), opts), opts)
+	if strings.TrimSpace(out.String()) != "Sonnet 8% 180 ~0.00 USD" {
+		t.Fatalf("custom statusline format = %q", out.String())
+	}
+
+	if got := statuslineBlockLeft([]usage.ThresholdStatus{{Name: "claude 5h", Used: 180, Limit: 1000}}); got != "820" {
+		t.Fatalf("block_left = %q, want 820", got)
+	}
 }
 
 func TestNoCostOutputs(t *testing.T) {
