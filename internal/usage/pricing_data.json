@@ -144,6 +144,18 @@
 "input_per_million": 3.0,
 "output_per_million": 15.0
 },
+"claude-fable-5": {
+"cache_read_per_million": 1.0,
+"cache_write_per_million": 12.5,
+"input_per_million": 10.0,
+"output_per_million": 50.0
+},
+"claude-fable-5@default": {
+"cache_read_per_million": 1.0,
+"cache_write_per_million": 12.5,
+"input_per_million": 10.0,
+"output_per_million": 50.0
+},
 "claude-haiku-4-5": {
 "cache_read_per_million": 0.1,
 "cache_write_per_million": 1.25,

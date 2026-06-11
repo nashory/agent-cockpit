@@ -68,13 +68,29 @@ def canonical_go_json(value) -> str:
     return json.dumps(value, separators=(",", ":"))
 
 
+def canonical_hash_table(table: dict[str, dict]) -> dict[str, dict]:
+    """Return the same shape internal/usage.pricingTableSHA256 hashes."""
+    out: dict[str, dict] = {}
+    for model, price in table.items():
+        entry = {
+            "input_per_million": price["input_per_million"],
+            "output_per_million": price["output_per_million"],
+        }
+        if price.get("cache_read_per_million", 0) != 0:
+            entry["cache_read_per_million"] = price["cache_read_per_million"]
+        if price.get("cache_write_per_million", 0) != 0:
+            entry["cache_write_per_million"] = price["cache_write_per_million"]
+        out[model] = entry
+    return out
+
+
 def main() -> int:
     raw = urllib.request.urlopen(SRC, timeout=30).read()
     data = json.loads(raw)
 
     out: dict[str, dict] = {}
     # Shorter keys (plainer, no region markup) win on collision.
-    for key in sorted(data, key=len):
+    for key in sorted(data, key=lambda k: (len(k), k)):
         v = data[key]
         if not isinstance(v, dict):
             continue
@@ -102,7 +118,7 @@ def main() -> int:
     with open(OUT, "w") as f:
         json.dump(out, f, indent=0, sort_keys=True)
         f.write("\n")
-    canonical = canonical_go_json(out).encode()
+    canonical = canonical_go_json(canonical_hash_table(out)).encode()
     meta = {
         "schema_version": 1,
         "source": "LiteLLM model_prices_and_context_window.json",
