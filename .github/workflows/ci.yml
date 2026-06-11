@@ -57,6 +57,26 @@ jobs:
           name: coverage
           path: coverage.out
 
+  benchmark:
+    name: Benchmarks
+    needs: [test]
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Run benchmarks
+        run: |
+          set -o pipefail
+          make bench | tee benchmark.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmarks
+          path: benchmark.txt
+
   cli-smoke:
     name: CLI Smoke
     needs: [test]

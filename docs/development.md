@@ -159,6 +159,19 @@ cockpit pricing update --check
 cockpit pricing update --check --json
 ```
 
+## Benchmarks
+
+`make bench` runs the latency-sensitive benchmark set for statusline rendering,
+source file collection, and core usage aggregation:
+
+```bash
+make bench
+```
+
+CI records the same benchmark output as a non-blocking artifact. Treat it as a
+trend signal first; once timings are stable enough, PR comparison can become a
+blocking regression gate.
+
 ## Release Flow
 
 1. Make sure CI passes on macOS, Linux, and Windows.

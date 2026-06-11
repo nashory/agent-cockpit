@@ -3,13 +3,12 @@ package cli
 import (
 	"io"
 	"testing"
-	"time"
 
-	"github.com/nashory/agent-cockpit/internal/usage"
+	"github.com/nashory/agent-cockpit/internal/benchdata"
 )
 
 func BenchmarkStatuslineRender(b *testing.B) {
-	events := benchmarkEvents(10_000)
+	events := benchdata.Events(10_000)
 	cfg := goldenConfig()
 	cfg.Limits.Claude5HTokens = 2_000_000
 	used := 42.0
@@ -43,28 +42,4 @@ func BenchmarkStatuslineRender(b *testing.B) {
 			}
 		})
 	}
-}
-
-func benchmarkEvents(n int) []usage.Event {
-	out := make([]usage.Event, 0, n)
-	base := time.Date(2026, 6, 11, 12, 0, 0, 0, time.UTC)
-	models := []string{"claude-sonnet-4-5", "claude-opus-4-8", "gpt-5-codex", "gemini-2.5-pro"}
-	sources := []string{"claude", "claude", "codex", "gemini"}
-	for i := 0; i < n; i++ {
-		idx := i % len(models)
-		out = append(out, usage.Event{
-			Source:      sources[idx],
-			SessionID:   "session-" + string(rune('0'+i%10)),
-			Project:     "agent-cockpit",
-			CWD:         "/tmp/agent-cockpit",
-			Model:       models[idx],
-			Input:       int64(100 + i%50),
-			Output:      int64(25 + i%20),
-			CacheRead:   int64(i % 10),
-			CacheCreate: int64(i % 7),
-			Reasoning:   int64(i % 5),
-			Timestamp:   base.Add(-time.Duration(i%720) * time.Minute),
-		})
-	}
-	return out
 }

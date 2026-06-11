@@ -164,7 +164,8 @@ Gaps:
 - No config schema.
 - No stable JSON schema documentation.
 - Limited output golden tests.
-- No performance benchmark suite.
+- Performance benchmarks exist for statusline rendering, source collection, and
+  usage aggregation; p95 tracking and cache-vs-scan comparison are still open.
 - No large synthetic fixture.
 - Statusline does not consume Claude Code stdin payload yet.
 - No `--timezone`, `--no-cost`, `--breakdown`, `--order`.
@@ -1047,8 +1048,8 @@ Acceptance criteria:
 
 Deliverables:
 
-- large fixture generator
-- benchmark suite
+- synthetic benchmark fixture helpers
+- benchmark suite and CI artifact
 - statusline latency budget
 - optional incremental cache if needed
 
