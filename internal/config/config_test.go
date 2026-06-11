@@ -1,8 +1,10 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -86,4 +88,71 @@ output_per_million = 75
 	if p, ok := cfg.Pricing["claude-opus"]; !ok || p.InputPerMillion != 15 {
 		t.Fatalf("pricing override missing: %+v", cfg.Pricing)
 	}
+}
+
+func TestSchemaJSONIsValid(t *testing.T) {
+	body, err := SchemaJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(body, &doc); err != nil {
+		t.Fatalf("schema should be valid JSON: %v\n%s", err, body)
+	}
+	if doc["$schema"] == "" || doc["properties"] == nil {
+		t.Fatalf("schema missing expected fields: %v", doc)
+	}
+}
+
+func TestValidateFileReportsConfigMistakes(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.toml")
+	body := `timezone = "Nope/Nowhere"
+refresh_interval = "0s"
+unknown_key = true
+
+[budget]
+daily_usd = -1
+warn_pct = 99
+critical_pct = 80
+
+[pricing."bad"]
+input_per_million = -1
+`
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	errs := ValidateFile(path)
+	got := validationFields(errs)
+	for _, want := range []string{"timezone", "refresh_interval", "unknown_key", "budget.daily_usd", "budget.warn_pct", "pricing.\"bad\".input_per_million"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("expected validation field %q in %s; errors: %+v", want, got, errs)
+		}
+	}
+}
+
+func TestValidateFileAcceptsStarterConfig(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.toml")
+	body := `timezone = "local"
+refresh_interval = "3s"
+currency = "USD"
+
+[paths]
+claude = ["~/.claude/projects"]
+codex = ["~/.codex/sessions"]
+gemini = ["~/.gemini/tmp"]
+`
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if errs := ValidateFile(path); len(errs) != 0 {
+		t.Fatalf("starter config should validate, got %+v", errs)
+	}
+}
+
+func validationFields(errs []ValidationError) string {
+	fields := make([]string, 0, len(errs))
+	for _, err := range errs {
+		fields = append(fields, err.Field)
+	}
+	return strings.Join(fields, "\n")
 }

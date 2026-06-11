@@ -62,6 +62,12 @@ type statuslineJSONDocument struct {
 	Limits        []usage.ThresholdStatus `json:"limits,omitempty"`
 }
 
+type configValidationDocument struct {
+	OK     bool                     `json:"ok"`
+	Path   string                   `json:"path"`
+	Errors []config.ValidationError `json:"errors"`
+}
+
 func Execute() error {
 	opts := &options{days: 30}
 	root := &cobra.Command{
@@ -548,6 +554,40 @@ func configCommand(opts *options) *cobra.Command {
 			}
 			body := []byte(configTemplate())
 			return os.WriteFile(path, body, 0o644)
+		},
+	})
+	cmd.AddCommand(&cobra.Command{
+		Use:   "schema",
+		Short: "Print the JSON schema for config.toml",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			body, err := config.SchemaJSON()
+			if err != nil {
+				return err
+			}
+			fmt.Fprintln(os.Stdout, string(body))
+			return nil
+		},
+	})
+	cmd.AddCommand(&cobra.Command{
+		Use:   "validate",
+		Short: "Validate config.toml",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			path := configPath(opts)
+			errs := config.ValidateFile(path)
+			if opts.json {
+				enc := json.NewEncoder(os.Stdout)
+				enc.SetIndent("", "  ")
+				return enc.Encode(configValidationDocument{OK: len(errs) == 0, Path: path, Errors: errs})
+			}
+			if len(errs) == 0 {
+				fmt.Fprintf(os.Stdout, "config ok: %s\n", path)
+				return nil
+			}
+			fmt.Fprintf(os.Stderr, "config invalid: %s\n", path)
+			for _, err := range errs {
+				fmt.Fprintf(os.Stderr, "  %s: %s\n", err.Field, err.Message)
+			}
+			return fmt.Errorf("config validation failed")
 		},
 	})
 	return cmd

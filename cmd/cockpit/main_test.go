@@ -153,6 +153,24 @@ func TestSmokePricingStatus(t *testing.T) {
 	}
 }
 
+func TestSmokeConfigSchemaAndValidate(t *testing.T) {
+	cfg := tempConfig(t)
+	out, err := runAC(t, "config", "schema")
+	if err != nil {
+		t.Fatalf("config schema failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, `"properties"`) || !strings.Contains(out, `"paths"`) {
+		t.Fatalf("config schema output unexpected: %s", out)
+	}
+	out, err = runAC(t, "--config", cfg, "config", "validate")
+	if err != nil {
+		t.Fatalf("config validate failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "config ok:") {
+		t.Fatalf("config validate output unexpected: %s", out)
+	}
+}
+
 func TestSmokeDoctor(t *testing.T) {
 	cfg := tempConfig(t)
 	out, err := runAC(t, "--config", cfg, "doctor")
