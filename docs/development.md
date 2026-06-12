@@ -127,6 +127,9 @@ Adapter rules:
 - Preserve timestamps and normalize into `usage.Event`; do not add report-level
   source branches unless the shared event model is insufficient.
 
+Use [Source Adapter Template](source-adapter-template.md) for the full adapter
+checklist.
+
 ## JSON Contracts
 
 JSON output is a script-facing contract. Add fields additively and cover changes

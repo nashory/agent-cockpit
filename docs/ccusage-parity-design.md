@@ -975,7 +975,9 @@ Tasks:
 - Add Codebuff adapter.
 - Add Kilo adapter.
 - Add Goose adapter.
-- Pick additional Cursor adapter if local fixture quality is available.
+- Pick additional Cursor adapter if local fixture quality is available. Cursor
+  is deferred until a concrete local fixture format is available from an
+  upstream implementation or real sanitized sample.
 - Add docs and fixtures for each new source.
 
 Suggested commit split:
