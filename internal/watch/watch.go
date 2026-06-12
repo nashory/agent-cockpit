@@ -14,21 +14,30 @@ import (
 // DefaultDebounce coalesces a burst of writes into a single refresh.
 const DefaultDebounce = 300 * time.Millisecond
 
-// IsLogFile reports whether path is an agent log file worth refreshing on:
-// any .jsonl (Claude, Codex) or a Gemini session-*.json.
+// IsLogFile reports whether path is an agent usage file worth refreshing on.
 func IsLogFile(path string) bool {
+	base := filepath.Base(path)
 	switch {
 	case strings.HasSuffix(path, ".jsonl"):
 		return true
-	case strings.HasSuffix(path, ".json") && strings.HasPrefix(filepath.Base(path), "session-"):
+	case base == "chat-messages.json":
+		return true
+	case strings.HasSuffix(path, ".json") && strings.HasPrefix(base, "session-"):
+		return true
+	case strings.HasSuffix(path, ".db"):
 		return true
 	default:
 		return false
 	}
 }
 
-// dirsUnder returns root and all existing subdirectories (best-effort).
+// dirsUnder returns root and all existing subdirectories (best-effort). If root
+// is a file path, it returns the parent directory so changes to that file can be
+// observed.
 func dirsUnder(root string) []string {
+	if st, err := os.Stat(root); err == nil && !st.IsDir() {
+		return []string{filepath.Dir(root)}
+	}
 	var dirs []string
 	_ = filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
 		if err != nil {

@@ -11,12 +11,17 @@ import (
 
 func TestIsLogFile(t *testing.T) {
 	cases := map[string]bool{
-		"/a/b/session.jsonl":             true,
-		"/a/b/archived_sessions/x.jsonl": true,
-		"/g/tmp/h/chats/session-1.json":  true,
-		"/g/tmp/h/chats/notes.json":      false, // json but not a session file
-		"/a/b/config.toml":               false,
-		"/a/b/session-1.jsonl.tmp":       false,
+		"/a/b/session.jsonl":                   true,
+		"/a/b/archived_sessions/x.jsonl":       true,
+		"/g/tmp/h/chats/session-1.json":        true,
+		"/codebuff/chats/a/chat-messages.json": true,
+		"/opencode/opencode.db":                true,
+		"/kilo/kilo.db":                        true,
+		"/goose/sessions.db":                   true,
+		"/g/tmp/h/chats/notes.json":            false, // json but not a session file
+		"/a/b/config.toml":                     false,
+		"/a/b/session-1.jsonl.tmp":             false,
+		"/a/b/chat-messages.json.tmp":          false,
 	}
 	for path, want := range cases {
 		if got := IsLogFile(path); got != want {
@@ -46,6 +51,17 @@ func TestDirsUnder(t *testing.T) {
 		if !want[d] {
 			t.Errorf("unexpected dir %q (files must not be included)", d)
 		}
+	}
+}
+
+func TestDirsUnderFileRootReturnsParent(t *testing.T) {
+	root := t.TempDir()
+	dbPath := filepath.Join(root, "kilo.db")
+	mustWrite(t, dbPath, "sqlite")
+
+	dirs := dirsUnder(dbPath)
+	if len(dirs) != 1 || dirs[0] != root {
+		t.Fatalf("dirsUnder(file) = %v, want [%q]", dirs, root)
 	}
 }
 
@@ -105,6 +121,23 @@ func TestWatcherEmitsOnWrite(t *testing.T) {
 	mustWrite(t, filepath.Join(sub, "a.jsonl"), "line\n")
 	if !recv(w.Events(), 3*time.Second) {
 		t.Fatal("expected a refresh signal after writing a .jsonl file")
+	}
+}
+
+func TestWatcherEmitsForFileRoot(t *testing.T) {
+	root := t.TempDir()
+	dbPath := filepath.Join(root, "kilo.db")
+	mustWrite(t, dbPath, "one")
+
+	w, err := New([]string{dbPath}, IsLogFile, 20*time.Millisecond)
+	if err != nil {
+		t.Skipf("fsnotify unavailable: %v", err)
+	}
+	defer w.Close()
+
+	mustWrite(t, dbPath, "two")
+	if !recv(w.Events(), 3*time.Second) {
+		t.Fatal("expected a refresh signal after writing a watched file root")
 	}
 }
 

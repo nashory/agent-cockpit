@@ -57,6 +57,21 @@ func TestCollectLoadsKiloDatabaseAndDedupes(t *testing.T) {
 	}
 }
 
+func TestCollectAcceptsKiloDatabaseFilePath(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, dbFileName)
+	createKiloDB(t, dbPath, "row-1", "session-a", `{"id":"msg-1","role":"assistant","providerID":"openai","modelID":"gpt-5","time":{"created":1767312000000},"tokens":{"input":10,"output":1}}`)
+	t.Setenv(dataDirEnv, dbPath)
+
+	events, err := (Source{}).Collect(context.Background(), config.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("events = %+v, want database file path to be accepted", events)
+	}
+}
+
 func TestParseSkipsNonAssistantAndMissingTimestamp(t *testing.T) {
 	for _, body := range []string{
 		`{"role":"user","modelID":"gpt-5","time":{"created":1767312000},"tokens":{"input":1}}`,

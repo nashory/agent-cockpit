@@ -60,8 +60,9 @@ func TestCollectUsesCodebuffDataDirAndChatShape(t *testing.T) {
 	dir := t.TempDir()
 	good := filepath.Join(dir, "projects", "myProject", "chats", "chat-a", "chat-messages.json")
 	nested := filepath.Join(dir, "projects", "myProject", "chat-messages.json")
+	wrongSection := filepath.Join(dir, "projects", "myProject", "logs", "chat-a", "chat-messages.json")
 	other := filepath.Join(dir, "projects", "myProject", "chats", "chat-a", "other.json")
-	for _, path := range []string{good, nested, other} {
+	for _, path := range []string{good, nested, wrongSection, other} {
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatal(err)
 		}

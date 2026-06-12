@@ -43,7 +43,7 @@ func (Source) Match(path string) bool {
 	parts := strings.FieldsFunc(filepath.ToSlash(path), func(r rune) bool { return r == '/' })
 	for i, part := range parts {
 		if part == "projects" {
-			return i+4 < len(parts)
+			return i+4 < len(parts) && parts[i+2] == "chats"
 		}
 	}
 	return false

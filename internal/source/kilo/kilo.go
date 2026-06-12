@@ -34,7 +34,7 @@ func (Source) Collect(ctx context.Context, cfg config.Config) ([]usage.Event, er
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		events, err := readDatabase(filepath.Join(root, dbFileName))
+		events, err := readDatabase(databasePath(root))
 		if err != nil {
 			continue
 		}
@@ -47,6 +47,13 @@ func (Source) Collect(ctx context.Context, cfg config.Config) ([]usage.Event, er
 		}
 	}
 	return out, ctx.Err()
+}
+
+func databasePath(root string) string {
+	if filepath.Base(root) == dbFileName {
+		return root
+	}
+	return filepath.Join(root, dbFileName)
 }
 
 func splitEnvPaths(raw string) []string {
