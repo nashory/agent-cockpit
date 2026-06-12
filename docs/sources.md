@@ -410,3 +410,43 @@ Token mapping:
 Session IDs use `<row_session_id>/<message_id>` when the embedded message has
 an ID, or `<row_session_id>/<row_id>` otherwise. Missing timestamps or models
 are skipped because Kilo rows need both to be useful in time-series reports.
+
+## Goose
+
+Default paths:
+
+```text
+~/.local/share/goose/sessions/sessions.db
+~/Library/Application Support/goose/sessions/sessions.db
+~/.local/share/Block/goose/sessions/sessions.db
+```
+
+`GOOSE_PATH_ROOT` can override discovery with a Goose root; agent-cockpit then
+reads `<root>/data/sessions/sessions.db`. Config paths point at directories
+that contain `sessions.db`, or directly at a `sessions.db` file. The source
+reads local SQLite databases only; it does not call Goose APIs or read
+credentials.
+
+Goose stores session-level token totals in the `sessions` table:
+
+```json
+{
+  "id": "session-a",
+  "model_config_json": {"model_name": "claude-sonnet-4-20250514"},
+  "created_at": "2026-05-01 01:02:03",
+  "accumulated_total_tokens": 180,
+  "accumulated_input_tokens": 100,
+  "accumulated_output_tokens": 50
+}
+```
+
+Token mapping:
+
+- `accumulated_input_tokens`, falling back to `input_tokens` -> input tokens
+- `accumulated_output_tokens`, falling back to `output_tokens` -> output tokens
+- `accumulated_total_tokens`, falling back to `total_tokens`, fills reasoning
+  or otherwise missing output tokens when it exceeds input plus output
+- `model_config_json.model_name` -> model name
+
+Session IDs use the Goose session row ID. Missing timestamps, models, or token
+totals are skipped because Goose rows are session-level aggregates.

@@ -15,6 +15,7 @@ usage events. It does not call provider APIs for reports.
 | Qwen Code | `~/.qwen/projects/*/chats/*.jsonl` | Not read | No |
 | Codebuff | `~/.config/manicode*/projects/*/chats/*/chat-messages.json` | Not read | No |
 | Kilo Code | `~/.local/share/kilo/kilo.db` | Not read | No |
+| Goose | `~/.local/share/goose/sessions/sessions.db`, `~/Library/Application Support/goose/sessions/sessions.db`, `~/.local/share/Block/goose/sessions/sessions.db` | Not read | No |
 
 Check what exists on your machine:
 
@@ -36,6 +37,7 @@ kimi = []
 qwen = []
 codebuff = []
 kilo = []
+goose = []
 ```
 
 Extracted fields are usage metadata only: source, session id, project or working

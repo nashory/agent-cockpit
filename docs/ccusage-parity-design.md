@@ -974,8 +974,8 @@ Tasks:
 - Add Qwen adapter.
 - Add Codebuff adapter.
 - Add Kilo adapter.
-- Pick additional Cursor or Goose adapters based on available
-  local fixture quality.
+- Add Goose adapter.
+- Pick additional Cursor adapter if local fixture quality is available.
 - Add docs and fixtures for each new source.
 
 Suggested commit split:

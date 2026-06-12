@@ -108,6 +108,7 @@ jobs:
           qwen = ["$tmp/empty"]
           codebuff = ["$tmp/empty"]
           kilo = ["$tmp/empty"]
+          goose = ["$tmp/empty"]
           EOF
 
           ./cockpit config schema > "$tmp/schema.json"

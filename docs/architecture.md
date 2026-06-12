@@ -27,6 +27,7 @@ internal/source/kimi/       Kimi wire JSONL parser
 internal/source/qwen/       Qwen Code JSONL parser
 internal/source/codebuff/   Codebuff chat JSON parser
 internal/source/kilo/       Kilo Code SQLite parser
+internal/source/goose/      Goose SQLite parser
 internal/scan/              parallel directory walk + file parsing
 internal/watch/             fsnotify log-dir watcher with debounced refresh
 internal/usage/             normalized event model, pricing, grouping, insights

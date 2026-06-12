@@ -52,7 +52,7 @@ func TestAllRegistersBuiltInSources(t *testing.T) {
 	for _, s := range source.All() {
 		names[s.Name()] = true
 	}
-	for _, want := range []string{"claude", "codex", "gemini", "opencode", "amp", "copilot", "kimi", "qwen", "codebuff", "kilo"} {
+	for _, want := range []string{"claude", "codex", "gemini", "opencode", "amp", "copilot", "kimi", "qwen", "codebuff", "kilo", "goose"} {
 		if !names[want] {
 			t.Errorf("source registry missing %q", want)
 		}

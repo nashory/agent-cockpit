@@ -59,6 +59,7 @@ kimi = ["~/.kimi"]
 qwen = ["~/.qwen"]
 codebuff = ["~/.config/manicode", "~/.config/manicode-dev", "~/.config/manicode-staging"]
 kilo = ["~/.local/share/kilo"]
+goose = ["~/.local/share/goose/sessions", "~/Library/Application Support/goose/sessions", "~/.local/share/Block/goose/sessions"]
 
 [pricing."claude-sonnet"]
 input_per_million = 3

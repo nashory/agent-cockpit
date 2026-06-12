@@ -10,7 +10,7 @@
 
 **A live terminal cockpit for token usage, cost, and speed across your coding agents.**
 
-Claude Code, Codex, Gemini, OpenCode, Amp, Copilot, Kimi, Qwen, Codebuff, and Kilo burn tokens all day. `agent-cockpit` reads their
+Claude Code, Codex, Gemini, OpenCode, Amp, Copilot, Kimi, Qwen, Codebuff, Kilo, and Goose burn tokens all day. `agent-cockpit` reads their
 **local** logs and turns them into a glass-cockpit dashboard: token burn, USD
 estimates, observed throughput, trends, and a GitHub-style year of activity.
 No cloud upload. No API keys. No background daemon.
@@ -27,7 +27,7 @@ No cloud upload. No API keys. No background daemon.
 
 - **🔒 Private by design.** It only reads log files already on your disk. Nothing
   is uploaded, no service runs in the background, no keys are required.
-- **🛩️ One cockpit for every agent.** Claude Code, Codex, Gemini, OpenCode, Amp, Copilot, Kimi, Qwen, Codebuff, and Kilo in a single
+- **🛩️ One cockpit for every agent.** Claude Code, Codex, Gemini, OpenCode, Amp, Copilot, Kimi, Qwen, Codebuff, Kilo, and Goose in a single
   normalized view, so you can compare engines, models, and projects side by side.
 - **💸 Know the cost.** Per-model pricing (derived from the
   [LiteLLM](https://github.com/BerriAI/litellm) dataset and vendored into the
@@ -135,7 +135,7 @@ tmux, Waybar, and localhost API examples.
 - 🛩️ **Live TUI:** a glass-cockpit dashboard that refreshes the instant an agent writes a log.
 - 📊 **Daily / Trends:** token usage and cost over time, as tables and braille charts.
 - ⏱️ **Blocks:** Claude's 5-hour billing windows with a live burn-rate projection.
-- 🤖 **Unified view:** Claude Code, Codex, Gemini, OpenCode, Amp, Copilot, Kimi, Qwen, Codebuff, and Kilo usage in one normalized cockpit.
+- 🤖 **Unified view:** Claude Code, Codex, Gemini, OpenCode, Amp, Copilot, Kimi, Qwen, Codebuff, Kilo, and Goose usage in one normalized cockpit.
 - 💸 **Accurate cost:** per-model pricing from the LiteLLM dataset, vendored for offline use with snapshot diagnostics.
 - 🧮 **Insights:** cache hit rate, throughput, velocity, engaged hours, and caution lamps.
 - 🚦 **Budgets & limits:** optional daily / weekly / monthly USD budgets and Claude 5h / 7d token limits, surfaced in the TUI and statusline.
@@ -219,6 +219,7 @@ only networked command is the explicit maintenance check
 | Qwen Code | `~/.qwen/projects/*/chats/*.jsonl` |
 | Codebuff | `~/.config/manicode*/projects/*/chats/*/chat-messages.json` |
 | Kilo Code | `~/.local/share/kilo/kilo.db` |
+| Goose | `~/.local/share/goose/sessions/sessions.db`, `~/Library/Application Support/goose/sessions/sessions.db`, `~/.local/share/Block/goose/sessions/sessions.db` |
 
 ## ⚙️ Configuration
 
@@ -261,6 +262,7 @@ kimi = ["~/.kimi"]
 qwen = ["~/.qwen"]
 codebuff = ["~/.config/manicode", "~/.config/manicode-dev", "~/.config/manicode-staging"]
 kilo = ["~/.local/share/kilo"]
+goose = ["~/.local/share/goose/sessions", "~/Library/Application Support/goose/sessions", "~/.local/share/Block/goose/sessions"]
 
 # Defaults come from the vendored LiteLLM table; override here only if you want
 # to. Prices are USD per million tokens; keys match a model-name substring.
@@ -286,7 +288,7 @@ mode is driven by an fsnotify watcher, and the TUI is built with
 
 ```text
 cmd/cockpit/                 entry point (the `cockpit` binary)
-internal/source/        Claude / Codex / Gemini / OpenCode / Amp / Copilot / Kimi / Qwen / Codebuff / Kilo log adapters
+internal/source/        Claude / Codex / Gemini / OpenCode / Amp / Copilot / Kimi / Qwen / Codebuff / Kilo / Goose log adapters
 internal/scan/          parallel directory walk + file parsing
 internal/watch/         fsnotify watcher for live refresh
 internal/usage/         normalized events, pricing, aggregation, insights

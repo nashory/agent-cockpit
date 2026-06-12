@@ -82,6 +82,11 @@ Codebuff:
 
 Kilo Code:
   ~/.local/share/kilo/kilo.db
+
+Goose:
+  ~/.local/share/goose/sessions/sessions.db
+  ~/Library/Application Support/goose/sessions/sessions.db
+  ~/.local/share/Block/goose/sessions/sessions.db
 ```
 
 Do not commit real agent logs, API keys, bot tokens, or local config files.

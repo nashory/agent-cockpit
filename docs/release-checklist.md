@@ -51,7 +51,7 @@ Checklist:
 Useful manual smoke path:
 
 ```bash
-cockpit --source claude,codex,gemini,opencode,amp,copilot,kimi,qwen,codebuff,kilo
+cockpit --source claude,codex,gemini,opencode,amp,copilot,kimi,qwen,codebuff,kilo,goose
 cockpit live --refresh 2s
 cockpit report --svg usage.svg
 ```

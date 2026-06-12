@@ -35,6 +35,7 @@ type Paths struct {
 	Qwen     []string `toml:"qwen"`
 	Codebuff []string `toml:"codebuff"`
 	Kilo     []string `toml:"kilo"`
+	Goose    []string `toml:"goose"`
 }
 
 type ValidationError struct {
@@ -71,6 +72,11 @@ func Default() Config {
 				filepath.Join(home, ".config", "manicode-staging"),
 			},
 			Kilo: []string{filepath.Join(home, ".local", "share", "kilo")},
+			Goose: []string{
+				filepath.Join(home, ".local", "share", "goose", "sessions"),
+				filepath.Join(home, "Library", "Application Support", "goose", "sessions"),
+				filepath.Join(home, ".local", "share", "Block", "goose", "sessions"),
+			},
 		},
 		Pricing: map[string]usage.Pricing{},
 	}
@@ -97,6 +103,7 @@ func Load(path string) (Config, error) {
 	cfg.Paths.Qwen = expandPaths(cfg.Paths.Qwen)
 	cfg.Paths.Codebuff = expandPaths(cfg.Paths.Codebuff)
 	cfg.Paths.Kilo = expandPaths(cfg.Paths.Kilo)
+	cfg.Paths.Goose = expandPaths(cfg.Paths.Goose)
 	if cfg.RefreshInterval == "" {
 		cfg.RefreshInterval = "3s"
 	}
@@ -166,7 +173,7 @@ func Validate(cfg Config) []ValidationError {
 	if cfg.Limits.Claude7DTokens < 0 {
 		errs = append(errs, ValidationError{Field: "limits.claude_7d_tokens", Message: "must be non-negative"})
 	}
-	for source, paths := range map[string][]string{"paths.claude": cfg.Paths.Claude, "paths.codex": cfg.Paths.Codex, "paths.gemini": cfg.Paths.Gemini, "paths.opencode": cfg.Paths.OpenCode, "paths.amp": cfg.Paths.Amp, "paths.copilot": cfg.Paths.Copilot, "paths.kimi": cfg.Paths.Kimi, "paths.qwen": cfg.Paths.Qwen, "paths.codebuff": cfg.Paths.Codebuff, "paths.kilo": cfg.Paths.Kilo} {
+	for source, paths := range map[string][]string{"paths.claude": cfg.Paths.Claude, "paths.codex": cfg.Paths.Codex, "paths.gemini": cfg.Paths.Gemini, "paths.opencode": cfg.Paths.OpenCode, "paths.amp": cfg.Paths.Amp, "paths.copilot": cfg.Paths.Copilot, "paths.kimi": cfg.Paths.Kimi, "paths.qwen": cfg.Paths.Qwen, "paths.codebuff": cfg.Paths.Codebuff, "paths.kilo": cfg.Paths.Kilo, "paths.goose": cfg.Paths.Goose} {
 		for i, path := range paths {
 			if strings.TrimSpace(path) == "" {
 				errs = append(errs, ValidationError{Field: fmt.Sprintf("%s[%d]", source, i), Message: "path must not be empty"})
@@ -270,6 +277,7 @@ func configSchema() map[string]any {
 					"qwen":     stringArraySchema("Qwen Code data roots containing projects/*/chats/*.jsonl files."),
 					"codebuff": stringArraySchema("Codebuff data roots containing projects/*/chats/*/chat-messages.json files."),
 					"kilo":     stringArraySchema("Kilo Code data roots containing kilo.db."),
+					"goose":    stringArraySchema("Goose data roots containing sessions.db."),
 				},
 			},
 			"pricing": map[string]any{
