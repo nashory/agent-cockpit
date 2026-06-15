@@ -49,6 +49,7 @@ type Model struct {
 	blkPopup        bool           // Blocks tab: show the selected window's per-model breakdown
 	sessSel         int            // Sessions tab: selected row (absolute index)
 	sessPopup       bool           // Sessions tab: show the selected session's per-model breakdown
+	costPopup       bool           // Cost tab: show selected day's spend breakdown
 	persist         bool           // write view preferences (compact/window/sort) across runs
 	trendSel        int            // Trends TOKENS/COST zoom: selected day index (0=oldest .. windowDays-1=today)
 	windowDays      int            // chart window in days (7 / 30 / 90), cycled with w
@@ -91,7 +92,11 @@ func (m *Model) resetTabState() {
 	m.projectSel, m.projectPopup = 0, false
 	m.blkSel, m.blkPopup = 0, false
 	m.sessSel, m.sessPopup = 0, false
+	m.costPopup = false
 	m.trendSel = m.windowDays - 1
+	if m.view == costs {
+		m.trendSel = m.costWindowDays() - 1
+	}
 }
 
 // tableTotal is the number of rows the current table tab can show.
@@ -307,6 +312,50 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+		if m.zoomed && m.view == costs && m.focus < n {
+			days := m.costWindowDays()
+			switch s {
+			case "esc":
+				if m.costPopup {
+					m.costPopup = false
+					return m, nil
+				}
+			case "enter":
+				if targets[m.focus].title == "SPEND RATE" {
+					m.costPopup = true
+					return m, nil
+				}
+			case "left", "h", "up", "k":
+				if m.costPopup {
+					return m, nil
+				}
+				if m.trendSel > 0 {
+					m.trendSel--
+				}
+				return m, nil
+			case "right", "l", "down", "j":
+				if m.costPopup {
+					return m, nil
+				}
+				if m.trendSel < days-1 {
+					m.trendSel++
+				}
+				return m, nil
+			case "home", "g":
+				if m.costPopup {
+					return m, nil
+				}
+				m.trendSel = 0
+				return m, nil
+			case "end", "G":
+				if m.costPopup {
+					return m, nil
+				}
+				m.trendSel = days - 1
+				return m, nil
+			}
+		}
+
 		// Daily tab: arrows move a row cursor; enter opens that day's per-model
 		// breakdown; esc closes it. The scroll offset follows the cursor.
 		if m.view == daily {
@@ -469,6 +518,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "esc":
 			m.zoomed = false
 			m.projectPopup = false
+			m.costPopup = false
 		case "enter":
 			if n > 0 {
 				m.zoomed = true
@@ -492,6 +542,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.windowDays = 7
 			}
 			m.trendSel = m.windowDays - 1
+			if m.view == costs {
+				m.trendSel = m.costWindowDays() - 1
+			}
 			if m.persist {
 				return m, savePrefsCmd(m.prefs())
 			}

@@ -1,5 +1,7 @@
 package tui
 
+import "fmt"
+
 // breakdownView decomposes usage by agent, model, and speed: the ENGINES share
 // bar on top, the model load table and output-speed lanes in the middle, and a
 // 100%-stacked area chart of model mix over time at the bottom. Zoom (enter) any
@@ -10,7 +12,7 @@ func (m Model) breakdownView(width int) string {
 	mixH := m.breakdownMixHeight()
 	modelRows := m.panelListRows(8, 12)
 	engines := panel("◈ ENGINES · share · "+span, colCyan, width, m.enginesBar(m.events, prices, width))
-	mix := panel("◈ MODEL MIX · 30d share", colCyan, width, m.modelStack(width, mixH))
+	mix := panel(fmt.Sprintf("◈ MODEL MIX · %dd share", modelStackDays(width)), colCyan, width, m.modelStack(width, mixH))
 
 	if m.compact {
 		return vstack(engines, panel("◈ MODELS · load · "+span, colCyan, width, m.modelsBody(width, m.panelListRows(5, 8))), mix)

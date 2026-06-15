@@ -113,7 +113,12 @@ func (m Model) zoomTargets() []zoomTarget {
 		// opens the selected session's per-model breakdown popup instead.
 		return nil
 	case costs:
-		return nil
+		return []zoomTarget{
+			{"SPEND RATE", colAmber, func(w, h int) string { return m.costZoom("spend", w, h) }},
+			{"TREND", colGreen, func(w, h int) string { return m.costZoom("trend", w, h) }},
+			{"CROSSOVER", colCyan, func(w, h int) string { return m.costZoom("crossover", w, h) }},
+			{"MONTH PACE", colAmber, func(w, h int) string { return m.costZoom("pace", w, h) }},
+		}
 	}
 	return nil
 }

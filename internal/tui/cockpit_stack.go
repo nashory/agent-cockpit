@@ -22,6 +22,81 @@ var modelPalette = []lipgloss.Color{
 
 var colOther = lipgloss.Color("240")
 
+type modelStackGrid struct {
+	days      int
+	colW      int
+	gapW      int
+	usedW     int
+	rightPad  int
+	colStarts []int
+}
+
+func modelStackDays(width int) int {
+	const gutter = 4
+	inner := width - 6
+	if inner < gutter+12 {
+		return 30
+	}
+	return modelStackGridFor(inner - gutter).days
+}
+
+func modelStackGridFor(plotW int) modelStackGrid {
+	days := 30
+	if plotW < days {
+		days = plotW
+	}
+	if days < 1 {
+		days = 1
+	}
+	gapW := 0
+	if plotW >= days*2-1 {
+		gapW = 1
+	}
+	if gapW == 0 {
+		days = plotW
+	}
+	colW := 1
+	bestUsed := days
+	if gapW > 0 {
+		maxDays := (plotW + 1) / 2
+		if maxDays > 90 {
+			maxDays = 90
+		}
+		bestDays, bestColW, bestRemainder := days, 1, plotW
+		for d := days; d <= maxDays; d++ {
+			cw := (plotW - (d-1)*gapW) / d
+			if cw < 1 {
+				continue
+			}
+			used := d*cw + (d-1)*gapW
+			remainder := plotW - used
+			if remainder < bestRemainder || (remainder == bestRemainder && d-days < bestDays-days) {
+				bestDays, bestColW, bestUsed, bestRemainder = d, cw, used, remainder
+			}
+		}
+		days, colW = bestDays, bestColW
+	} else {
+		bestUsed = days * colW
+	}
+	x := 0
+	colStarts := make([]int, days)
+	for i := range colStarts {
+		colStarts[i] = x
+		x += colW
+		if gapW > 0 && i < days-1 {
+			x += gapW
+		}
+	}
+	return modelStackGrid{
+		days:      days,
+		colW:      colW,
+		gapW:      gapW,
+		usedW:     plotW,
+		rightPad:  plotW - bestUsed,
+		colStarts: colStarts,
+	}
+}
+
 // colIdle marks days with no activity at all; rendered as a solid black band
 // (same block as the model bands, just black) so an empty day recedes into the
 // background instead of reading as a model.
@@ -137,27 +212,8 @@ func (m Model) modelStack(width, height int) string {
 		height = 24
 	}
 	plotW := inner - gutter
-	days := 30
-	if plotW < days {
-		days = plotW
-	}
-	if days < 1 {
-		days = 1
-	}
-	colWidths := make([]int, days)
-	colStarts := make([]int, days)
-	baseW := plotW / days
-	extra := plotW % days
-	x := 0
-	for i := range colWidths {
-		colStarts[i] = x
-		colWidths[i] = baseW
-		if i < extra {
-			colWidths[i]++
-		}
-		x += colWidths[i]
-	}
-	usedW := plotW
+	grid := modelStackGridFor(plotW)
+	days := grid.days
 
 	labels, colors, daily, totals, grand := modelMix(m.events, days)
 	if grand == 0 {
@@ -189,6 +245,7 @@ func (m Model) modelStack(width, height int) string {
 	}
 
 	var b strings.Builder
+	gridLine := lipgloss.NewStyle().Foreground(colTrack).Render("│")
 	for sr := 0; sr < height; sr++ {
 		rfb := height - 1 - sr // row from bottom
 		lab := ""
@@ -202,12 +259,17 @@ func (m Model) modelStack(width, height int) string {
 		}
 		b.WriteString(labelStyle.Render(fmt.Sprintf("%3s ", lab)))
 		for c := 0; c < days; c++ {
-			colW := colWidths[c]
 			if g := bandOf[c][rfb]; g >= 0 {
-				b.WriteString(lipgloss.NewStyle().Foreground(colors[g]).Render(strings.Repeat("█", colW)))
+				b.WriteString(lipgloss.NewStyle().Foreground(colors[g]).Render(strings.Repeat("█", grid.colW)))
 			} else {
-				b.WriteString(lipgloss.NewStyle().Foreground(colIdle).Render(strings.Repeat("█", colW)))
+				b.WriteString(lipgloss.NewStyle().Foreground(colIdle).Render(strings.Repeat("█", grid.colW)))
 			}
+			if grid.gapW > 0 && c < days-1 {
+				b.WriteString(gridLine)
+			}
+		}
+		if grid.rightPad > 0 {
+			b.WriteString(strings.Repeat(" ", grid.rightPad))
 		}
 		b.WriteByte('\n')
 	}
@@ -216,12 +278,23 @@ func (m Model) modelStack(width, height int) string {
 	now := time.Now()
 	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).AddDate(0, 0, -(days - 1))
 	xl := map[int]string{}
-	for _, dd := range []int{0, days / 2, days - 1} {
+	ticks := grid.usedW / 9
+	if ticks < 3 {
+		ticks = 3
+	}
+	if ticks > days {
+		ticks = days
+	}
+	for i := 0; i < ticks; i++ {
+		dd := 0
+		if ticks > 1 {
+			dd = (i*(days-1) + (ticks-1)/2) / (ticks - 1)
+		}
 		if dd >= 0 && dd < days {
-			xl[colStarts[dd]] = start.AddDate(0, 0, dd).Format("01/02")
+			xl[grid.colStarts[dd]] = start.AddDate(0, 0, dd).Format("01/02")
 		}
 	}
-	b.WriteString(strings.Repeat(" ", gutter) + labelStyle.Render(axisLine(usedW, xl)) + "\n")
+	b.WriteString(strings.Repeat(" ", gutter) + labelStyle.Render(axisLine(grid.usedW, xl)) + "\n")
 
 	// Legend: swatch + model + overall share.
 	var leg strings.Builder

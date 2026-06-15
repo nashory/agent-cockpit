@@ -166,6 +166,156 @@ func (m Model) costHero(rows []costDayRow) string {
 	}, "   ")...)
 }
 
+func (m Model) costZoom(kind string, width, height int) string {
+	days := m.costWindowDays()
+	rows := m.costRows(days)
+	if len(rows) == 0 {
+		return labelStyle.Render("no data")
+	}
+	sel := m.costSelectedIndex(len(rows))
+	if kind == "spend" && m.costPopup {
+		return m.costSelectedDayBreakdown(rows, sel, width)
+	}
+	chartHeight := height - 12
+	if chartHeight < 8 {
+		chartHeight = 8
+	}
+	if chartHeight > 30 {
+		chartHeight = 30
+	}
+
+	var chart string
+	switch kind {
+	case "spend":
+		chart = m.costSpendRateBarsSelected(rows, width, chartHeight, sel)
+	case "trend":
+		chart = m.costTrendChart(rows, width, chartHeight)
+	case "crossover":
+		chart = m.costCrossoverChart(rows, width, chartHeight)
+	case "pace":
+		chart = m.costPaceChart(rows, width, chartHeight)
+	default:
+		chart = m.costTrendChart(rows, width, chartHeight)
+	}
+
+	controls := "←/→ inspect day · home/end jump · w window · esc back"
+	if kind == "spend" {
+		controls = "←/→ inspect day · enter breakdown · home/end jump · w window · esc back"
+	}
+	parts := []string{
+		labelStyle.Render(controls),
+		chart,
+		"",
+		m.costZoomInspector(rows, sel, width, kind),
+	}
+	tableRows := height - chartHeight - 12
+	if tableRows > 3 {
+		if tableRows > 8 {
+			tableRows = 8
+		}
+		parts = append(parts, "", m.costTable(rows, width, tableRows))
+	}
+	return strings.TrimRight(lipgloss.JoinVertical(lipgloss.Left, parts...), "\n")
+}
+
+func (m Model) costSelectedDayBreakdown(rows []costDayRow, idx int, width int) string {
+	if idx < 0 || idx >= len(rows) {
+		return labelStyle.Render("no data")
+	}
+	row := rows[idx]
+	start := time.Date(row.date.Year(), row.date.Month(), row.date.Day(), 0, 0, 0, 0, row.date.Location())
+	end := start.AddDate(0, 0, 1)
+	var dayEvents []usage.Event
+	for _, e := range m.events {
+		if !e.Timestamp.IsZero() && !e.Timestamp.Before(start) && e.Timestamp.Before(end) {
+			dayEvents = append(dayEvents, e)
+		}
+	}
+	title := fmt.Sprintf("BREAKDOWN · %s · %d events · esc chart", row.date.Format("2006-01-02 Mon"), len(dayEvents))
+	body := m.usageDetailBody(dayEvents)
+	panelW := width - 6
+	if panelW < 40 {
+		panelW = width
+	}
+	return panel(title, colAmber, panelW, body)
+}
+
+func (m Model) costSelectedIndex(total int) int {
+	if total <= 0 {
+		return 0
+	}
+	idx := m.trendSel
+	if idx < 0 {
+		return 0
+	}
+	if idx >= total {
+		return total - 1
+	}
+	return idx
+}
+
+func (m Model) costZoomInspector(rows []costDayRow, idx int, width int, kind string) string {
+	row := rows[idx]
+	cur := m.currency()
+	driver := strings.TrimSpace(row.source + " / " + row.model)
+	if driver == "/" || driver == "" {
+		driver = "no spend"
+	}
+	prev := row.cost
+	if idx > 0 {
+		prev = rows[idx-1].cost
+	}
+	dayDelta := row.cost - prev
+	cross := row.ma7 - row.ma30
+	monthActual := costMonthActual(rows, idx)
+	monthPace := row.ma30 * float64(row.date.Day())
+	var note string
+	switch kind {
+	case "spend":
+		note = fmt.Sprintf("1d delta %+0.2f %s vs previous day", dayDelta, cur)
+	case "trend":
+		note = fmt.Sprintf("7d trend is %+0.2f %s vs 30d baseline", cross, cur)
+	case "crossover":
+		note = fmt.Sprintf("crossover %+0.2f %s; positive means recent spend is above baseline", cross, cur)
+	case "pace":
+		note = fmt.Sprintf("month actual %.2f %s vs 30d run-rate %.2f", monthActual, cur, monthPace)
+	default:
+		note = fmt.Sprintf("top driver %s", driver)
+	}
+	cells := spread([]string{
+		readout("DATE", row.date.Format("2006-01-02"), colText),
+		readout("1D", fmt.Sprintf("%.2f %s", row.cost, cur), colAmber),
+		readout("7D AVG", fmt.Sprintf("%.2f", row.ma7), colGreen),
+		readout("14D AVG", fmt.Sprintf("%.2f", row.ma14), colCyan),
+		readout("30D AVG", fmt.Sprintf("%.2f", row.ma30), colText),
+		readout("TOKENS", compact(row.tokens), colCyan),
+	}, "   ")
+	inner := width - 6
+	if inner < 20 {
+		inner = 20
+	}
+	detail := labelStyle.Render(truncate(note+" · driver "+driver, inner))
+	return lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.JoinHorizontal(lipgloss.Top, cells...),
+		detail,
+	)
+}
+
+func costMonthActual(rows []costDayRow, idx int) float64 {
+	if idx < 0 || idx >= len(rows) {
+		return 0
+	}
+	month := rows[idx].date.Month()
+	year := rows[idx].date.Year()
+	var total float64
+	for i := 0; i <= idx; i++ {
+		if rows[i].date.Month() == month && rows[i].date.Year() == year {
+			total += rows[i].cost
+		}
+	}
+	return total
+}
+
 func (m Model) costMovingAverageChart(rows []costDayRow, width, height int) string {
 	return m.costSpendRateChart(rows, width, height)
 }
@@ -232,6 +382,10 @@ func (m Model) costSpendRateChart(rows []costDayRow, width, height int) string {
 }
 
 func (m Model) costSpendRateBars(rows []costDayRow, width, limit int) string {
+	return m.costSpendRateBarsSelected(rows, width, limit, -1)
+}
+
+func (m Model) costSpendRateBarsSelected(rows []costDayRow, width, limit, selected int) string {
 	if len(rows) == 0 {
 		return labelStyle.Render("no data")
 	}
@@ -239,12 +393,13 @@ func (m Model) costSpendRateBars(rows []costDayRow, width, limit int) string {
 	if inner < 30 {
 		inner = 30
 	}
-	start := len(rows) - limit
-	if start < 0 {
-		start = 0
+	start := costVisibleStart(len(rows), limit, selected)
+	end := start + limit
+	if end > len(rows) {
+		end = len(rows)
 	}
 	var maxCost float64
-	for i := start; i < len(rows); i++ {
+	for i := start; i < end; i++ {
 		if rows[i].cost > maxCost {
 			maxCost = rows[i].cost
 		}
@@ -258,15 +413,47 @@ func (m Model) costSpendRateBars(rows []costDayRow, width, limit int) string {
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "%s\n", labelStyle.Render(fmt.Sprintf("%-9s %-*s %8s %7s", "DAY", barW, "1D COST", "COST", "7D AVG")))
-	for i := start; i < len(rows); i++ {
+	for i := start; i < end; i++ {
 		row := rows[i]
-		fmt.Fprintf(&b, "%-9s %s %8.2f %7.2f\n",
+		line := fmt.Sprintf("%-9s %s %8.2f %7.2f",
 			row.date.Format("01-02 Mon"),
 			gaugeColored(row.cost/maxCost, barW, colAmber),
 			row.cost,
 			row.ma7)
+		if i == selected {
+			line = lipgloss.NewStyle().Reverse(true).Render(line)
+		}
+		b.WriteString(line)
+		b.WriteByte('\n')
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+func costVisibleStart(total, limit, selected int) int {
+	if total <= 0 {
+		return 0
+	}
+	if limit < 1 {
+		limit = 1
+	}
+	if limit >= total {
+		return 0
+	}
+	if selected < 0 {
+		return total - limit
+	}
+	if selected >= total {
+		selected = total - 1
+	}
+	start := selected - limit/2
+	if start < 0 {
+		return 0
+	}
+	maxStart := total - limit
+	if start > maxStart {
+		return maxStart
+	}
+	return start
 }
 
 func (m Model) costTrendChart(rows []costDayRow, width, height int) string {
