@@ -199,8 +199,9 @@ func (m Model) trendsView(width int) string {
 	costPts := dailyCostSeries(m.events, days, prices)
 
 	hero := heroPanel("✈ TRENDS · "+wl+"  · w window", colCyan, width, m.trendsHero(tokPts, costPts, days))
+	chartH := m.panelChartHeight(8, 12)
 	if m.compact {
-		tok := panel("◈ TOKENS · "+wl, colCyan, width, paddedChart(seriesChart(tokPts, width, 8, colGreen)))
+		tok := panel("◈ TOKENS · "+wl, colCyan, width, paddedChart(seriesChart(tokPts, width, chartH, colGreen)))
 		return vstack(hero, tok)
 	}
 
@@ -215,10 +216,10 @@ func (m Model) trendsView(width int) string {
 	half, stackHalf := gridWidths(width, gap, 2, 26)
 	if stackHalf {
 		return vstack(hero,
-			panel("◈ TOKENS · "+wl, colGreen, width, paddedChart(seriesChart(tokPts, width, 8, colGreen))),
-			panel("◈ COST · "+wl, colAmber, width, paddedChart(seriesChart(costPts, width, 8, colAmber))),
-			panel("◈ VELOCITY · Δ tok/day · "+wl, colCyan, width, paddedChart(seriesChart(velPts, width, 8, colCyan))),
-			panel("◈ THROUGHPUT · out t/s · "+wl, colCyan, width, paddedChart(seriesChart(thrPts, width, 8, colCyan))),
+			panel("◈ TOKENS · "+wl, colGreen, width, paddedChart(seriesChart(tokPts, width, chartH, colGreen))),
+			panel("◈ COST · "+wl, colAmber, width, paddedChart(seriesChart(costPts, width, chartH, colAmber))),
+			panel("◈ VELOCITY · Δ tok/day · "+wl, colCyan, width, paddedChart(seriesChart(velPts, width, chartH, colCyan))),
+			panel("◈ THROUGHPUT · out t/s · "+wl, colCyan, width, paddedChart(seriesChart(thrPts, width, chartH, colCyan))),
 			panel("◈ EFFICIENCY · "+span, colGreen, width, m.efficiencyBody(width-6)),
 			panel("◈ ECONOMICS · "+span, colAmber, width, m.economicsBody(width-6)),
 			panel("◈ CADENCE · "+span, colGreen, width, m.cadenceBody()),
@@ -235,12 +236,12 @@ func (m Model) trendsView(width int) string {
 	// Borders/headers are uniform cyan like the other tabs; chart line colors
 	// stay distinct since they carry meaning.
 	row1 := panelsRow(false, gap,
-		panelSpec{"◈ TOKENS · " + wl, colGreen, half, paddedChart(seriesChart(tokPts, half, 8, colGreen))},
-		panelSpec{"◈ COST · " + wl, colAmber, half, paddedChart(seriesChart(costPts, half, 8, colAmber))},
+		panelSpec{"◈ TOKENS · " + wl, colGreen, half, paddedChart(seriesChart(tokPts, half, chartH, colGreen))},
+		panelSpec{"◈ COST · " + wl, colAmber, half, paddedChart(seriesChart(costPts, half, chartH, colAmber))},
 	)
 	row2 := panelsRow(false, gap,
-		panelSpec{"◈ VELOCITY · Δ tok/day · " + wl, colCyan, half, paddedChart(seriesChart(velPts, half, 8, colCyan))},
-		panelSpec{"◈ THROUGHPUT · out t/s · " + wl, colCyan, half, paddedChart(seriesChart(thrPts, half, 8, colCyan))},
+		panelSpec{"◈ VELOCITY · Δ tok/day · " + wl, colCyan, half, paddedChart(seriesChart(velPts, half, chartH, colCyan))},
+		panelSpec{"◈ THROUGHPUT · out t/s · " + wl, colCyan, half, paddedChart(seriesChart(thrPts, half, chartH, colCyan))},
 	)
 	row3 := panelsRow(stackThird, gap,
 		panelSpec{"◈ EFFICIENCY · " + span, colGreen, tw, m.efficiencyBody(iw)},

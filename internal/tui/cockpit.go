@@ -187,7 +187,7 @@ func (m Model) trendChart(events []usage.Event, width int) string {
 	if inner < 20 {
 		inner = 20
 	}
-	h := 8
+	h := m.panelChartHeight(8, 12)
 	pts := dailySeries(events, days)
 	if len(pts) == 0 {
 		return labelStyle.Render("no data")

@@ -137,18 +137,27 @@ func (m Model) modelStack(width, height int) string {
 		height = 24
 	}
 	plotW := inner - gutter
-	colW := 1
-	if plotW >= 60 {
-		colW = 2
-	}
-	days := plotW / colW
-	if days > 30 {
-		days = 30
+	days := 30
+	if plotW < days {
+		days = plotW
 	}
 	if days < 1 {
 		days = 1
 	}
-	usedW := days * colW
+	colWidths := make([]int, days)
+	colStarts := make([]int, days)
+	baseW := plotW / days
+	extra := plotW % days
+	x := 0
+	for i := range colWidths {
+		colStarts[i] = x
+		colWidths[i] = baseW
+		if i < extra {
+			colWidths[i]++
+		}
+		x += colWidths[i]
+	}
+	usedW := plotW
 
 	labels, colors, daily, totals, grand := modelMix(m.events, days)
 	if grand == 0 {
@@ -193,6 +202,7 @@ func (m Model) modelStack(width, height int) string {
 		}
 		b.WriteString(labelStyle.Render(fmt.Sprintf("%3s ", lab)))
 		for c := 0; c < days; c++ {
+			colW := colWidths[c]
 			if g := bandOf[c][rfb]; g >= 0 {
 				b.WriteString(lipgloss.NewStyle().Foreground(colors[g]).Render(strings.Repeat("█", colW)))
 			} else {
@@ -208,7 +218,7 @@ func (m Model) modelStack(width, height int) string {
 	xl := map[int]string{}
 	for _, dd := range []int{0, days / 2, days - 1} {
 		if dd >= 0 && dd < days {
-			xl[dd*colW] = start.AddDate(0, 0, dd).Format("01/02")
+			xl[colStarts[dd]] = start.AddDate(0, 0, dd).Format("01/02")
 		}
 	}
 	b.WriteString(strings.Repeat(" ", gutter) + labelStyle.Render(axisLine(usedW, xl)) + "\n")

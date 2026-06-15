@@ -30,15 +30,30 @@ func (m Model) costView(width int) string {
 	if stack {
 		cellW = width
 	}
+	cellH := m.costGridCellHeight()
 	row1 := panelsRow(stack, gap,
-		panelSpec{"◈ SPEND RATE · 1d / 7d / 14d / 30d", colAmber, cellW, m.costSpendRateChart(rows, cellW, 8)},
-		panelSpec{"◈ CROSSOVER · short vs long", colGreen, cellW, m.costCrossoverChart(rows, cellW, 8)},
+		panelSpec{"◈ SPEND RATE · daily bars + 7d avg", colAmber, cellW, m.costSpendRateBars(rows, cellW, cellH)},
+		panelSpec{"◈ TREND · 7d vs 30d", colGreen, cellW, m.costTrendChart(rows, cellW, cellH)},
 	)
 	row2 := panelsRow(stack, gap,
-		panelSpec{"◈ MONTH PACE · actual vs run-rate", colCyan, cellW, m.costPaceChart(rows, cellW, 8)},
-		panelSpec{"◈ EFFICIENCY · cost per 1K tokens", colAmber, cellW, m.costEfficiencyChart(rows, cellW, 8)},
+		panelSpec{"◈ CROSSOVER · 7d minus 30d", colCyan, cellW, m.costCrossoverChart(rows, cellW, cellH)},
+		panelSpec{"◈ MONTH PACE · actual vs 30d run-rate", colAmber, cellW, m.costPaceChart(rows, cellW, cellH)},
 	)
 	return vstack(hero, row1, row2)
+}
+
+func (m Model) costGridCellHeight() int {
+	if m.height <= 0 {
+		return 10
+	}
+	h := (m.height - 21) / 2
+	if h < 8 {
+		return 8
+	}
+	if h > 16 {
+		return 16
+	}
+	return h
 }
 
 func (m Model) costWindowDays() int {
@@ -213,19 +228,57 @@ func costMultiLineChart(rows []costDayRow, width, height int, lines []costLine) 
 }
 
 func (m Model) costSpendRateChart(rows []costDayRow, width, height int) string {
+	return m.costSpendRateBars(rows, width, height)
+}
+
+func (m Model) costSpendRateBars(rows []costDayRow, width, limit int) string {
+	if len(rows) == 0 {
+		return labelStyle.Render("no data")
+	}
+	inner := width - 6
+	if inner < 30 {
+		inner = 30
+	}
+	start := len(rows) - limit
+	if start < 0 {
+		start = 0
+	}
+	var maxCost float64
+	for i := start; i < len(rows); i++ {
+		if rows[i].cost > maxCost {
+			maxCost = rows[i].cost
+		}
+	}
+	if maxCost <= 0 {
+		maxCost = 1
+	}
+	barW := inner - 28
+	if barW < 8 {
+		barW = 8
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s\n", labelStyle.Render(fmt.Sprintf("%-9s %-*s %8s %7s", "DAY", barW, "1D COST", "COST", "7D AVG")))
+	for i := start; i < len(rows); i++ {
+		row := rows[i]
+		fmt.Fprintf(&b, "%-9s %s %8.2f %7.2f\n",
+			row.date.Format("01-02 Mon"),
+			gaugeColored(row.cost/maxCost, barW, colAmber),
+			row.cost,
+			row.ma7)
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+func (m Model) costTrendChart(rows []costDayRow, width, height int) string {
 	return costMultiLineChart(rows, width, height, []costLine{
-		{"30d", colDim, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma30 }},
-		{"14d", colCyan, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma14 }},
-		{"7d", colGreen, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma7 }},
-		{"1d", colAmber, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.cost }},
+		{"30d baseline", colDim, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma30 }},
+		{"7d trend", colGreen, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma7 }},
 	})
 }
 
 func (m Model) costCrossoverChart(rows []costDayRow, width, height int) string {
 	return costMultiLineChart(rows, width, height, []costLine{
-		{"7d", colGreen, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma7 }},
-		{"14d", colCyan, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma14 }},
-		{"30d", colDim, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma30 }},
+		{"zero", colDim, func(costDayRow, int, []costDayRow) float64 { return 0 }},
 		{"7d-30d", colAmber, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma7 - r.ma30 }},
 	})
 }
@@ -242,9 +295,6 @@ func (m Model) costPaceChart(rows []costDayRow, width, height int) string {
 				}
 			}
 			return total
-		}},
-		{"7d pace", colGreen, func(r costDayRow, _ int, _ []costDayRow) float64 {
-			return r.ma7 * float64(r.date.Day())
 		}},
 		{"30d pace", colDim, func(r costDayRow, _ int, _ []costDayRow) float64 {
 			return r.ma30 * float64(r.date.Day())

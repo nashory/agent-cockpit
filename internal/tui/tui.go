@@ -669,6 +669,24 @@ func (m Model) contentHeight() int {
 	return h
 }
 
+func (m Model) panelChartHeight(base, max int) int {
+	if m.height <= 0 {
+		return base
+	}
+	h := base + (m.height-36)/8
+	if h < base {
+		return base
+	}
+	if h > max {
+		return max
+	}
+	return h
+}
+
+func (m Model) panelListRows(base, max int) int {
+	return m.panelChartHeight(base, max)
+}
+
 func (m Model) content() string {
 	var b bytes.Buffer
 	if !m.lastRefresh.IsZero() {

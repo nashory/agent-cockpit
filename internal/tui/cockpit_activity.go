@@ -70,7 +70,7 @@ func (m Model) activityView(width int) string {
 	}
 	row := panelsRow(stack, gap,
 		panelSpec{"◈ DAY OF WEEK · " + span, colCyan, lw, m.weekdayBars(m.ins, lw)},
-		panelSpec{"◈ TOP PROJECTS · " + span, colCyan, rw, m.projectBars(rw, cur)},
+		panelSpec{"◈ TOP PROJECTS · " + span, colCyan, rw, m.projectBars(rw, cur, m.panelListRows(7, 12))},
 	)
 
 	return vstack(hero, cal, hourPanel, row)
@@ -125,13 +125,13 @@ func (m Model) weekdayBars(ins usage.Insights, width int) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
-func (m Model) projectBars(width int, cur string) string {
+func (m Model) projectBars(width int, cur string, limit int) string {
 	buckets := m.projectRows()
 	if len(buckets) == 0 {
 		return labelStyle.Render("no data")
 	}
-	if len(buckets) > 7 {
-		buckets = buckets[:7]
+	if limit > 0 && len(buckets) > limit {
+		buckets = buckets[:limit]
 	}
 	return m.projectRowsTable(buckets, width, cur, false)
 }
