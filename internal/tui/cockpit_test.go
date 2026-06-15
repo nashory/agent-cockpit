@@ -57,6 +57,7 @@ func TestCockpitRender(t *testing.T) {
 		{"DAILY", daily},
 		{"BLOCKS", blocks},
 		{"SESSIONS", sessions},
+		{"COST", costs},
 	}
 	for _, compactMode := range []bool{false, true} {
 		for _, termW := range []int{140, 80} {
@@ -99,7 +100,7 @@ func TestCockpitRender(t *testing.T) {
 // shrink to match.)
 func TestFocusTargetsMatchBody(t *testing.T) {
 	for _, compactMode := range []bool{false, true} {
-		for _, v := range []view{overview, breakdown, trends, activity, daily, blocks, sessions} {
+		for _, v := range []view{overview, breakdown, trends, activity, daily, blocks, sessions, costs} {
 			m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
 			m.width = 140
 			m.height = 44
@@ -115,6 +116,39 @@ func TestFocusTargetsMatchBody(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestTabBodyStartsAtStableLine(t *testing.T) {
+	for _, compactMode := range []bool{false, true} {
+		wantLine := -1
+		for _, v := range []view{overview, breakdown, trends, activity, daily, blocks, sessions, costs} {
+			m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})
+			m.width = 140
+			m.height = 44
+			m.view = v
+			m.compact = compactMode
+			gotLine := firstPanelLine(stripANSI(m.View()))
+			if gotLine < 0 {
+				t.Fatalf("view=%d compact=%v: no panel border found", v, compactMode)
+			}
+			if wantLine < 0 {
+				wantLine = gotLine
+				continue
+			}
+			if gotLine != wantLine {
+				t.Fatalf("view=%d compact=%v: first panel line = %d, want %d", v, compactMode, gotLine, wantLine)
+			}
+		}
+	}
+}
+
+func firstPanelLine(s string) int {
+	for i, ln := range strings.Split(s, "\n") {
+		if strings.ContainsAny(ln, "╔╭") {
+			return i
+		}
+	}
+	return -1
 }
 
 // stripANSI removes SGR escape sequences so rendered text can be matched.
@@ -137,7 +171,7 @@ func stripANSI(s string) string {
 }
 
 func TestZoomRender(t *testing.T) {
-	views := []view{overview, breakdown, trends, activity, daily, blocks, sessions}
+	views := []view{overview, breakdown, trends, activity, daily, blocks, sessions, costs}
 	for _, v := range views {
 		for _, w := range []int{140, 80} {
 			m := New(sampleEvents(), Options{Report: report.Options{Currency: "USD"}})

@@ -200,7 +200,7 @@ func (m Model) trendsView(width int) string {
 
 	hero := heroPanel("✈ TRENDS · "+wl+"  · w window", colCyan, width, m.trendsHero(tokPts, costPts, days))
 	if m.compact {
-		tok := panel("◈ TOKENS · "+wl, colCyan, width, seriesChart(tokPts, width, 8, colGreen))
+		tok := panel("◈ TOKENS · "+wl, colCyan, width, paddedChart(seriesChart(tokPts, width, 8, colGreen)))
 		return vstack(hero, tok)
 	}
 
@@ -215,10 +215,10 @@ func (m Model) trendsView(width int) string {
 	half, stackHalf := gridWidths(width, gap, 2, 26)
 	if stackHalf {
 		return vstack(hero,
-			panel("◈ TOKENS · "+wl, colGreen, width, seriesChart(tokPts, width, 8, colGreen)),
-			panel("◈ COST · "+wl, colAmber, width, seriesChart(costPts, width, 8, colAmber)),
-			panel("◈ VELOCITY · Δ tok/day · "+wl, colCyan, width, seriesChart(velPts, width, 8, colCyan)),
-			panel("◈ THROUGHPUT · out t/s · "+wl, colCyan, width, seriesChart(thrPts, width, 8, colCyan)),
+			panel("◈ TOKENS · "+wl, colGreen, width, paddedChart(seriesChart(tokPts, width, 8, colGreen))),
+			panel("◈ COST · "+wl, colAmber, width, paddedChart(seriesChart(costPts, width, 8, colAmber))),
+			panel("◈ VELOCITY · Δ tok/day · "+wl, colCyan, width, paddedChart(seriesChart(velPts, width, 8, colCyan))),
+			panel("◈ THROUGHPUT · out t/s · "+wl, colCyan, width, paddedChart(seriesChart(thrPts, width, 8, colCyan))),
 			panel("◈ EFFICIENCY · "+span, colGreen, width, m.efficiencyBody(width-6)),
 			panel("◈ ECONOMICS · "+span, colAmber, width, m.economicsBody(width-6)),
 			panel("◈ CADENCE · "+span, colGreen, width, m.cadenceBody()),
@@ -235,12 +235,12 @@ func (m Model) trendsView(width int) string {
 	// Borders/headers are uniform cyan like the other tabs; chart line colors
 	// stay distinct since they carry meaning.
 	row1 := panelsRow(false, gap,
-		panelSpec{"◈ TOKENS · " + wl, colGreen, half, seriesChart(tokPts, half, 8, colGreen)},
-		panelSpec{"◈ COST · " + wl, colAmber, half, seriesChart(costPts, half, 8, colAmber)},
+		panelSpec{"◈ TOKENS · " + wl, colGreen, half, paddedChart(seriesChart(tokPts, half, 8, colGreen))},
+		panelSpec{"◈ COST · " + wl, colAmber, half, paddedChart(seriesChart(costPts, half, 8, colAmber))},
 	)
 	row2 := panelsRow(false, gap,
-		panelSpec{"◈ VELOCITY · Δ tok/day · " + wl, colCyan, half, seriesChart(velPts, half, 8, colCyan)},
-		panelSpec{"◈ THROUGHPUT · out t/s · " + wl, colCyan, half, seriesChart(thrPts, half, 8, colCyan)},
+		panelSpec{"◈ VELOCITY · Δ tok/day · " + wl, colCyan, half, paddedChart(seriesChart(velPts, half, 8, colCyan))},
+		panelSpec{"◈ THROUGHPUT · out t/s · " + wl, colCyan, half, paddedChart(seriesChart(thrPts, half, 8, colCyan))},
 	)
 	row3 := panelsRow(stackThird, gap,
 		panelSpec{"◈ EFFICIENCY · " + span, colGreen, tw, m.efficiencyBody(iw)},
@@ -285,7 +285,7 @@ func (m Model) trendSplitZoom(w, h, metric int) string {
 	if chartH < 6 {
 		chartH = 6
 	}
-	chart := seriesChart(series, w, chartH, color)
+	chart := paddedChart(seriesChart(series, w, chartH, color))
 
 	// Date cursor caret aligned to the chart's plot area: find the x-axis baseline
 	// row (the one with '└') and treat everything after it as the plot columns.
@@ -325,7 +325,7 @@ func (m Model) trendSplitZoom(w, h, metric int) string {
 	}, "   ")...)
 
 	// Bottom table: all days oldest -> newest, selected highlighted, scrolled.
-	rowsBudget := h - chartH - 6
+	rowsBudget := h - chartH - 7
 	if rowsBudget < 3 {
 		rowsBudget = 3
 	}

@@ -249,6 +249,15 @@ func vstack(parts ...string) string {
 	return lipgloss.JoinVertical(lipgloss.Left, spaced...)
 }
 
+// paddedChart gives dense chart panels the same visual breathing room that text
+// panels get from their first content row.
+func paddedChart(chart string) string {
+	if chart == "" {
+		return chart
+	}
+	return "\n" + chart
+}
+
 // clipLines truncates each line to w display cells, ANSI-aware.
 func clipLines(s string, w int) string {
 	if w < 1 {

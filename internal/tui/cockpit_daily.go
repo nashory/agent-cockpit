@@ -135,10 +135,42 @@ func (m Model) dailyView(width int) string {
 		return m.dayDetail(width)
 	}
 	span := m.dataSpanLabel()
+	rows := m.sortedLedger()
+	hero := heroPanel("✈ LEDGER SUMMARY · "+periodLabel(m.periodMode), colCyan, width, m.dailySummaryBody(rows))
 	body := m.ledgerTable(width, m.scroll, m.tableVisible())
 	title := fmt.Sprintf("◈ LEDGER · %s · last %s · row %d/%d · sort %s · p period · ↑↓ enter · s sort",
-		periodLabel(m.periodMode), span, m.daySel+1, m.tableTotal(), sortLabel(m.sortMode))
-	return panel(title, colCyan, width, body)
+		periodLabel(m.periodMode), span, m.daySel+1, len(rows), sortLabel(m.sortMode))
+	table := panel(title, colCyan, width, body)
+	return vstack(hero, table)
+}
+
+func (m Model) dailySummaryBody(rows []dayRow) string {
+	if len(rows) == 0 {
+		return labelStyle.Render("no data")
+	}
+	cur := m.currency()
+	var totals usage.Totals
+	models := map[string]struct{}{}
+	for _, row := range rows {
+		totals.Events += row.totals.Events
+		totals.Input += row.totals.Input
+		totals.Output += row.totals.Output
+		totals.CacheRead += row.totals.CacheRead
+		totals.CacheCreate += row.totals.CacheCreate
+		totals.Total += row.totals.Total
+		totals.CostUSD += row.totals.CostUSD
+		for model := range row.models {
+			models[model] = struct{}{}
+		}
+	}
+	cells := []string{
+		readout("ROWS", compact(int64(len(rows))), colCyan),
+		readout("TOKENS", compact(totals.Total), colGreen),
+		readout("COST", fmt.Sprintf("~%.2f %s", totals.CostUSD, cur), colGreen),
+		readout("EVENTS", compact(int64(totals.Events)), colText),
+		readout("MODELS", compact(int64(len(models))), colText),
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Top, spread(cells, "   ")...)
 }
 
 // dayDetail renders the per-model breakdown for the selected day (enter on the

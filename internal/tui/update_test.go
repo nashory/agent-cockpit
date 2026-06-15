@@ -74,8 +74,8 @@ func TestUpdateKeyHandling(t *testing.T) {
 	// shift+tab wraps backwards from overview to the last tab.
 	m = upd(m, runes("1"))
 	m = upd(m, tea.KeyMsg{Type: tea.KeyShiftTab})
-	if m.view != sessions {
-		t.Fatalf("shift+tab from overview should wrap to sessions, got %d", m.view)
+	if m.view != costs {
+		t.Fatalf("shift+tab from overview should wrap to cost, got %d", m.view)
 	}
 }
 

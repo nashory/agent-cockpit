@@ -21,6 +21,7 @@ const (
 	daily
 	blocks
 	sessions
+	costs
 	numViews
 )
 
@@ -117,7 +118,7 @@ func (m Model) tableVisible() int {
 	}
 	switch m.view {
 	case daily:
-		if v := m.height - 14; v > 6 {
+		if v := m.height - 16; v > 6 {
 			return v
 		}
 		return 6
@@ -127,7 +128,7 @@ func (m Model) tableVisible() int {
 		}
 		return 5
 	case sessions:
-		if v := m.height - 14; v > 6 {
+		if v := m.height - 16; v > 6 {
 			return v
 		}
 		return 6
@@ -509,7 +510,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, savePrefsCmd(m.prefs())
 				}
 			}
-		case "1", "2", "3", "4", "5", "6", "7":
+		case "1", "2", "3", "4", "5", "6", "7", "8":
 			m.view = view(int(s[0] - '1'))
 			m.resetTabState()
 		case "tab":
@@ -566,7 +567,7 @@ func (m Model) View() string {
 }
 
 func (m Model) sidebar() string {
-	items := []string{"1 Overview", "2 Breakdown", "3 Trends", "4 Activity", "5 Daily", "6 Blocks", "7 Sessions"}
+	items := []string{"1 Overview", "2 Breakdown", "3 Trends", "4 Activity", "5 Daily", "6 Blocks", "7 Sessions", "8 Cost"}
 	for i := range items {
 		if view(i) == m.view {
 			items[i] = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("39")).Render("> " + items[i])
@@ -611,7 +612,7 @@ func (m Model) helpView(width int) string {
 	lines := []string{
 		titleStyle.Render("KEYBOARD"),
 		"",
-		row("1 - 7", "jump to a tab"),
+		row("1 - 8", "jump to a tab"),
 		row("tab / shift+tab", "next / previous tab"),
 		row("e", "toggle expert / compact layout"),
 		row("w", "cycle the chart window (7 / 30 / 90 days)"),
@@ -629,7 +630,7 @@ func (m Model) helpView(width int) string {
 		row("arrows", "on a zoomed calendar, move the day cursor"),
 		row("↑↓ + enter", "on zoomed TOP PROJECTS, open project drill-down"),
 		"",
-		titleStyle.Render("DAILY · BLOCKS · SESSIONS"),
+		titleStyle.Render("DAILY · BLOCKS · SESSIONS · COST"),
 		"",
 		row("↑↓ / jk", "move the row cursor"),
 		row("pgup/pgdn, g/G", "page, jump to top / bottom"),
@@ -720,8 +721,10 @@ func (m Model) content() string {
 	}
 	if bar := m.focusBar(targets); bar != "" {
 		fmt.Fprintln(&b, clipLines(bar, w))
+	} else {
 		fmt.Fprintln(&b)
 	}
+	fmt.Fprintln(&b)
 	switch m.view {
 	case overview:
 		fmt.Fprint(&b, m.overview(w))
@@ -737,6 +740,8 @@ func (m Model) content() string {
 		fmt.Fprint(&b, m.blocksView(w))
 	case sessions:
 		fmt.Fprint(&b, m.sessionsView(w))
+	case costs:
+		fmt.Fprint(&b, m.costView(w))
 	default:
 		fmt.Fprintln(&b, "Unknown view")
 	}

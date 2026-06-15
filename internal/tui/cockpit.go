@@ -215,7 +215,7 @@ func (m Model) trendChart(events []usage.Event, width int) string {
 		tc.Push(p)
 	}
 	tc.DrawBraille()
-	return tc.View()
+	return paddedChart(tc.View())
 }
 
 // agentSparks renders a stacked sparkline per agent: a quick activity trace.

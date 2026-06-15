@@ -33,9 +33,9 @@ func (m Model) zoomTargets() []zoomTarget {
 	ev := m.events
 	prices := m.reportOptions.Pricing
 	wd := m.windowDays
-	tokChart := func(w, h int) string { return seriesChart(dailySeries(ev, wd), w, chartH(h), colGreen) }
-	thrChart := func(w, h int) string { return seriesChart(dailyThroughput(ev, wd), w, chartH(h), colCyan) }
-	velChart := func(w, h int) string { return seriesChart(dailyVelocity(ev, wd), w, chartH(h), colCyan) }
+	tokChart := func(w, h int) string { return paddedChart(seriesChart(dailySeries(ev, wd), w, chartH(h), colGreen)) }
+	thrChart := func(w, h int) string { return paddedChart(seriesChart(dailyThroughput(ev, wd), w, chartH(h), colCyan)) }
+	velChart := func(w, h int) string { return paddedChart(seriesChart(dailyVelocity(ev, wd), w, chartH(h), colCyan)) }
 	enginesBar := func(w, h int) string { return m.enginesBar(ev, prices, w) }
 	enginesClusters := func(w, h int) string { return m.agentClusters(w) }
 	modelsZoom := func(w, h int) string { return m.modelsBody(w, 0) }
@@ -111,6 +111,8 @@ func (m Model) zoomTargets() []zoomTarget {
 	case sessions:
 		// No zoom target: the Sessions tab uses a row cursor (arrows) and enter
 		// opens the selected session's per-model breakdown popup instead.
+		return nil
+	case costs:
 		return nil
 	}
 	return nil

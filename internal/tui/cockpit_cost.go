@@ -1,0 +1,317 @@
+package tui
+
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	tslc "github.com/NimbleMarkets/ntcharts/linechart/timeserieslinechart"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/nashory/agent-cockpit/internal/usage"
+)
+
+type costDayRow struct {
+	date   time.Time
+	cost   float64
+	ma7    float64
+	ma14   float64
+	ma30   float64
+	tokens int64
+	source string
+	model  string
+}
+
+func (m Model) costView(width int) string {
+	days := m.costWindowDays()
+	rows := m.costRows(days)
+	hero := heroPanel("✈ COST RATE · "+fmt.Sprintf("%dd", days), colAmber, width, m.costHero(rows))
+	gap := 1
+	cellW, stack := gridWidths(width, gap, 2, 38)
+	if stack {
+		cellW = width
+	}
+	row1 := panelsRow(stack, gap,
+		panelSpec{"◈ SPEND RATE · 1d / 7d / 14d / 30d", colAmber, cellW, m.costSpendRateChart(rows, cellW, 8)},
+		panelSpec{"◈ CROSSOVER · short vs long", colGreen, cellW, m.costCrossoverChart(rows, cellW, 8)},
+	)
+	row2 := panelsRow(stack, gap,
+		panelSpec{"◈ MONTH PACE · actual vs run-rate", colCyan, cellW, m.costPaceChart(rows, cellW, 8)},
+		panelSpec{"◈ EFFICIENCY · cost per 1K tokens", colAmber, cellW, m.costEfficiencyChart(rows, cellW, 8)},
+	)
+	return vstack(hero, row1, row2)
+}
+
+func (m Model) costWindowDays() int {
+	if m.windowDays < 30 {
+		return 30
+	}
+	return m.windowDays
+}
+
+func (m Model) costRows(days int) []costDayRow {
+	if days < 1 {
+		days = 1
+	}
+	prices := m.reportOptions.Pricing
+	start := time.Now().AddDate(0, 0, -days+1).Truncate(24 * time.Hour)
+	rows := make([]costDayRow, days)
+	topCostByDay := make([]map[string]float64, days)
+	for i := range rows {
+		rows[i].date = start.AddDate(0, 0, i)
+		topCostByDay[i] = map[string]float64{}
+	}
+	for _, e := range m.events {
+		if e.Timestamp.IsZero() {
+			continue
+		}
+		idx := int(e.Timestamp.Truncate(24*time.Hour).Sub(start) / (24 * time.Hour))
+		if idx < 0 || idx >= days {
+			continue
+		}
+		cost := usage.EstimateCostWith(e, prices)
+		rows[idx].cost += cost
+		rows[idx].tokens += e.TotalTokens()
+		key := strings.TrimSpace(e.Source + " / " + shortModel(e.Model))
+		if key == "/" || key == "" {
+			key = "unknown"
+		}
+		topCostByDay[idx][key] += cost
+	}
+	costs := make([]float64, days)
+	for i, row := range rows {
+		costs[i] = row.cost
+		var topKey string
+		var topCost float64
+		for key, cost := range topCostByDay[i] {
+			if cost > topCost {
+				topCost = cost
+				topKey = key
+			}
+		}
+		if topKey != "" {
+			parts := strings.SplitN(topKey, " / ", 2)
+			rows[i].source = parts[0]
+			if len(parts) > 1 {
+				rows[i].model = parts[1]
+			}
+		}
+	}
+	ma7 := movingAverage(costs, 7)
+	ma14 := movingAverage(costs, 14)
+	ma30 := movingAverage(costs, 30)
+	for i := range rows {
+		rows[i].ma7 = ma7[i]
+		rows[i].ma14 = ma14[i]
+		rows[i].ma30 = ma30[i]
+	}
+	return rows
+}
+
+func movingAverage(values []float64, window int) []float64 {
+	if window < 1 {
+		window = 1
+	}
+	out := make([]float64, len(values))
+	var sum float64
+	for i, v := range values {
+		sum += v
+		if i >= window {
+			sum -= values[i-window]
+		}
+		n := i + 1
+		if n > window {
+			n = window
+		}
+		out[i] = sum / float64(n)
+	}
+	return out
+}
+
+func (m Model) costHero(rows []costDayRow) string {
+	if len(rows) == 0 {
+		return labelStyle.Render("no data")
+	}
+	cur := m.currency()
+	var total, peak float64
+	for _, row := range rows {
+		total += row.cost
+		if row.cost > peak {
+			peak = row.cost
+		}
+	}
+	last := rows[len(rows)-1]
+	return lipgloss.JoinHorizontal(lipgloss.Top, spread([]string{
+		readout("TODAY", fmt.Sprintf("~%.2f %s", last.cost, cur), colAmber),
+		readout("7D AVG", fmt.Sprintf("~%.2f", last.ma7), colGreen),
+		readout("14D AVG", fmt.Sprintf("~%.2f", last.ma14), colCyan),
+		readout("30D AVG", fmt.Sprintf("~%.2f", last.ma30), colText),
+		readout("MONTH PACE", fmt.Sprintf("~%.2f %s", last.ma30*30, cur), colAmber),
+		readout("PEAK", fmt.Sprintf("~%.2f", peak), colGreen),
+		readout("TOTAL", fmt.Sprintf("~%.2f", total), colText),
+	}, "   ")...)
+}
+
+func (m Model) costMovingAverageChart(rows []costDayRow, width, height int) string {
+	return m.costSpendRateChart(rows, width, height)
+}
+
+type costLine struct {
+	name  string
+	color lipgloss.Color
+	value func(costDayRow, int, []costDayRow) float64
+}
+
+func costMultiLineChart(rows []costDayRow, width, height int, lines []costLine) string {
+	if len(rows) == 0 {
+		return labelStyle.Render("no data")
+	}
+	inner := width - 6
+	if inner < 20 {
+		inner = 20
+	}
+	var maxY, minY float64
+	for i, row := range rows {
+		for _, line := range lines {
+			v := line.value(row, i, rows)
+			if v > maxY {
+				maxY = v
+			}
+			if v < minY {
+				minY = v
+			}
+		}
+	}
+	if maxY <= minY {
+		maxY = minY + 1
+	}
+	start := rows[0].date
+	end := rows[len(rows)-1].date
+	tc := tslc.New(inner, height,
+		tslc.WithTimeRange(start, end),
+		tslc.WithYRange(minY, maxY),
+		tslc.WithAxesStyles(labelStyle, labelStyle),
+	)
+	tc.SetViewTimeAndYRange(start, end, minY, maxY)
+	names := make([]string, 0, len(lines))
+	for _, line := range lines {
+		names = append(names, line.name)
+		tc.SetDataSetStyle(line.name, lipgloss.NewStyle().Foreground(line.color))
+		for i, row := range rows {
+			tc.PushDataSet(line.name, tslc.TimePoint{Time: row.date, Value: line.value(row, i, rows)})
+		}
+	}
+	tc.DrawBrailleDataSets(names)
+	parts := make([]string, 0, len(lines)*2)
+	for i, line := range lines {
+		if i > 0 {
+			parts = append(parts, labelStyle.Render("  "))
+		}
+		parts = append(parts, lipgloss.NewStyle().Foreground(line.color).Render(line.name))
+	}
+	legend := lipgloss.JoinHorizontal(lipgloss.Top, parts...)
+	return lipgloss.JoinVertical(lipgloss.Left, paddedChart(tc.View()), legend)
+}
+
+func (m Model) costSpendRateChart(rows []costDayRow, width, height int) string {
+	return costMultiLineChart(rows, width, height, []costLine{
+		{"30d", colDim, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma30 }},
+		{"14d", colCyan, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma14 }},
+		{"7d", colGreen, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma7 }},
+		{"1d", colAmber, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.cost }},
+	})
+}
+
+func (m Model) costCrossoverChart(rows []costDayRow, width, height int) string {
+	return costMultiLineChart(rows, width, height, []costLine{
+		{"7d", colGreen, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma7 }},
+		{"14d", colCyan, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma14 }},
+		{"30d", colDim, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma30 }},
+		{"7d-30d", colAmber, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma7 - r.ma30 }},
+	})
+}
+
+func (m Model) costPaceChart(rows []costDayRow, width, height int) string {
+	return costMultiLineChart(rows, width, height, []costLine{
+		{"actual", colAmber, func(_ costDayRow, i int, rows []costDayRow) float64 {
+			var total float64
+			month := rows[i].date.Month()
+			year := rows[i].date.Year()
+			for j := 0; j <= i; j++ {
+				if rows[j].date.Month() == month && rows[j].date.Year() == year {
+					total += rows[j].cost
+				}
+			}
+			return total
+		}},
+		{"7d pace", colGreen, func(r costDayRow, _ int, _ []costDayRow) float64 {
+			return r.ma7 * float64(r.date.Day())
+		}},
+		{"30d pace", colDim, func(r costDayRow, _ int, _ []costDayRow) float64 {
+			return r.ma30 * float64(r.date.Day())
+		}},
+	})
+}
+
+func (m Model) costEfficiencyChart(rows []costDayRow, width, height int) string {
+	values := make([]float64, len(rows))
+	for i, row := range rows {
+		if row.tokens > 0 {
+			values[i] = row.cost / float64(row.tokens) * 1000
+		}
+	}
+	ma7 := movingAverage(values, 7)
+	ma30 := movingAverage(values, 30)
+	return costMultiLineChart(rows, width, height, []costLine{
+		{"1d", colAmber, func(_ costDayRow, i int, _ []costDayRow) float64 { return values[i] }},
+		{"7d", colGreen, func(_ costDayRow, i int, _ []costDayRow) float64 { return ma7[i] }},
+		{"30d", colDim, func(_ costDayRow, i int, _ []costDayRow) float64 { return ma30[i] }},
+	})
+}
+
+func (m Model) costTable(rows []costDayRow, width, limit int) string {
+	if len(rows) == 0 {
+		return labelStyle.Render("no data")
+	}
+	cur := m.currency()
+	inner := width - 6
+	if inner < 40 {
+		inner = 40
+	}
+	const dateW, costW, avgW, tokW = 10, 10, 9, 9
+	driverW := inner - dateW - costW - avgW*3 - tokW - 6
+	if driverW < 8 {
+		driverW = 8
+	}
+	line := func(date, cost, ma7, ma14, ma30, tok, driver string) string {
+		return fmt.Sprintf("%-*s %*s %*s %*s %*s %*s %-*s",
+			dateW, date, costW, cost, avgW, ma7, avgW, ma14, avgW, ma30, tokW, tok,
+			driverW, truncate(driver, driverW))
+	}
+	var b strings.Builder
+	b.WriteString(labelStyle.Render(line("DATE", "1D", "7D", "14D", "30D", "TOKENS", "TOP DRIVER")))
+	b.WriteByte('\n')
+	start := len(rows) - limit
+	if start < 0 {
+		start = 0
+	}
+	for i := len(rows) - 1; i >= start; i-- {
+		row := rows[i]
+		driver := strings.TrimSpace(row.source + " / " + row.model)
+		if driver == "/" || driver == "" {
+			driver = "no spend"
+		}
+		b.WriteString(line(row.date.Format("01-02 Mon"),
+			fmt.Sprintf("%.2f", row.cost),
+			fmt.Sprintf("%.2f", row.ma7),
+			fmt.Sprintf("%.2f", row.ma14),
+			fmt.Sprintf("%.2f", row.ma30),
+			compact(row.tokens),
+			driver,
+		))
+		if i == len(rows)-1 {
+			b.WriteString(labelStyle.Render("  " + cur))
+		}
+		b.WriteByte('\n')
+	}
+	return strings.TrimRight(b.String(), "\n")
+}

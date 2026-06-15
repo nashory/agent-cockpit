@@ -100,10 +100,41 @@ func (m Model) sessionsView(width int) string {
 		return m.sessionDetail(width)
 	}
 	span := m.dataSpanLabel()
+	rows := m.sortedSessions()
+	hero := heroPanel("✈ SESSION SUMMARY · "+span, colCyan, width, m.sessionsSummaryBody(rows))
 	body := m.sessionsTable(width, m.scroll, m.tableVisible())
 	title := fmt.Sprintf("◈ SESSIONS · last %s · row %d/%d · sort %s · ↑↓ enter · s sort",
-		span, m.sessSel+1, m.tableTotal(), sortLabel(m.sortMode))
-	return panel(title, colCyan, width, body)
+		span, m.sessSel+1, len(rows), sortLabel(m.sortMode))
+	table := panel(title, colCyan, width, body)
+	return vstack(hero, table)
+}
+
+func (m Model) sessionsSummaryBody(rows []sessRow) string {
+	if len(rows) == 0 {
+		return labelStyle.Render("no data")
+	}
+	cur := m.currency()
+	var totals usage.Totals
+	projects := map[string]struct{}{}
+	engines := map[string]struct{}{}
+	for _, row := range rows {
+		totals.Total += row.totals.Total
+		totals.CostUSD += row.totals.CostUSD
+		if row.project != "" {
+			projects[row.project] = struct{}{}
+		}
+		if row.source != "" {
+			engines[row.source] = struct{}{}
+		}
+	}
+	cells := []string{
+		readout("SESSIONS", compact(int64(len(rows))), colCyan),
+		readout("TOKENS", compact(totals.Total), colGreen),
+		readout("COST", fmt.Sprintf("~%.2f %s", totals.CostUSD, cur), colGreen),
+		readout("PROJECTS", compact(int64(len(projects))), colText),
+		readout("ENGINES", compact(int64(len(engines))), colText),
+	}
+	return lipgloss.JoinHorizontal(lipgloss.Top, spread(cells, "   ")...)
 }
 
 // sessionDetail renders the per-model breakdown for the selected session (enter
