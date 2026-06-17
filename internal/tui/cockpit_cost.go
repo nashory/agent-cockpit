@@ -189,13 +189,13 @@ func (m Model) costZoom(kind string, width, height int) string {
 	case "spend":
 		chart = m.costSpendRateBarsSelected(rows, width, chartHeight, sel)
 	case "trend":
-		chart = m.costTrendChart(rows, width, chartHeight)
+		chart = m.costTrendChartSelected(rows, width, chartHeight, sel)
 	case "crossover":
-		chart = m.costCrossoverChart(rows, width, chartHeight)
+		chart = m.costCrossoverChartSelected(rows, width, chartHeight, sel)
 	case "pace":
-		chart = m.costPaceChart(rows, width, chartHeight)
+		chart = m.costPaceChartSelected(rows, width, chartHeight, sel)
 	default:
-		chart = m.costTrendChart(rows, width, chartHeight)
+		chart = m.costTrendChartSelected(rows, width, chartHeight, sel)
 	}
 
 	controls := "←/→ inspect day · home/end jump · w window · esc back"
@@ -327,6 +327,10 @@ type costLine struct {
 }
 
 func costMultiLineChart(rows []costDayRow, width, height int, lines []costLine) string {
+	return costMultiLineChartSelected(rows, width, height, lines, -1, colCyan)
+}
+
+func costMultiLineChartSelected(rows []costDayRow, width, height int, lines []costLine, selected int, cursorColor lipgloss.Color) string {
 	if len(rows) == 0 {
 		return labelStyle.Render("no data")
 	}
@@ -366,6 +370,10 @@ func costMultiLineChart(rows []costDayRow, width, height int, lines []costLine) 
 		}
 	}
 	tc.DrawBrailleDataSets(names)
+	chart := paddedChart(tc.View())
+	if selected >= 0 {
+		chart = lipgloss.JoinVertical(lipgloss.Left, chart, costChartCursor(chart, len(rows), selected, cursorColor))
+	}
 	parts := make([]string, 0, len(lines)*2)
 	for i, line := range lines {
 		if i > 0 {
@@ -374,7 +382,41 @@ func costMultiLineChart(rows []costDayRow, width, height int, lines []costLine) 
 		parts = append(parts, lipgloss.NewStyle().Foreground(line.color).Render(line.name))
 	}
 	legend := lipgloss.JoinHorizontal(lipgloss.Top, parts...)
-	return lipgloss.JoinVertical(lipgloss.Left, paddedChart(tc.View()), legend)
+	return lipgloss.JoinVertical(lipgloss.Left, chart, legend)
+}
+
+func costChartCursor(chart string, total, selected int, color lipgloss.Color) string {
+	if total < 1 {
+		total = 1
+	}
+	if selected < 0 {
+		selected = 0
+	}
+	if selected >= total {
+		selected = total - 1
+	}
+	gutter, plotW := 0, 1
+	for _, ln := range strings.Split(chart, "\n") {
+		if i := strings.IndexRune(ln, '└'); i >= 0 {
+			runes := []rune(ln)
+			for j, rn := range runes {
+				if rn == '└' {
+					gutter = j + 1
+					plotW = len(runes) - gutter
+					break
+				}
+			}
+			break
+		}
+	}
+	if plotW < 1 {
+		plotW = 1
+	}
+	pos := gutter
+	if total > 1 {
+		pos += selected * (plotW - 1) / (total - 1)
+	}
+	return lipgloss.NewStyle().Foreground(color).Bold(true).Render(strings.Repeat(" ", pos) + "▲")
 }
 
 func (m Model) costSpendRateChart(rows []costDayRow, width, height int) string {
@@ -457,21 +499,33 @@ func costVisibleStart(total, limit, selected int) int {
 }
 
 func (m Model) costTrendChart(rows []costDayRow, width, height int) string {
-	return costMultiLineChart(rows, width, height, []costLine{
+	return m.costTrendChartSelected(rows, width, height, -1)
+}
+
+func (m Model) costTrendChartSelected(rows []costDayRow, width, height, selected int) string {
+	return costMultiLineChartSelected(rows, width, height, []costLine{
 		{"30d baseline", colDim, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma30 }},
 		{"7d trend", colGreen, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma7 }},
-	})
+	}, selected, colGreen)
 }
 
 func (m Model) costCrossoverChart(rows []costDayRow, width, height int) string {
-	return costMultiLineChart(rows, width, height, []costLine{
+	return m.costCrossoverChartSelected(rows, width, height, -1)
+}
+
+func (m Model) costCrossoverChartSelected(rows []costDayRow, width, height, selected int) string {
+	return costMultiLineChartSelected(rows, width, height, []costLine{
 		{"zero", colDim, func(costDayRow, int, []costDayRow) float64 { return 0 }},
 		{"7d-30d", colAmber, func(r costDayRow, _ int, _ []costDayRow) float64 { return r.ma7 - r.ma30 }},
-	})
+	}, selected, colCyan)
 }
 
 func (m Model) costPaceChart(rows []costDayRow, width, height int) string {
-	return costMultiLineChart(rows, width, height, []costLine{
+	return m.costPaceChartSelected(rows, width, height, -1)
+}
+
+func (m Model) costPaceChartSelected(rows []costDayRow, width, height, selected int) string {
+	return costMultiLineChartSelected(rows, width, height, []costLine{
 		{"actual", colAmber, func(_ costDayRow, i int, rows []costDayRow) float64 {
 			var total float64
 			month := rows[i].date.Month()
@@ -486,7 +540,7 @@ func (m Model) costPaceChart(rows []costDayRow, width, height int) string {
 		{"30d pace", colDim, func(r costDayRow, _ int, _ []costDayRow) float64 {
 			return r.ma30 * float64(r.date.Day())
 		}},
-	})
+	}, selected, colAmber)
 }
 
 func (m Model) costEfficiencyChart(rows []costDayRow, width, height int) string {
