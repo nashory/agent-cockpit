@@ -15,6 +15,11 @@
 "input_per_million": 3.0,
 "output_per_million": 15.0
 },
+"chat-latest": {
+"cache_read_per_million": 0.5,
+"input_per_million": 5.0,
+"output_per_million": 30.0
+},
 "chatgpt-4o-latest": {
 "input_per_million": 5.0,
 "output_per_million": 15.0
@@ -150,6 +155,24 @@
 "input_per_million": 10.0,
 "output_per_million": 50.0
 },
+"claude-fable-5-1": {
+"cache_read_per_million": 0.25,
+"cache_write_per_million": 12.5,
+"input_per_million": 10.0,
+"output_per_million": 50.0
+},
+"claude-fable-5-1@default": {
+"cache_read_per_million": 0.25,
+"cache_write_per_million": 12.5,
+"input_per_million": 10.0,
+"output_per_million": 50.0
+},
+"claude-fable-5.1": {
+"cache_read_per_million": 0.25,
+"cache_write_per_million": 12.5,
+"input_per_million": 10.0,
+"output_per_million": 50.0
+},
 "claude-fable-5@default": {
 "cache_read_per_million": 1.0,
 "cache_write_per_million": 12.5,
@@ -178,9 +201,23 @@
 "input_per_million": 0.8,
 "output_per_million": 2.4
 },
+"claude-mythos-5": {
+"cache_read_per_million": 1.0,
+"cache_write_per_million": 12.5,
+"input_per_million": 10.0,
+"output_per_million": 50.0
+},
+"claude-mythos-5-1": {
+"cache_read_per_million": 0.25,
+"cache_write_per_million": 12.5,
+"input_per_million": 10.0,
+"output_per_million": 50.0
+},
 "claude-mythos-preview": {
-"input_per_million": 0.0,
-"output_per_million": 0.0
+"cache_read_per_million": 1.0,
+"cache_write_per_million": 12.5,
+"input_per_million": 10.0,
+"output_per_million": 50.0
 },
 "claude-opus-4": {
 "cache_read_per_million": 1.5,
@@ -288,6 +325,24 @@
 "input_per_million": 5.0,
 "output_per_million": 25.0
 },
+"claude-opus-4.8": {
+"cache_read_per_million": 0.5,
+"cache_write_per_million": 6.25,
+"input_per_million": 5.0,
+"output_per_million": 25.0
+},
+"claude-opus-5": {
+"cache_read_per_million": 0.5,
+"cache_write_per_million": 6.25,
+"input_per_million": 5.0,
+"output_per_million": 25.0
+},
+"claude-opus-5@default": {
+"cache_read_per_million": 0.5,
+"cache_write_per_million": 6.25,
+"input_per_million": 5.0,
+"output_per_million": 25.0
+},
 "claude-sonnet-4": {
 "cache_read_per_million": 0.3,
 "cache_write_per_million": 3.75,
@@ -334,69 +389,275 @@
 "input_per_million": 3.0,
 "output_per_million": 15.0
 },
+"claude-sonnet-5": {
+"cache_read_per_million": 0.2,
+"cache_write_per_million": 2.5,
+"input_per_million": 2.0,
+"output_per_million": 10.0
+},
+"claude-sonnet-5@default": {
+"cache_read_per_million": 0.2,
+"cache_write_per_million": 2.5,
+"input_per_million": 2.0,
+"output_per_million": 10.0
+},
 "databricks-claude-3-7-sonnet": {
+"cache_read_per_million": 0.30002,
+"cache_write_per_million": 3.74997,
 "input_per_million": 2.99999,
 "output_per_million": 15.00002
 },
+"databricks-claude-fable-5": {
+"cache_read_per_million": 1.00002,
+"cache_write_per_million": 12.50004,
+"input_per_million": 10.00006,
+"output_per_million": 50.00002
+},
+"databricks-claude-fable-5-1": {
+"cache_read_per_million": 0.25004,
+"cache_write_per_million": 12.50004,
+"input_per_million": 10.00006,
+"output_per_million": 50.00002
+},
 "databricks-claude-haiku-4-5": {
+"cache_read_per_million": 0.10003,
+"cache_write_per_million": 1.24999,
 "input_per_million": 1.00002,
 "output_per_million": 5.00003
 },
 "databricks-claude-opus-4": {
+"cache_read_per_million": 1.50003,
+"cache_write_per_million": 18.74999,
 "input_per_million": 15.00002,
 "output_per_million": 75.00003
 },
 "databricks-claude-opus-4-1": {
+"cache_read_per_million": 1.50003,
+"cache_write_per_million": 18.74999,
 "input_per_million": 15.00002,
 "output_per_million": 75.00003
 },
 "databricks-claude-opus-4-5": {
+"cache_read_per_million": 0.50001,
+"cache_write_per_million": 6.25002,
+"input_per_million": 5.00003,
+"output_per_million": 25.00001
+},
+"databricks-claude-opus-4-6": {
+"cache_read_per_million": 0.50001,
+"cache_write_per_million": 6.25002,
+"input_per_million": 5.00003,
+"output_per_million": 25.00001
+},
+"databricks-claude-opus-4-7": {
+"cache_read_per_million": 0.50001,
+"cache_write_per_million": 6.25002,
+"input_per_million": 5.00003,
+"output_per_million": 25.00001
+},
+"databricks-claude-opus-4-8": {
+"cache_read_per_million": 0.50001,
+"cache_write_per_million": 6.25002,
+"input_per_million": 5.00003,
+"output_per_million": 25.00001
+},
+"databricks-claude-opus-5": {
+"cache_read_per_million": 0.50001,
+"cache_write_per_million": 6.25002,
 "input_per_million": 5.00003,
 "output_per_million": 25.00001
 },
 "databricks-claude-sonnet-4": {
+"cache_read_per_million": 0.30002,
+"cache_write_per_million": 3.74997,
 "input_per_million": 2.99999,
 "output_per_million": 15.00002
 },
 "databricks-claude-sonnet-4-1": {
+"cache_read_per_million": 0.30002,
+"cache_write_per_million": 3.74997,
 "input_per_million": 2.99999,
 "output_per_million": 15.00002
 },
 "databricks-claude-sonnet-4-5": {
+"cache_read_per_million": 0.30002,
+"cache_write_per_million": 3.74997,
+"input_per_million": 2.99999,
+"output_per_million": 15.00002
+},
+"databricks-claude-sonnet-4-6": {
+"cache_read_per_million": 0.30002,
+"cache_write_per_million": 3.74997,
+"input_per_million": 2.99999,
+"output_per_million": 15.00002
+},
+"databricks-claude-sonnet-5": {
+"cache_read_per_million": 0.30002,
+"cache_write_per_million": 3.74997,
 "input_per_million": 2.99999,
 "output_per_million": 15.00002
 },
 "databricks-gemini-2-5-flash": {
+"cache_read_per_million": 0.030002,
+"cache_write_per_million": 0.30002,
 "input_per_million": 0.30002,
 "output_per_million": 2.49998
 },
 "databricks-gemini-2-5-pro": {
+"cache_read_per_million": 0.124999,
+"cache_write_per_million": 1.24999,
 "input_per_million": 1.24999,
 "output_per_million": 9.99999
 },
+"databricks-gemini-3-1-flash-lite": {
+"cache_read_per_million": 0.03122,
+"cache_write_per_million": 0.31248,
+"input_per_million": 0.31248,
+"output_per_million": 1.87502
+},
+"databricks-gemini-3-1-pro": {
+"cache_read_per_million": 0.24997,
+"cache_write_per_million": 2.49998,
+"input_per_million": 2.49998,
+"output_per_million": 15.00002
+},
+"databricks-gemini-3-5-flash": {
+"cache_read_per_million": 0.18753,
+"cache_write_per_million": 1.87502,
+"input_per_million": 1.87502,
+"output_per_million": 11.24998
+},
+"databricks-gemini-3-5-flash-lite": {
+"cache_read_per_million": 0.03752,
+"cache_write_per_million": 0.37499,
+"input_per_million": 0.37499,
+"output_per_million": 3.12501
+},
+"databricks-gemini-3-6-flash": {
+"cache_read_per_million": 0.18753,
+"cache_write_per_million": 1.87502,
+"input_per_million": 1.87502,
+"output_per_million": 9.37503
+},
+"databricks-gemini-3-flash": {
+"cache_read_per_million": 0.06251,
+"cache_write_per_million": 0.62503,
+"input_per_million": 0.62503,
+"output_per_million": 3.74997
+},
+"databricks-gemini-3-pro": {
+"cache_read_per_million": 0.24997,
+"cache_write_per_million": 2.49998,
+"input_per_million": 2.49998,
+"output_per_million": 15.00002
+},
 "databricks-gpt-5": {
+"cache_read_per_million": 0.12502,
+"cache_write_per_million": 1.24999,
 "input_per_million": 1.24999,
 "output_per_million": 9.99999
 },
 "databricks-gpt-5-1": {
+"cache_read_per_million": 0.12502,
+"cache_write_per_million": 1.24999,
 "input_per_million": 1.24999,
 "output_per_million": 9.99999
 },
+"databricks-gpt-5-1-codex-max": {
+"cache_read_per_million": 0.12502,
+"cache_write_per_million": 1.24999,
+"input_per_million": 1.24999,
+"output_per_million": 9.99999
+},
+"databricks-gpt-5-1-codex-mini": {
+"cache_read_per_million": 0.02499,
+"cache_write_per_million": 0.24997,
+"input_per_million": 0.24997,
+"output_per_million": 1.99997
+},
+"databricks-gpt-5-2": {
+"cache_read_per_million": 0.175,
+"cache_write_per_million": 1.75,
+"input_per_million": 1.75,
+"output_per_million": 14.0
+},
+"databricks-gpt-5-2-codex": {
+"cache_read_per_million": 0.175,
+"cache_write_per_million": 1.75,
+"input_per_million": 1.75,
+"output_per_million": 14.0
+},
+"databricks-gpt-5-4": {
+"cache_read_per_million": 0.24997,
+"cache_write_per_million": 2.49998,
+"input_per_million": 2.49998,
+"output_per_million": 15.00002
+},
+"databricks-gpt-5-4-mini": {
+"cache_read_per_million": 0.07497,
+"cache_write_per_million": 0.74998,
+"input_per_million": 0.74998,
+"output_per_million": 4.50002
+},
+"databricks-gpt-5-4-nano": {
+"cache_read_per_million": 0.02002,
+"cache_write_per_million": 0.19999,
+"input_per_million": 0.19999,
+"output_per_million": 1.24999
+},
+"databricks-gpt-5-6-luna": {
+"cache_read_per_million": 0.10003,
+"cache_write_per_million": 1.24999,
+"input_per_million": 1.00002,
+"output_per_million": 5.99998
+},
+"databricks-gpt-5-6-sol": {
+"cache_read_per_million": 0.39998,
+"cache_write_per_million": 5.00003,
+"input_per_million": 4.00001,
+"output_per_million": 19.99998
+},
+"databricks-gpt-5-6-terra": {
+"cache_read_per_million": 0.24997,
+"cache_write_per_million": 3.12501,
+"input_per_million": 2.49998,
+"output_per_million": 15.00002
+},
 "databricks-gpt-5-mini": {
+"cache_read_per_million": 0.02499,
+"cache_write_per_million": 0.24997,
 "input_per_million": 0.24997,
 "output_per_million": 1.99997
 },
 "databricks-gpt-5-nano": {
+"cache_read_per_million": 0.00497,
+"cache_write_per_million": 0.04998,
 "input_per_million": 0.04998,
 "output_per_million": 0.39998
 },
 "databricks-gpt-oss-120b": {
+"cache_read_per_million": 0.15001,
+"cache_write_per_million": 0.15001,
 "input_per_million": 0.15001,
 "output_per_million": 0.59997
 },
 "databricks-gpt-oss-20b": {
+"cache_read_per_million": 0.07,
+"cache_write_per_million": 0.07,
 "input_per_million": 0.07,
 "output_per_million": 0.30002
+},
+"daybreak-blue-latest": {
+"cache_read_per_million": 0.4,
+"cache_write_per_million": 5.0,
+"input_per_million": 4.0,
+"output_per_million": 20.0
+},
+"daybreak-red-latest": {
+"cache_read_per_million": 1.25,
+"cache_write_per_million": 15.625,
+"input_per_million": 12.5,
+"output_per_million": 75.0
 },
 "ft:gpt-3.5-turbo": {
 "input_per_million": 3.0,
@@ -482,13 +743,19 @@
 "input_per_million": 0.3,
 "output_per_million": 2.5
 },
+"gemini-2.5-flash-image": {
+"cache_read_per_million": 0.03,
+"cache_write_per_million": 0.083333,
+"input_per_million": 0.3,
+"output_per_million": 2.5
+},
 "gemini-2.5-flash-lite": {
 "cache_read_per_million": 0.01,
 "input_per_million": 0.1,
 "output_per_million": 0.4
 },
 "gemini-2.5-flash-lite-preview-06-17": {
-"cache_read_per_million": 0.025,
+"cache_read_per_million": 0.01,
 "input_per_million": 0.1,
 "output_per_million": 0.4
 },
@@ -497,20 +764,8 @@
 "input_per_million": 0.1,
 "output_per_million": 0.4
 },
-"gemini-2.5-flash-native-audio-latest": {
-"input_per_million": 0.3,
-"output_per_million": 2.5
-},
-"gemini-2.5-flash-native-audio-preview-09-2025": {
-"input_per_million": 0.3,
-"output_per_million": 2.5
-},
-"gemini-2.5-flash-native-audio-preview-12-2025": {
-"input_per_million": 0.3,
-"output_per_million": 2.5
-},
 "gemini-2.5-flash-preview-09-2025": {
-"cache_read_per_million": 0.075,
+"cache_read_per_million": 0.03,
 "input_per_million": 0.3,
 "output_per_million": 2.5
 },
@@ -519,10 +774,22 @@
 "input_per_million": 1.25,
 "output_per_million": 10.0
 },
-"gemini-2.5-pro-preview-tts": {
+"gemini-2.5-pro-preview": {
 "cache_read_per_million": 0.125,
+"cache_write_per_million": 0.375,
 "input_per_million": 1.25,
 "output_per_million": 10.0
+},
+"gemini-2.5-pro-preview-05-06": {
+"cache_read_per_million": 0.125,
+"cache_write_per_million": 0.375,
+"input_per_million": 1.25,
+"output_per_million": 10.0
+},
+"gemini-2.5-pro-preview-tts": {
+"cache_read_per_million": 0.125,
+"input_per_million": 1.0,
+"output_per_million": 20.0
 },
 "gemini-3-flash-preview": {
 "cache_read_per_million": 0.05,
@@ -533,13 +800,37 @@
 "input_per_million": 2.0,
 "output_per_million": 12.0
 },
+"gemini-3-pro-image": {
+"cache_read_per_million": 0.2,
+"cache_write_per_million": 0.375,
+"input_per_million": 2.0,
+"output_per_million": 12.0
+},
+"gemini-3-pro-image-preview": {
+"cache_read_per_million": 0.2,
+"cache_write_per_million": 0.375,
+"input_per_million": 2.0,
+"output_per_million": 12.0
+},
 "gemini-3-pro-preview": {
 "cache_read_per_million": 0.2,
 "input_per_million": 2.0,
 "output_per_million": 12.0
 },
+"gemini-3.1-flash-image": {
+"input_per_million": 0.5,
+"output_per_million": 3.0
+},
+"gemini-3.1-flash-image-preview": {
+"input_per_million": 0.5,
+"output_per_million": 3.0
+},
 "gemini-3.1-flash-lite": {
 "cache_read_per_million": 0.025,
+"input_per_million": 0.25,
+"output_per_million": 1.5
+},
+"gemini-3.1-flash-lite-image": {
 "input_per_million": 0.25,
 "output_per_million": 1.5
 },
@@ -548,9 +839,9 @@
 "input_per_million": 0.25,
 "output_per_million": 1.5
 },
-"gemini-3.1-flash-live-preview": {
-"input_per_million": 0.75,
-"output_per_million": 4.5
+"gemini-3.1-pro": {
+"input_per_million": 2.0,
+"output_per_million": 12.0
 },
 "gemini-3.1-pro-preview": {
 "cache_read_per_million": 0.2,
@@ -566,6 +857,26 @@
 "cache_read_per_million": 0.15,
 "input_per_million": 1.5,
 "output_per_million": 9.0
+},
+"gemini-3.5-flash-lite": {
+"cache_read_per_million": 0.03,
+"input_per_million": 0.3,
+"output_per_million": 2.5
+},
+"gemini-3.6-flash": {
+"cache_read_per_million": 0.075,
+"input_per_million": 0.75,
+"output_per_million": 3.75
+},
+"gemini-3.7-flash": {
+"cache_read_per_million": 0.075,
+"input_per_million": 0.75,
+"output_per_million": 3.75
+},
+"gemini-3.8-flash": {
+"cache_read_per_million": 0.075,
+"input_per_million": 0.75,
+"output_per_million": 3.75
 },
 "gemini-exp-1114": {
 "input_per_million": 0.0,
@@ -594,6 +905,14 @@
 "input_per_million": 0.35,
 "output_per_million": 1.05
 },
+"gemini-omni-1.1-flash": {
+"input_per_million": 1.5,
+"output_per_million": 9.0
+},
+"gemini-omni-flash-preview": {
+"input_per_million": 1.5,
+"output_per_million": 9.0
+},
 "gemini-pro-latest": {
 "cache_read_per_million": 0.125,
 "input_per_million": 1.25,
@@ -604,7 +923,28 @@
 "input_per_million": 0.3,
 "output_per_million": 2.5
 },
+"gemini-robotics-er-1.6-preview": {
+"input_per_million": 1.0,
+"output_per_million": 5.0
+},
+"gemini-robotics-er-2-preview": {
+"cache_read_per_million": 0.2,
+"input_per_million": 2.0,
+"output_per_million": 10.0
+},
+"gemini-robotics-er-2-streaming-preview": {
+"input_per_million": 2.0,
+"output_per_million": 10.0
+},
 "gemma-3-27b-it": {
+"input_per_million": 0.0,
+"output_per_million": 0.0
+},
+"gemma-4-26b-a4b-it": {
+"input_per_million": 0.0,
+"output_per_million": 0.0
+},
+"gemma-4-31b-it": {
 "input_per_million": 0.0,
 "output_per_million": 0.0
 },
@@ -788,16 +1128,6 @@
 "input_per_million": 0.15,
 "output_per_million": 0.6
 },
-"gpt-4o-mini-realtime-preview": {
-"cache_read_per_million": 0.3,
-"input_per_million": 0.6,
-"output_per_million": 2.4
-},
-"gpt-4o-mini-realtime-preview-2024-12-17": {
-"cache_read_per_million": 0.3,
-"input_per_million": 0.6,
-"output_per_million": 2.4
-},
 "gpt-4o-mini-search-preview": {
 "cache_read_per_million": 0.075,
 "input_per_million": 0.15,
@@ -807,26 +1137,6 @@
 "cache_read_per_million": 0.075,
 "input_per_million": 0.15,
 "output_per_million": 0.6
-},
-"gpt-4o-realtime-preview": {
-"cache_read_per_million": 2.5,
-"input_per_million": 5.0,
-"output_per_million": 20.0
-},
-"gpt-4o-realtime-preview-2024-10-01": {
-"cache_read_per_million": 2.5,
-"input_per_million": 5.0,
-"output_per_million": 20.0
-},
-"gpt-4o-realtime-preview-2024-12-17": {
-"cache_read_per_million": 2.5,
-"input_per_million": 5.0,
-"output_per_million": 20.0
-},
-"gpt-4o-realtime-preview-2025-06-03": {
-"cache_read_per_million": 2.5,
-"input_per_million": 5.0,
-"output_per_million": 20.0
 },
 "gpt-4o-search-preview": {
 "cache_read_per_million": 1.25,
@@ -883,6 +1193,10 @@
 "input_per_million": 0.05,
 "output_per_million": 0.4
 },
+"gpt-5-pro": {
+"input_per_million": 15.0,
+"output_per_million": 120.0
+},
 "gpt-5-search-api": {
 "cache_read_per_million": 0.125,
 "input_per_million": 1.25,
@@ -918,10 +1232,20 @@
 "input_per_million": 1.25,
 "output_per_million": 10.0
 },
+"gpt-5.1-codex": {
+"cache_read_per_million": 0.13,
+"input_per_million": 1.25,
+"output_per_million": 10.0
+},
 "gpt-5.1-codex-max": {
 "cache_read_per_million": 0.125,
 "input_per_million": 1.25,
 "output_per_million": 10.0
+},
+"gpt-5.1-codex-mini": {
+"cache_read_per_million": 0.03,
+"input_per_million": 0.25,
+"output_per_million": 2.0
 },
 "gpt-5.2": {
 "cache_read_per_million": 0.175,
@@ -967,6 +1291,11 @@
 "input_per_million": 1.75,
 "output_per_million": 14.0
 },
+"gpt-5.3-codex": {
+"cache_read_per_million": 0.175,
+"input_per_million": 1.75,
+"output_per_million": 14.0
+},
 "gpt-5.4": {
 "cache_read_per_million": 0.25,
 "input_per_million": 2.5,
@@ -997,6 +1326,10 @@
 "input_per_million": 0.2,
 "output_per_million": 1.25
 },
+"gpt-5.4-pro": {
+"input_per_million": 30.0,
+"output_per_million": 180.0
+},
 "gpt-5.5": {
 "cache_read_per_million": 0.5,
 "input_per_million": 5.0,
@@ -1006,6 +1339,46 @@
 "cache_read_per_million": 0.5,
 "input_per_million": 5.0,
 "output_per_million": 30.0
+},
+"gpt-5.5-pro": {
+"input_per_million": 30.0,
+"output_per_million": 180.0
+},
+"gpt-5.6": {
+"cache_read_per_million": 0.4,
+"cache_write_per_million": 5.0,
+"input_per_million": 4.0,
+"output_per_million": 20.0
+},
+"gpt-5.6-cyber": {
+"cache_read_per_million": 1.25,
+"cache_write_per_million": 15.625,
+"input_per_million": 12.5,
+"output_per_million": 75.0
+},
+"gpt-5.6-luna": {
+"cache_read_per_million": 0.02,
+"cache_write_per_million": 0.25,
+"input_per_million": 0.2,
+"output_per_million": 1.2
+},
+"gpt-5.6-sol": {
+"cache_read_per_million": 0.4,
+"cache_write_per_million": 5.0,
+"input_per_million": 4.0,
+"output_per_million": 20.0
+},
+"gpt-5.6-terra": {
+"cache_read_per_million": 0.2,
+"cache_write_per_million": 2.5,
+"input_per_million": 2.0,
+"output_per_million": 12.0
+},
+"gpt-6-astra": {
+"cache_read_per_million": 1.0,
+"cache_write_per_million": 12.5,
+"input_per_million": 10.0,
+"output_per_million": 50.0
 },
 "gpt-audio": {
 "input_per_million": 2.5,
@@ -1044,12 +1417,20 @@
 "output_per_million": 0.6
 },
 "gpt-oss-120b-maas": {
-"input_per_million": 0.15,
-"output_per_million": 0.6
+"input_per_million": 0.09,
+"output_per_million": 0.36
 },
 "gpt-oss-120b-mxfp-gguf": {
 "input_per_million": 0.0,
 "output_per_million": 0.0
+},
+"gpt-oss-120b-turbo": {
+"input_per_million": 0.15,
+"output_per_million": 0.6
+},
+"gpt-oss-120b-ultra": {
+"input_per_million": 0.2,
+"output_per_million": 0.95
 },
 "gpt-oss-20b": {
 "input_per_million": 0.04,
@@ -1083,45 +1464,6 @@
 "input_per_million": 0.0,
 "output_per_million": 0.0
 },
-"gpt-realtime": {
-"cache_read_per_million": 0.4,
-"input_per_million": 4.0,
-"output_per_million": 16.0
-},
-"gpt-realtime-1.5": {
-"cache_read_per_million": 0.4,
-"input_per_million": 4.0,
-"output_per_million": 16.0
-},
-"gpt-realtime-1.5-2026-02-23": {
-"cache_read_per_million": 4.0,
-"input_per_million": 4.0,
-"output_per_million": 16.0
-},
-"gpt-realtime-2": {
-"cache_read_per_million": 0.4,
-"input_per_million": 4.0,
-"output_per_million": 16.0
-},
-"gpt-realtime-2025-08-28": {
-"cache_read_per_million": 0.4,
-"input_per_million": 4.0,
-"output_per_million": 16.0
-},
-"gpt-realtime-mini": {
-"input_per_million": 0.6,
-"output_per_million": 2.4
-},
-"gpt-realtime-mini-2025-10-06": {
-"cache_read_per_million": 0.06,
-"input_per_million": 0.6,
-"output_per_million": 2.4
-},
-"gpt-realtime-mini-2025-12-15": {
-"cache_read_per_million": 0.06,
-"input_per_million": 0.6,
-"output_per_million": 2.4
-},
 "jp.anthropic.claude-haiku-4-5-20251001": {
 "cache_read_per_million": 0.11,
 "cache_write_per_million": 1.375,
@@ -1129,6 +1471,18 @@
 "output_per_million": 5.5
 },
 "jp.anthropic.claude-opus-4-7": {
+"cache_read_per_million": 0.55,
+"cache_write_per_million": 6.875,
+"input_per_million": 5.5,
+"output_per_million": 27.5
+},
+"jp.anthropic.claude-opus-4-8": {
+"cache_read_per_million": 0.55,
+"cache_write_per_million": 6.875,
+"input_per_million": 5.5,
+"output_per_million": 27.5
+},
+"jp.anthropic.claude-opus-5": {
 "cache_read_per_million": 0.55,
 "cache_write_per_million": 6.875,
 "input_per_million": 5.5,
@@ -1145,6 +1499,12 @@
 "cache_write_per_million": 4.125,
 "input_per_million": 3.3,
 "output_per_million": 16.5
+},
+"jp.anthropic.claude-sonnet-5": {
+"cache_read_per_million": 0.22,
+"cache_write_per_million": 2.75,
+"input_per_million": 2.2,
+"output_per_million": 11.0
 },
 "l3-70b-euryale-v2.1": {
 "input_per_million": 1.48,
@@ -1163,8 +1523,8 @@
 "output_per_million": 0.05
 },
 "l3.1-70b-euryale-v2.2": {
-"input_per_million": 0.65,
-"output_per_million": 0.75
+"input_per_million": 0.85,
+"output_per_million": 0.85
 },
 "l3.3-70b-euryale-v2.3": {
 "input_per_million": 0.65,
@@ -1183,6 +1543,14 @@
 "output_per_million": 0.0
 },
 "lyria-3-pro-preview": {
+"input_per_million": 0.0,
+"output_per_million": 0.0
+},
+"lyria-3.5-clip-preview": {
+"input_per_million": 0.0,
+"output_per_million": 0.0
+},
+"lyria-3.5-pro-preview": {
 "input_per_million": 0.0,
 "output_per_million": 0.0
 },
@@ -1216,6 +1584,10 @@
 "input_per_million": 15.0,
 "output_per_million": 60.0
 },
+"o1-pro": {
+"input_per_million": 150.0,
+"output_per_million": 600.0
+},
 "o3": {
 "cache_read_per_million": 0.5,
 "input_per_million": 2.0,
@@ -1237,8 +1609,13 @@
 "output_per_million": 4.4
 },
 "o3-mini-high": {
+"cache_read_per_million": 0.55,
 "input_per_million": 1.1,
 "output_per_million": 4.4
+},
+"o3-pro": {
+"input_per_million": 20.0,
+"output_per_million": 80.0
 },
 "o4-mini": {
 "cache_read_per_million": 0.275,
@@ -1246,6 +1623,11 @@
 "output_per_million": 4.4
 },
 "o4-mini-2025-04-16": {
+"cache_read_per_million": 0.275,
+"input_per_million": 1.1,
+"output_per_million": 4.4
+},
+"o4-mini-high": {
 "cache_read_per_million": 0.275,
 "input_per_million": 1.1,
 "output_per_million": 4.4
@@ -1276,10 +1658,22 @@
 "input_per_million": 1.1,
 "output_per_million": 4.4
 },
+"us-gov.anthropic.claude-opus-4-8": {
+"cache_read_per_million": 0.6,
+"cache_write_per_million": 7.5,
+"input_per_million": 6.0,
+"output_per_million": 30.0
+},
 "us-gov.anthropic.claude-sonnet-4-5-20250929": {
 "cache_read_per_million": 0.36,
 "cache_write_per_million": 4.5,
 "input_per_million": 3.6,
 "output_per_million": 18.0
+},
+"us-gov.anthropic.claude-sonnet-5": {
+"cache_read_per_million": 0.24,
+"cache_write_per_million": 3.0,
+"input_per_million": 2.4,
+"output_per_million": 12.0
 }
 }
