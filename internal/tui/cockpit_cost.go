@@ -7,6 +7,7 @@ import (
 
 	tslc "github.com/NimbleMarkets/ntcharts/linechart/timeserieslinechart"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/nashory/agent-cockpit/internal/usage"
 )
 
@@ -397,12 +398,13 @@ func costChartCursor(chart string, total, selected int, color lipgloss.Color) st
 	}
 	gutter, plotW := 0, 1
 	for _, ln := range strings.Split(chart, "\n") {
-		if i := strings.IndexRune(ln, '└'); i >= 0 {
-			runes := []rune(ln)
+		plain := ansi.Strip(ln)
+		if strings.ContainsRune(plain, '└') {
+			runes := []rune(plain)
 			for j, rn := range runes {
 				if rn == '└' {
-					gutter = j + 1
-					plotW = len(runes) - gutter
+					gutter = lipgloss.Width(string(runes[:j+1]))
+					plotW = lipgloss.Width(string(runes[j+1:]))
 					break
 				}
 			}

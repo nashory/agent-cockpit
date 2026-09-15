@@ -38,6 +38,15 @@ func TestGaugeWidthAndClamp(t *testing.T) {
 	}
 }
 
+func TestCostChartCursorIgnoresANSIWidths(t *testing.T) {
+	chart := "\x1b[31m  └────\x1b[0m"
+	got := stripANSI(costChartCursor(chart, 2, 1, colGreen))
+	want := "      ▲"
+	if got != want {
+		t.Fatalf("cursor = %q, want %q", got, want)
+	}
+}
+
 func TestContribLevel(t *testing.T) {
 	if contribLevel(0, 100) != 0 {
 		t.Error("zero tokens should be level 0")
