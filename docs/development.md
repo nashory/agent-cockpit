@@ -179,9 +179,10 @@ cockpit pricing update --check --json
 The `Pricing Refresh` GitHub Actions workflow runs the same freshness check
 weekly and on manual dispatch. When LiteLLM pricing has changed, it regenerates
 `internal/usage/pricing_data.json` and `internal/usage/pricing_metadata.json`,
-runs the pricing-focused tests, and opens or updates the
-`automation/pricing-refresh` pull request. The workflow exits without a PR when
-the embedded snapshot already matches upstream.
+runs the full CI suite, and commits the generated snapshot to the branch that
+started the workflow. The push is fast-forward-only, so a concurrent branch
+update fails safely instead of overwriting newer work. The workflow exits
+without a commit when the embedded snapshot already matches upstream.
 
 ## Benchmarks
 

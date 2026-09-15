@@ -2,7 +2,7 @@
   "schema_version": 1,
   "source": "LiteLLM model_prices_and_context_window.json",
   "source_url": "https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json",
-  "generated_at": "2026-06-11T21:05:46Z",
-  "model_count": 271,
-  "data_sha256": "5e6e6a1450ae7b3bb37f7f78ad367795cb547a57a3ff47f549f670123acd3419"
+  "generated_at": "2026-09-15T11:23:54Z",
+  "model_count": 350,
+  "data_sha256": "0d191a97a1d336646dea9b887ff9c4ec2a64500f2f3e60442ede6bc15dbbb49e"
 }
