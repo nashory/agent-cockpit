@@ -110,6 +110,18 @@ func TestWindowBadDates(t *testing.T) {
 }
 
 func TestLoadFiltersConfiguredSources(t *testing.T) {
+	for _, name := range []string{
+		"AMP_DATA_DIR",
+		"OPENCODE_DATA_DIR",
+		"COPILOT_OTEL_FILE_EXPORTER_PATH",
+		"KIMI_DATA_DIR",
+		"QWEN_DATA_DIR",
+		"CODEBUFF_DATA_DIR",
+		"KILO_DATA_DIR",
+		"GOOSE_PATH_ROOT",
+	} {
+		t.Setenv(name, "")
+	}
 	dir := t.TempDir()
 	claudeDir := filepath.Join(dir, "claude")
 	emptyDir := filepath.Join(dir, "empty")
@@ -125,7 +137,15 @@ func TestLoadFiltersConfiguredSources(t *testing.T) {
 	mustWrite(t, cfgPath, "[paths]\n"+
 		"claude = ['"+claudeDir+"']\n"+
 		"codex = ['"+emptyDir+"']\n"+
-		"gemini = ['"+emptyDir+"']\n")
+		"gemini = ['"+emptyDir+"']\n"+
+		"opencode = ['"+emptyDir+"']\n"+
+		"amp = ['"+emptyDir+"']\n"+
+		"copilot = ['"+emptyDir+"']\n"+
+		"kimi = ['"+emptyDir+"']\n"+
+		"qwen = ['"+emptyDir+"']\n"+
+		"codebuff = ['"+emptyDir+"']\n"+
+		"kilo = ['"+emptyDir+"']\n"+
+		"goose = ['"+emptyDir+"']\n")
 
 	events, cfg, err := load(context.Background(), &options{configPath: cfgPath, days: 36500})
 	if err != nil {

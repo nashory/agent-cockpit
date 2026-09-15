@@ -35,8 +35,8 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// tempConfig writes a config whose three sources point at temp dirs (so smoke
-// tests never read real ~/.claude logs) with one recent Claude event.
+// tempConfig writes a config whose sources point at temp dirs (so smoke tests
+// never read real agent logs) with one recent Claude event.
 func tempConfig(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -54,7 +54,19 @@ func tempConfig(t *testing.T) string {
 		t.Fatal(err)
 	}
 	// TOML literal (single-quoted) strings keep Windows backslash paths intact.
-	body := fmt.Sprintf("[paths]\nclaude = ['%s']\ncodex = ['%s']\ngemini = ['%s']\n", claudeRoot, empty, empty)
+	body := fmt.Sprintf(`[paths]
+claude = ['%s']
+codex = ['%s']
+gemini = ['%s']
+opencode = ['%s']
+amp = ['%s']
+copilot = ['%s']
+kimi = ['%s']
+qwen = ['%s']
+codebuff = ['%s']
+kilo = ['%s']
+goose = ['%s']
+`, claudeRoot, empty, empty, empty, empty, empty, empty, empty, empty, empty, empty)
 	cfg := filepath.Join(dir, "config.toml")
 	if err := os.WriteFile(cfg, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
@@ -64,7 +76,20 @@ func tempConfig(t *testing.T) string {
 
 func runAC(t *testing.T, args ...string) (string, error) {
 	t.Helper()
-	out, err := exec.Command(acBin, args...).CombinedOutput()
+	cmd := exec.Command(acBin, args...)
+	// Source-specific environment overrides must not let smoke tests discover
+	// real logs outside the temporary config.
+	cmd.Env = append(os.Environ(),
+		"AMP_DATA_DIR=",
+		"OPENCODE_DATA_DIR=",
+		"COPILOT_OTEL_FILE_EXPORTER_PATH=",
+		"KIMI_DATA_DIR=",
+		"QWEN_DATA_DIR=",
+		"CODEBUFF_DATA_DIR=",
+		"KILO_DATA_DIR=",
+		"GOOSE_PATH_ROOT=",
+	)
+	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
 
