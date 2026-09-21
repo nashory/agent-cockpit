@@ -67,25 +67,32 @@ func TestLookupPricingLongestMatch(t *testing.T) {
 	if p, _ := ResolvePricing("claude-opus-4-8", prices); p.InputPerMillion != 99 {
 		t.Fatalf("expected longest match (claude-opus), got %v", p.InputPerMillion)
 	}
-	// With no config, rates come from the vendored LiteLLM table. Opus 4.8 is the
-	// newer, cheaper Opus tier ($5/M in), not the legacy $15/M.
-	if p, _ := ResolvePricing("claude-opus-4-8", nil); p.InputPerMillion != 5 {
-		t.Fatalf("litellm opus-4-8 input rate = %v, want 5", p.InputPerMillion)
+	// With no config, rates come from the vendored LiteLLM table. Compare with
+	// the snapshot entry rather than pinning an upstream price that can change.
+	want := litellmTable()["claude-opus-4-8"]
+	if p, source := ResolvePricing("claude-opus-4-8", nil); p != want || source != "vendored" {
+		t.Fatalf("litellm opus-4-8 pricing = %+v from %q, want %+v from vendored", p, source, want)
 	}
 }
 
 func TestDefaultPricingFromLiteLLM(t *testing.T) {
-	cases := map[string]Pricing{
-		"claude-opus-4-8":            {InputPerMillion: 5, OutputPerMillion: 25},
-		"gpt-5-codex":                {InputPerMillion: 1.25, OutputPerMillion: 10},
-		"gemini-2.5-flash":           {InputPerMillion: 0.30, OutputPerMillion: 2.5},
-		"claude-sonnet-4-5-20250930": {InputPerMillion: 3, OutputPerMillion: 15}, // substring match
+	cases := map[string]string{
+		"claude-opus-4-8":            "claude-opus-4-8",
+		"gpt-5-codex":                "gpt-5-codex",
+		"gemini-2.5-flash":           "gemini-2.5-flash",
+		"claude-sonnet-4-5-20250930": "claude-sonnet-4-5", // substring match
 	}
-	for model, want := range cases {
+	for model, tableKey := range cases {
+		want, ok := litellmTable()[tableKey]
+		if !ok {
+			t.Fatalf("vendored pricing missing test model %q", tableKey)
+		}
 		got := DefaultPricing(model)
-		if got.InputPerMillion != want.InputPerMillion || got.OutputPerMillion != want.OutputPerMillion {
-			t.Errorf("DefaultPricing(%q) = in %v/out %v, want in %v/out %v",
-				model, got.InputPerMillion, got.OutputPerMillion, want.InputPerMillion, want.OutputPerMillion)
+		if got != want {
+			t.Errorf("DefaultPricing(%q) = %+v, want snapshot entry %q = %+v", model, got, tableKey, want)
+		}
+		if got.InputPerMillion <= 0 || got.OutputPerMillion <= 0 {
+			t.Errorf("DefaultPricing(%q) returned non-positive rates: %+v", model, got)
 		}
 	}
 	// A model absent from the table resolves to zero rates (no crash, no bogus cost).
@@ -156,8 +163,13 @@ func TestEstimateCostWith(t *testing.T) {
 func TestEstimateCostCachedNotDoubleCharged(t *testing.T) {
 	// codex-shaped event: input_tokens 67776 incl 65024 cached -> Input 2752.
 	e := Event{Model: "gpt-5-codex", Input: 2752, CacheRead: 65024, Output: 306}
-	want := (2752*1.25 + 65024*0.125 + 306*10) / 1_000_000 // default codex rates
-	got := EstimateCost(e)
+	prices := PriceBook{"gpt-5-codex": {
+		InputPerMillion:     1.25,
+		OutputPerMillion:    10,
+		CacheReadPerMillion: 0.125,
+	}}
+	want := (2752*1.25 + 65024*0.125 + 306*10) / 1_000_000
+	got := EstimateCostWith(e, prices)
 	if got < want-1e-9 || got > want+1e-9 {
 		t.Fatalf("cost = %v, want %v", got, want)
 	}
